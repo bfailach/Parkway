@@ -5,6 +5,6 @@
 |---|---|
 | Frontend | React / TypeScript |
 | Backend | Node.js |
-| Base de datos | (por definir) |
+| Base de datos | PostgreSQL |
 | Arquitectura | Cliente – Servidor – Nodos distribuidos |
 
