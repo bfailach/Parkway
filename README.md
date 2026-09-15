@@ -19,7 +19,7 @@ consulta y en el panel del administrador.
 - Soporte para varias sedes desde el mismo sistema.
 - Reportes de ocupación por franja horaria, rotación por espacio e ingresos por periodo.
 
-## Tecnología
+## Tecnologías
 
 | Elemento | Valor |
 |---|---|
