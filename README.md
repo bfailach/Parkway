@@ -1,7 +1,5 @@
 # Parkway
 
-## El problema
-
 En la mayoría de parqueaderos el conductor llega sin saber si hay cupo. El
 personal lleva el control de entradas y salidas en planillas o de memoria, lo
 que genera filas en la entrada, espacios asignados dos veces y una cifra de
