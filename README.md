@@ -1,18 +1,27 @@
 # Parkway
 
-En la mayoría de parqueaderos el conductor llega sin saber si hay cupo, y el personal administrativo lleva el control de entradas y salidas en planillas o de memoria. Esto produce filas innecesarias, espacios asignados dos veces y una disponibilidad que nadie conoce con certeza.
+## El problema
 
-ParkFlow resuelve esto con una fuente única de verdad: la base de datos garantiza que un espacio no pueda ocuparse dos veces, y los cambios se propagan a todos los clientes conectados en el momento en que ocurren.
+En la mayoría de parqueaderos el conductor llega sin saber si hay cupo. El
+personal lleva el control de entradas y salidas en planillas o de memoria, lo
+que genera filas en la entrada, espacios asignados dos veces y una cifra de
+disponibilidad que nadie sabe con certeza.
 
-Características
-Disponibilidad en tiempo real — los tableros se actualizan vía WebSocket cuando entra o sale un vehículo, sin recargar ni hacer polling.
-Asignación sin duplicados — la exclusividad de cada espacio está garantizada por una restricción en la base de datos, no por lógica de aplicación.
-Registro de entradas y salidas — con cálculo automático de permanencia y tarifa.
-Roles diferenciados — vista de consulta para usuarios y panel de control para administradores.
-Multi-parqueadero — el modelo soporta varias sedes desde el diseño inicial.
-Historial y reportes — ocupación por franja horaria, rotación por espacio, ingresos por periodo.
+ParkFlow centraliza ese control. La base de datos impide que un espacio se
+ocupe dos veces y los cambios se reflejan de inmediato en las pantallas de
+consulta y en el panel del administrador.
 
-## 1. Tecnología
+## Características
+
+- Consulta de cupos libres por parqueadero y por tipo de espacio.
+- Registro de entrada con asignación automática de espacio.
+- Registro de salida con cálculo de permanencia y tarifa.
+- Actualización de la disponibilidad por WebSocket, sin recargar la página.
+- Control de acceso por rol: consulta para usuarios, gestión para administradores.
+- Soporte para varias sedes desde el mismo sistema.
+- Reportes de ocupación por franja horaria, rotación por espacio e ingresos por periodo.
+
+## Tecnología
 
 | Elemento | Valor |
 |---|---|
