@@ -30,7 +30,7 @@ consulta y en el panel del administrador.
 
 ## Estructura del repositorio
 
-
+```
 Parkway/
 ├── database/
 │   ├── schema.sql      # Creación de la base de datos: tablas, PK, FK, restricciones
@@ -50,7 +50,7 @@ Parkway/
 │   ├── tsconfig.json
 │   └── .env.example
 └── README.md
-
+```
 
 Esta estructura corresponde a la arquitectura en tres capas definida en la
 documentación de la Fase 1 (`Propuesta_fase_1`), y las tablas de
