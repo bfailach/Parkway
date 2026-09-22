@@ -30,7 +30,7 @@ consulta y en el panel del administrador.
 
 ## Estructura del repositorio
 
-```
+
 Parkway/
 ├── database/
 │   ├── schema.sql      # Creación de la base de datos: tablas, PK, FK, restricciones
@@ -50,7 +50,7 @@ Parkway/
 │   ├── tsconfig.json
 │   └── .env.example
 └── README.md
-```
+
 
 Esta estructura corresponde a la arquitectura en tres capas definida en la
 documentación de la Fase 1 (`Propuesta_fase_1`), y las tablas de
@@ -65,7 +65,7 @@ Fase 2.
 
 ## 1. Crear y poblar la base de datos
 
-```bash
+bash
 # Crear la base de datos vacía
 createdb parkway
 
@@ -74,24 +74,24 @@ psql -d parkway -f database/schema.sql
 
 # Cargar datos iniciales de prueba (opcional, recomendado para desarrollo)
 psql -d parkway -f database/seed.sql
-```
+
 
 Si PostgreSQL requiere usuario/host explícitos:
 
-```bash
+bash
 psql -h localhost -U postgres -d parkway -f database/schema.sql
-```
+
 
 ## 2. Configurar y ejecutar el backend
 
-```bash
+bash
 cd backend
 cp .env.example .env
 # Editar .env con las credenciales locales de PostgreSQL
 
 npm install
 npm run dev
-```
+
 
 El servidor queda disponible en `http://localhost:3000`. Endpoints
 disponibles en esta fase:
