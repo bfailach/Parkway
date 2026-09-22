@@ -1,6 +1,6 @@
 # Parkway
 
-<img width="1280" height="440" alt="imagen" src="https://github.com/user-attachments/assets/bd68162f-f77d-4eaa-b511-00fb855d7506" />
+
 
 
 En la mayoría de parqueaderos el conductor llega sin saber si hay cupo. El
