@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { api, ApiError, Parqueadero, Registro } from "../lib/api";
+import { api, Parqueadero, Registro } from "../lib/api";
 import { useConsulta } from "../lib/useConsulta";
 import { duracion, horaCorta, nombreTipo, pesos } from "../lib/formato";
 import { Placa } from "../components/Placa";
-import { Dialogo } from "../components/Dialogo";
-import { Tiquete } from "../components/Tiquete";
+import { SalidaDialogo } from "../components/SalidaDialogo";
 
 /**
  * Vehículos dentro del parqueadero y registro de salida (RF07).
@@ -14,33 +13,8 @@ import { Tiquete } from "../components/Tiquete";
 export function Activos({ sede }: { sede: Parqueadero }) {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<Registro | null>(null);
-  const [resultado, setResultado] = useState<Registro | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
 
   const activos = useConsulta(() => api.activos(sede.id_parqueadero, filtro || undefined), [sede.id_parqueadero, filtro], 15000);
-
-  async function confirmarSalida() {
-    if (!seleccion) return;
-    setEnviando(true);
-    setError(null);
-    try {
-      const r = await api.salida(seleccion.id_registro);
-      setResultado(r);
-      activos.recargar();
-    } catch (ex) {
-      setError(ex instanceof ApiError ? ex.message : "No se pudo registrar la salida");
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  function cerrar() {
-    setSeleccion(null);
-    setResultado(null);
-    setError(null);
-  }
-
   const lista = activos.datos ?? [];
 
   return (
@@ -102,37 +76,12 @@ export function Activos({ sede }: { sede: Parqueadero }) {
         </div>
       )}
 
-      <Dialogo abierto={!!seleccion} titulo={resultado ? "Salida registrada" : "Registrar salida"} onCerrar={cerrar}>
-        {seleccion && !resultado && (
-          <>
-            <div className="confirmacion">
-              <Placa placa={seleccion.placa} tamano="md" />
-              <dl className="tiquete-datos">
-                <div><dt>Espacio</dt><dd>{seleccion.codigo_espacio}</dd></div>
-                <div><dt>Ingreso</dt><dd>{horaCorta(seleccion.fecha_ingreso)}</dd></div>
-                <div><dt>Tiempo</dt><dd>{duracion(seleccion.minutos_transcurridos)}</dd></div>
-                <div><dt>Valor estimado</dt><dd>{pesos(seleccion.valor_estimado)}</dd></div>
-              </dl>
-              <p className="tenue">El valor final se calcula con la hora exacta de salida.</p>
-            </div>
-            {error && <p className="alerta alerta-error" role="alert">{error}</p>}
-            <div className="dialogo-acciones">
-              <button className="boton boton-texto" onClick={cerrar}>Cancelar</button>
-              <button className="boton boton-primario" onClick={confirmarSalida} disabled={enviando} autoFocus>
-                {enviando ? "Registrando..." : "Confirmar salida"}
-              </button>
-            </div>
-          </>
-        )}
-        {resultado && (
-          <>
-            <Tiquete registro={resultado} sede={sede.nombre} />
-            <div className="dialogo-acciones">
-              <button className="boton boton-primario" onClick={cerrar} autoFocus>Listo</button>
-            </div>
-          </>
-        )}
-      </Dialogo>
+      <SalidaDialogo
+        registro={seleccion}
+        sede={sede.nombre}
+        onCerrar={() => setSeleccion(null)}
+        onRegistrada={() => activos.recargar()}
+      />
     </div>
   );
 }

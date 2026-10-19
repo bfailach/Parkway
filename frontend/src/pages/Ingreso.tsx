@@ -167,7 +167,7 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
         {ultimo ? (
           <>
             <p className="alerta alerta-ok">Ingreso registrado. Entregue el tiquete al conductor.</p>
-            <Tiquete registro={ultimo} sede={sede.nombre} />
+            <Tiquete key={ultimo.id_registro} registro={ultimo} sede={sede.nombre} />
           </>
         ) : (
           <div className="vacio">

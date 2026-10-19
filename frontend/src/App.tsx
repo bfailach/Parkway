@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, onSesionExpirada, Parqueadero, sesion, TipoVehiculo, Usuario } from "./lib/api";
+import { useRuta } from "./lib/ruta";
+import { Portada } from "./pages/Portada";
 import { Login } from "./pages/Login";
 import { Disponibilidad } from "./pages/Disponibilidad";
 import { Ingreso } from "./pages/Ingreso";
@@ -18,6 +20,7 @@ const VISTAS: { id: Vista; nombre: string; personal: boolean }[] = [
 const NOMBRE_ROL = { CLIENTE: "Cliente", OPERADOR: "Operador", ADMINISTRADOR: "Administrador" };
 
 export default function App() {
+  const [ruta, ir] = useRuta();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [verificando, setVerificando] = useState(!!sesion.token());
   const [sedes, setSedes] = useState<Parqueadero[]>([]);
@@ -49,7 +52,23 @@ export default function App() {
   }, [usuario]);
 
   if (verificando) return null;
-  if (!usuario) return <Login onIngresar={(u) => { setUsuario(u); setVista(u.rol === "CLIENTE" ? "disponibilidad" : "ingreso"); }} />;
+
+  if (ruta === "portada") {
+    return <Portada enSesion={!!usuario} onIngresar={() => ir(usuario ? "panel" : "ingresar")} />;
+  }
+
+  if (!usuario) {
+    return (
+      <Login
+        onVolver={() => ir("portada")}
+        onIngresar={(u) => {
+          setUsuario(u);
+          setVista(u.rol === "CLIENTE" ? "disponibilidad" : "ingreso");
+          ir("panel");
+        }}
+      />
+    );
+  }
 
   const esPersonal = usuario.rol !== "CLIENTE";
   const sede = sedes.find((s) => s.id_parqueadero === idSede);
@@ -59,12 +78,15 @@ export default function App() {
     sesion.borrar();
     setUsuario(null);
     setVista("disponibilidad");
+    ir("portada");
   }
 
   return (
     <div className="app">
       <header className="barra">
-        <span className="marca"><span className="senal-p senal-p-sm" aria-hidden="true">P</span>Parkway</span>
+        <a href="#/" className="marca" aria-label="Parkway, ir a la portada">
+          <span className="senal-p senal-p-sm" aria-hidden="true">P</span>Parkway
+        </a>
         <label className="selector-sede">
           <span className="visualmente-oculto">Sede</span>
           <select value={idSede ?? ""} onChange={(e) => setIdSede(Number(e.target.value))}>
@@ -90,7 +112,7 @@ export default function App() {
 
       <main className="contenido">
         {errorCarga && <p className="alerta alerta-error" role="alert">{errorCarga}</p>}
-        {sede && vista === "disponibilidad" && <Disponibilidad sede={sede} esPersonal={esPersonal} />}
+        {sede && vista === "disponibilidad" && <Disponibilidad key={`d${esPersonal}`} sede={sede} esPersonal={esPersonal} />}
         {sede && esPersonal && vista === "ingreso" && <Ingreso sede={sede} tipos={tipos} />}
         {sede && esPersonal && vista === "activos" && <Activos sede={sede} />}
         {sede && esPersonal && vista === "historial" && <Historial sede={sede} />}

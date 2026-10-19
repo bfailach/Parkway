@@ -157,6 +157,7 @@ export const api = {
   parqueaderos: () => request<Parqueadero[]>("GET", "/catalogos/parqueaderos"),
   tiposVehiculo: () => request<TipoVehiculo[]>("GET", "/catalogos/tipos-vehiculo"),
   resumen: (idParqueadero: number) => request<Resumen>("GET", `/estacionamiento/resumen?${qs({ idParqueadero })}`),
+  plano: (idParqueadero: number) => request<EspacioMapa[]>("GET", `/estacionamiento/plano?${qs({ idParqueadero })}`),
   espacios: (idParqueadero: number) => request<EspacioMapa[]>("GET", `/estacionamiento/espacios?${qs({ idParqueadero })}`),
   totalesDia: (idParqueadero: number) => request<TotalesDia>("GET", `/estacionamiento/totales-dia?${qs({ idParqueadero })}`),
   activos: (idParqueadero: number, placa?: string) =>
