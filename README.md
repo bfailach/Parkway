@@ -34,12 +34,28 @@ registra una salida, el carro sale por el carril.
 
 **Panel del personal**
 
+Pestañas del operador: Disponibilidad, Registrar ingreso, En el
+parqueadero, Reservas e Historial. El administrador además ve la Bitácora.
+
 - Plano 3D interactivo: se gira con el mouse y, al pasar sobre una plaza,
   muestra su código y la placa. Un clic sobre un vehículo abre el registro de
   su salida.
 - Campo de placa con forma de placa amarilla de Bogotá y validación por tipo.
 - Tiquete de papel que se "imprime" al registrar un ingreso o una salida.
 - Vista "Plano" en 2D para equipos sin aceleración gráfica.
+- **Reservas:** los clientes que van en camino, con su teléfono, el espacio
+  apartado y el tiempo que les queda para llegar; también las reservas del
+  día que llegaron, se cancelaron o expiraron. El botón "Registrar ingreso"
+  abre el formulario con la placa y el tipo ya escritos.
+- Al digitar una placa con reserva, el formulario de ingreso avisa a quién
+  pertenece y a qué espacio entrará.
+- **Bitácora (administrador):** todas las operaciones con su usuario,
+  resultado y detalle, filtrables por operación, resultado y fechas.
+- Las bicicletas se registran sin marca, solo con su código y color.
+
+El acento de la interfaz es el azul de la señal de parqueadero del logo. El
+amarillo se usa solo para las placas. En el plano, verde es libre, rojo
+ocupado y azul reservado.
 
 Las fuentes (Big Shoulders Display y Barlow) se incluyen en el proyecto, así
 que la interfaz funciona sin conexión a internet. Con `prefers-reduced-motion`
@@ -56,7 +72,8 @@ activo se desactivan las animaciones automáticas.
 | Plano 3D de la sede con el estado real de cada plaza | RF05 | Implementado |
 | Salida desde el plano 3D (clic sobre el vehículo) | RF07 | Implementado |
 | Mapa de plazas, vehículos activos e historial de salidas | RF05, RF13 | Implementado |
-| Bitácora de transacciones (confirmadas y revertidas) | RF14, RNF08 | Implementado en el backend |
+| Bitácora de transacciones con consulta para el administrador | RF14, RNF08 | Implementado |
+| Reservas de la sede para el operador, con ingreso en un clic | RF10 | Implementado |
 | Actualización de disponibilidad sin recargar la página | RF12 | Consulta cada 5 s. WebSocket en la siguiente fase |
 | Creación de cuenta de cliente | RF01 | Implementado |
 | Vehículos del cliente: registrar, consultar y quitar | RF04 | Implementado |
@@ -202,7 +219,8 @@ Para ver el parqueadero con vehículos dentro (recomendado para presentar):
 psql -d parkway -f database/demo.sql
 ```
 
-`demo.sql` ocupa cerca del 60 % de los espacios y registra salidas del día.
+`demo.sql` ocupa cerca del 60 % de los espacios, registra salidas del día,
+crea dos reservas activas (ABC123 y XYZ78D) y llena la bitácora.
 Se puede ejecutar varias veces.
 
 `seed.sql` usa la extensión `pgcrypto` (la crea `schema.sql`) para guardar
@@ -240,7 +258,8 @@ portada queda en `http://localhost:5173/#/` y el panel en `#/ingresar`.
 
 El operador y el administrador registran ingresos y salidas. El cliente
 reserva espacios, registra sus vehículos y consulta su historial;
-`cliente1@parkway.test` ya tiene el vehículo ABC123. También se puede crear
+`cliente1@parkway.test` tiene el carro ABC123 y `cliente2@parkway.test`
+(Cliente123*) la moto XYZ78D. También se puede crear
 un cliente nuevo desde "Crea una para reservar".
 
 ## Pruebas
@@ -272,6 +291,8 @@ rechazados con código 409 y ningún espacio duplicado (RNF03).
 | GET | `/api/estacionamiento/activos?idParqueadero=1&placa=ABC` | Personal | Vehículos dentro y valor acumulado |
 | GET | `/api/estacionamiento/historial?idParqueadero=1&desde=2026-10-01&hasta=2026-10-31` | Personal | Salidas registradas |
 | GET | `/api/estacionamiento/totales-dia?idParqueadero=1` | Personal | Ingresos, salidas y valor del día |
+| GET | `/api/estacionamiento/reservas?idParqueadero=1` | Personal | Reservas activas y del día, con el cliente |
+| GET | `/api/admin/bitacora?tipo=INGRESO&estado=REVERTIDA&desde=…&hasta=…` | Administrador | Bitácora de transacciones |
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra una salida |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
@@ -309,7 +330,11 @@ una regla de negocio lo impide, por ejemplo cuando no hay espacios libres.
 | **Salida registrada** | **Historial** |
 | ![Salida](docs/capturas/12_salida.jpg) | ![Historial](docs/capturas/13_historial.jpg) |
 
-| **Reserva del cliente** | **El operador digita la placa reservada** |
+| **Reservas para el operador** | **Aviso de reserva al digitar la placa** |
+| ![Reservas](docs/capturas/20_operador_reservas.jpg) | ![Aviso de reserva](docs/capturas/21_ingreso_con_reserva.jpg) |
+| **Bitácora del administrador** | **Acceso del personal** |
+| ![Bitácora](docs/capturas/22_bitacora.jpg) | ![Cierre](docs/capturas/23_cierre.jpg) |
+| **Reserva del cliente** | **Ingreso con reserva** |
 | ![Reserva](docs/capturas/15_cliente_reserva.jpg) | ![Ingreso con reserva](docs/capturas/16_operador_con_reserva.jpg) |
 | **El cliente ve su vehículo dentro** | **Mis vehículos** |
 | ![Vehículo dentro](docs/capturas/17_cliente_dentro.jpg) | ![Mis vehículos](docs/capturas/18_cliente_vehiculos.jpg) |
