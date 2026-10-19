@@ -58,7 +58,11 @@ activo se desactivan las animaciones automáticas.
 | Mapa de plazas, vehículos activos e historial de salidas | RF05, RF13 | Implementado |
 | Bitácora de transacciones (confirmadas y revertidas) | RF14, RNF08 | Implementado en el backend |
 | Actualización de disponibilidad sin recargar la página | RF12 | Consulta cada 5 s. WebSocket en la siguiente fase |
-| Pagos y comprobantes, reservas, gestión de tarifas y usuarios | RF02, RF08 a RF11 | Siguiente fase |
+| Creación de cuenta de cliente | RF01 | Implementado |
+| Vehículos del cliente: registrar, consultar y quitar | RF04 | Implementado |
+| Reservas: reservar, cancelar, expiración a los 30 minutos | RF10 | Implementado |
+| Estado e historial del cliente (vehículo dentro, valor acumulado, visitas) | RF03 | Implementado |
+| Pagos y comprobantes, gestión de tarifas y usuarios por el administrador | RF02, RF08, RF09, RF11 | Siguiente fase |
 | Predicción de ocupación con IA | RF15 | Diseño en el documento maestro |
 
 ## Operación principal: ingreso y salida de vehículos
@@ -84,6 +88,35 @@ Reglas que se cumplen:
 - Una placa registrada como motocicleta no puede ingresar como automóvil.
 - Cada operación queda en la tabla `transaccion` con el usuario, el
   resultado y el detalle.
+
+## Funciones del cliente
+
+Un cliente crea su cuenta desde "Ingresar" con el enlace "Crea una para
+reservar". En su panel tiene cuatro secciones:
+
+- **Mi parqueo.** Reserva un espacio: elige la sede y el vehículo, y el
+  sistema aparta el primer espacio libre de ese tipo. La reserva muestra el
+  código del espacio, una cuenta regresiva de 30 minutos y el plano 3D con
+  su plaza resaltada. Si el vehículo ya está dentro, muestra el espacio, el
+  tiempo y el valor acumulado, que se actualiza cada segundo.
+- **Mis vehículos.** Agrega placas con la validación por tipo y las quita
+  cuando no están dentro ni reservadas. Si la placa ya había entrado como
+  visitante, queda asociada a la cuenta.
+- **Cupos por sede.** El plano 3D de cada sede, sin placas de otros clientes.
+- **Mi historial.** Visitas con su valor y reservas con su estado.
+
+Reglas de la reserva:
+
+- Un vehículo solo puede tener una reserva activa y no puede reservar si
+  ya está dentro.
+- El espacio queda en estado RESERVADO y no se cuenta como libre.
+- Cuando el operador digita la placa, el vehículo entra a su espacio
+  reservado y la reserva pasa a CUMPLIDA. Puede entrar aunque no queden
+  cupos libres.
+- Si el cliente no llega en 30 minutos, la reserva pasa a EXPIRADA y el
+  espacio se libera. El backend revisa cada 30 segundos y deja la
+  expiración en la bitácora. El plazo se cambia con `RESERVA_MINUTOS` en
+  `backend/.env`.
 
 **Cálculo del cobro.** Horas completas por el valor de la hora, más cada
 fracción de 15 minutos iniciada por el valor de la fracción. El valor de un
@@ -129,6 +162,7 @@ Parkway/
 ├── frontend/
 │   └── src/
 │       ├── pages/                  # Portada, Login, Disponibilidad, Ingreso, Activos, Historial
+│       │   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial
 │       ├── three/                  # Escena 3D: plazas, vehículos, entorno, cámara
 │       ├── components/             # Placa, Tiquete, Odometro, SalidaDialogo, MapaEspacios
 │       └── lib/                    # Cliente de la API, formatos, consultas periódicas
@@ -204,14 +238,16 @@ portada queda en `http://localhost:5173/#/` y el panel en `#/ingresar`.
 | Administrador | admin@parkway.test | Admin123* |
 | Cliente | cliente1@parkway.test | Cliente123* |
 
-El operador y el administrador registran ingresos y salidas. El cliente solo
-consulta los cupos libres.
+El operador y el administrador registran ingresos y salidas. El cliente
+reserva espacios, registra sus vehículos y consulta su historial;
+`cliente1@parkway.test` ya tiene el vehículo ABC123. También se puede crear
+un cliente nuevo desde "Crea una para reservar".
 
 ## Pruebas
 
 ```bash
 cd backend
-npm test                                   # Pruebas unitarias de tarifas y validaciones
+npm test                                   # Pruebas unitarias de tarifas, placas, cuentas y vehículos
 npx tsx scripts/pruebaConcurrencia.ts 20   # Con el backend corriendo
 ```
 
@@ -225,6 +261,7 @@ rechazados con código 409 y ningún espacio duplicado (RNF03).
 | --- | --- | --- | --- |
 | GET | `/api/health` | Público | Estado del servicio |
 | POST | `/api/auth/login` | Público | Inicia sesión y devuelve el token |
+| POST | `/api/auth/registro` | Público | Crea una cuenta de cliente e inicia la sesión |
 | GET | `/api/auth/me` | Sesión | Usuario de la sesión |
 | GET | `/api/catalogos/parqueaderos` | Público | Sedes |
 | GET | `/api/catalogos/tipos-vehiculo` | Público | Tipos de vehículo con tarifa vigente |
@@ -237,6 +274,12 @@ rechazados con código 409 y ningún espacio duplicado (RNF03).
 | GET | `/api/estacionamiento/totales-dia?idParqueadero=1` | Personal | Ingresos, salidas y valor del día |
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra una salida |
+| GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
+| GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
+| GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar y registrar vehículos propios |
+| DELETE | `/api/cliente/vehiculos/:placa` | Cliente | Quitar un vehículo de la cuenta |
+| GET, POST | `/api/cliente/reservas` | Cliente | Consultar y crear reservas |
+| POST | `/api/cliente/reservas/:idReserva/cancelar` | Cliente | Cancelar una reserva activa |
 
 Ejemplo de ingreso:
 
@@ -265,6 +308,11 @@ una regla de negocio lo impide, por ejemplo cuando no hay espacios libres.
 | ![Plano 3D](docs/capturas/10_plano_3d.jpg) | ![Activos](docs/capturas/11_en_el_parqueadero.jpg) |
 | **Salida registrada** | **Historial** |
 | ![Salida](docs/capturas/12_salida.jpg) | ![Historial](docs/capturas/13_historial.jpg) |
+
+| **Reserva del cliente** | **El operador digita la placa reservada** |
+| ![Reserva](docs/capturas/15_cliente_reserva.jpg) | ![Ingreso con reserva](docs/capturas/16_operador_con_reserva.jpg) |
+| **El cliente ve su vehículo dentro** | **Mis vehículos** |
+| ![Vehículo dentro](docs/capturas/17_cliente_dentro.jpg) | ![Mis vehículos](docs/capturas/18_cliente_vehiculos.jpg) |
 
 **En el celular**
 
