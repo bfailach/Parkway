@@ -28,7 +28,8 @@ SELECT
         ELSE 'BIC' || lpad(((g * 53) % 10000)::text, 4, '0')
     END AS placa,
     t.id_tipo,
-    (ARRAY['Mazda', 'Renault', 'Chevrolet', 'Kia', 'Toyota', 'Nissan', 'Suzuki', 'Hyundai'])[1 + g % 8] AS marca,
+    CASE WHEN t.nombre = 'BICICLETA' THEN NULL
+         ELSE (ARRAY['Mazda', 'Renault', 'Chevrolet', 'Kia', 'Toyota', 'Nissan', 'Suzuki', 'Hyundai'])[1 + g % 8] END AS marca,
     (ARRAY['Blanco', 'Gris', 'Negro', 'Rojo', 'Azul', 'Plata'])[1 + g % 6] AS color,
     g
 FROM generate_series(1, 120) AS g
@@ -99,6 +100,58 @@ SELECT s.placa, s.id_espacio, s.id_tarifa,
        LEAST((s.minutos / 60) * s.valor_hora + ceil((s.minutos % 60) / 15.0) * s.valor_fraccion, s.valor_dia),
        'CERRADO'
   FROM salidas s;
+
+-- Reservas de ejemplo: dos activas (clientes de seed.sql) y dos terminadas hoy
+WITH libre_auto AS (
+    SELECT id_espacio FROM espacio e JOIN parqueadero p USING (id_parqueadero)
+     WHERE p.nombre = 'Sede Chapinero' AND e.estado = 'LIBRE'
+       AND e.id_tipo = (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'AUTOMOVIL')
+     ORDER BY e.codigo LIMIT 1
+),
+libre_moto AS (
+    SELECT id_espacio FROM espacio e JOIN parqueadero p USING (id_parqueadero)
+     WHERE p.nombre = 'Sede Chapinero' AND e.estado = 'LIBRE'
+       AND e.id_tipo = (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'MOTOCICLETA')
+     ORDER BY e.codigo LIMIT 1
+),
+nuevas AS (
+    INSERT INTO reserva (id_cliente, id_espacio, placa, fecha_inicio, fecha_fin, estado)
+    SELECT u.id_usuario, x.id_espacio, x.placa, now() - interval '12 minutes', now() + interval '18 minutes', 'ACTIVA'
+      FROM (SELECT id_espacio, 'ABC123' AS placa, 'cliente1@parkway.test' AS correo FROM libre_auto
+            UNION ALL
+            SELECT id_espacio, 'XYZ78D', 'cliente2@parkway.test' FROM libre_moto) x
+      JOIN usuario u ON u.correo = x.correo
+    RETURNING id_espacio
+)
+UPDATE espacio SET estado = 'RESERVADO', version = version + 1
+ WHERE id_espacio IN (SELECT id_espacio FROM nuevas);
+
+INSERT INTO reserva (id_cliente, id_espacio, placa, fecha_inicio, fecha_fin, estado)
+SELECT u.id_usuario, e.id_espacio, 'ABC123', now() - interval '3 hours', now() - interval '150 minutes', 'EXPIRADA'
+  FROM usuario u, espacio e JOIN parqueadero p USING (id_parqueadero)
+ WHERE u.correo = 'cliente1@parkway.test' AND p.nombre = 'Sede Chapinero' AND e.codigo = 'A-02'
+   AND now() - interval '3 hours' >= CURRENT_DATE
+UNION ALL
+SELECT u.id_usuario, e.id_espacio, 'XYZ78D', now() - interval '2 hours', now() - interval '90 minutes', 'CANCELADA'
+  FROM usuario u, espacio e JOIN parqueadero p USING (id_parqueadero)
+ WHERE u.correo = 'cliente2@parkway.test' AND p.nombre = 'Sede Chapinero' AND e.codigo = 'M-02'
+   AND now() - interval '2 hours' >= CURRENT_DATE;
+
+
+-- Bitácora de los movimientos de demostración
+INSERT INTO transaccion (id_usuario, tipo_operacion, entidad, id_entidad, estado, fecha_inicio, fecha_fin, detalle)
+SELECT r.id_operador_ingreso, 'INGRESO', 'registro_estacionamiento', r.id_registro::text, 'CONFIRMADA',
+       r.fecha_ingreso, r.fecha_ingreso, jsonb_build_object('placa', r.placa, 'espacio', e.codigo)
+  FROM registro_estacionamiento r JOIN espacio e USING (id_espacio)
+UNION ALL
+SELECT r.id_operador_salida, 'SALIDA', 'registro_estacionamiento', r.id_registro::text, 'CONFIRMADA',
+       r.fecha_salida, r.fecha_salida, jsonb_build_object('placa', r.placa, 'minutos', r.minutos, 'valor', r.valor_calculado)
+  FROM registro_estacionamiento r WHERE r.estado = 'CERRADO'
+UNION ALL
+SELECT r.id_cliente, 'RESERVA', 'reserva', r.id_reserva::text, 'CONFIRMADA',
+       r.fecha_inicio, r.fecha_inicio, jsonb_build_object('placa', r.placa, 'espacio', e.codigo)
+  FROM reserva r JOIN espacio e USING (id_espacio)
+ORDER BY 6;
 
 DROP TABLE demo_vehiculo;
 

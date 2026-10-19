@@ -47,6 +47,12 @@ export async function planoPublico(idParqueadero: number) {
   return espacioRepository.listarPlano(idParqueadero);
 }
 
+export async function reservasDeLaSede(idParqueadero: number) {
+  await validarSede(idParqueadero);
+  await reservaRepository.expirarVencidas();
+  return reservaRepository.deLaSede(idParqueadero);
+}
+
 export async function mapaEspacios(idParqueadero: number) {
   await validarSede(idParqueadero);
   return espacioRepository.listarConOcupacion(idParqueadero);
@@ -110,6 +116,12 @@ export async function registrarIngreso(datos: DatosIngreso, idOperador: number) 
       let espacio;
       let idReserva: number | undefined;
       const reserva = await reservaRepository.activaPorPlaca(client, datos.placa);
+      if (reserva && reserva.id_parqueadero !== datos.idParqueadero) {
+        // El vehículo llegó a otra sede: la reserva ya no se usará.
+        await reservaRepository.cambiarEstado(client, reserva.id_reserva, "CANCELADA");
+        const apartado = await espacioRepository.bloquearParaAsignacion(client, reserva.id_espacio);
+        if (apartado?.estado === "RESERVADO") await espacioRepository.actualizarEstado(client, reserva.id_espacio, "LIBRE");
+      }
       if (reserva && reserva.id_parqueadero === datos.idParqueadero) {
         espacio = await espacioRepository.bloquearParaAsignacion(client, reserva.id_espacio);
         if (!espacio || espacio.estado !== "RESERVADO") throw conflict("El espacio de la reserva no está disponible");

@@ -1,4 +1,4 @@
-import { FORMATO_PLACA, normalizarPlaca } from "./ingresoValidator";
+import { FORMATO_PLACA, normalizarPlaca, TIPOS_VEHICULO } from "./ingresoValidator";
 
 /**
  * Validaciones de los datos que envía el cliente: creación de cuenta
@@ -60,7 +60,8 @@ export function validarVehiculo(body: Record<string, unknown>): Resultado<DatosV
   if (!placa) errores.placa = "La placa es obligatoria";
   else if (formato && !formato.regex.test(placa)) errores.placa = `Formato inválido. Ejemplo: ${formato.ejemplo}`;
 
-  const marca = texto(body.marca);
+  // Las bicicletas no llevan marca.
+  const marca = idTipo === TIPOS_VEHICULO.BICICLETA ? "" : texto(body.marca);
   const color = texto(body.color);
   if (marca.length > 40) errores.marca = "Máximo 40 caracteres";
   if (color.length > 20) errores.color = "Máximo 20 caracteres";

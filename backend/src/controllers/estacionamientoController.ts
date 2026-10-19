@@ -57,3 +57,7 @@ export const postSalida = asyncHandler<AuthenticatedRequest>(async (req, res) =>
   const registro = await estacionamientoService.registrarSalida(Number(req.params.idRegistro), req.usuario!.id_usuario);
   res.json(registro);
 });
+
+export const getReservas = asyncHandler(async (req, res) => {
+  res.json(await estacionamientoService.reservasDeLaSede(sede(req)));
+});

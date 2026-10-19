@@ -32,11 +32,14 @@ export async function listarDisponibles(idParqueadero: number, idTipo: number): 
 export async function listarConOcupacion(idParqueadero: number) {
   const { rows } = await pool.query(
     `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo,
-            r.id_registro, r.placa, r.fecha_ingreso
+            r.id_registro, COALESCE(r.placa, rs.placa) AS placa, r.fecha_ingreso,
+            rs.id_reserva, rs.fecha_fin AS reserva_vence
        FROM espacio e
        JOIN tipo_vehiculo t ON t.id_tipo = e.id_tipo
        LEFT JOIN registro_estacionamiento r
               ON r.id_espacio = e.id_espacio AND r.estado = 'ABIERTO'
+       LEFT JOIN reserva rs
+              ON rs.id_espacio = e.id_espacio AND rs.estado = 'ACTIVA'
       WHERE e.id_parqueadero = $1
       ORDER BY e.id_tipo, e.codigo`,
     [idParqueadero]

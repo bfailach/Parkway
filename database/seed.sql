@@ -43,7 +43,7 @@ INSERT INTO parqueadero (nombre, direccion, capacidad_total) VALUES
 INSERT INTO vehiculo (placa, id_tipo, id_cliente, marca, color) VALUES
     ('ABC123', (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'AUTOMOVIL'),
         (SELECT id_usuario FROM usuario WHERE correo = 'cliente1@parkway.test'), 'Mazda',  'Gris'),
-    ('XYZ789', (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'MOTOCICLETA'),
+    ('XYZ78D', (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'MOTOCICLETA'),
         (SELECT id_usuario FROM usuario WHERE correo = 'cliente2@parkway.test'), 'Yamaha', 'Negro'),
     ('JKL456', (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'AUTOMOVIL'),
         NULL, 'Renault', 'Blanco'); -- vehículo de visitante, sin cliente registrado

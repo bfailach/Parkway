@@ -32,3 +32,9 @@ test("limita la longitud de marca y color", () => {
   assert.equal(r.valido, false);
   assert.ok(r.errores.color);
 });
+
+test("el ingreso de una bicicleta ignora la marca", () => {
+  const r = validarIngreso({ placa: "BIC0042", idTipo: 3, idParqueadero: 2, marca: "GW" });
+  assert.equal(r.valido, true);
+  assert.equal(r.datos?.marca, undefined);
+});

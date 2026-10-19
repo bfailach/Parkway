@@ -87,7 +87,8 @@ export function validarIngreso(body: Record<string, unknown>): ResultadoValidaci
       idTipo: idTipo as number,
       idParqueadero: idParqueadero as number,
       idEspacio,
-      marca: marca ?? undefined,
+      // Las bicicletas no llevan marca.
+      marca: idTipo === TIPOS_VEHICULO.BICICLETA ? undefined : marca ?? undefined,
       color: color ?? undefined,
     },
   };

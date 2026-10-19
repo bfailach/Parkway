@@ -93,3 +93,25 @@ export async function delCliente(idCliente: number, limite = 30) {
   );
   return rows;
 }
+
+/**
+ * Reservas de una sede para el personal: las activas y las del día que ya
+ * terminaron (cumplidas, canceladas o expiradas), con el contacto del cliente.
+ */
+export async function deLaSede(idParqueadero: number) {
+  const { rows } = await pool.query(
+    `SELECT r.id_reserva, r.placa, r.fecha_inicio, r.fecha_fin, r.estado,
+            e.id_espacio, e.codigo AS codigo_espacio, tv.id_tipo, tv.nombre AS tipo,
+            u.nombre AS cliente, u.telefono, v.marca, v.color
+       FROM reserva r
+       JOIN espacio e        ON e.id_espacio = r.id_espacio
+       JOIN vehiculo v       ON v.placa = r.placa
+       JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo
+       JOIN usuario u        ON u.id_usuario = r.id_cliente
+      WHERE e.id_parqueadero = $1
+        AND (r.estado = 'ACTIVA' OR r.fecha_inicio >= CURRENT_DATE)
+      ORDER BY (r.estado = 'ACTIVA') DESC, r.fecha_fin ASC, r.fecha_inicio DESC`,
+    [idParqueadero]
+  );
+  return rows;
+}

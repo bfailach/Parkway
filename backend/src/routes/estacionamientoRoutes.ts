@@ -19,6 +19,7 @@ router.get("/espacios", ...personal, c.getEspacios);
 router.get("/totales-dia", ...personal, c.getTotalesDia);
 router.get("/activos", ...personal, c.getActivos);
 router.get("/historial", ...personal, c.getHistorial);
+router.get("/reservas", ...personal, c.getReservas); // RF10: reservas de la sede
 router.post("/ingreso", ...personal, c.postIngreso); // RF06
 router.post("/salida/:idRegistro", ...personal, c.postSalida); // RF07
 

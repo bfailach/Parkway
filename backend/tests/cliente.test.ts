@@ -38,3 +38,12 @@ test("valida la placa del vehículo según el tipo", () => {
   assert.equal(r.valido, false);
   if (!r.valido) assert.match(r.errores.placa, /ABC12D/);
 });
+
+test("las bicicletas no guardan marca", () => {
+  const r = validarVehiculo({ placa: "BIC0042", idTipo: 3, marca: "GW", color: "Negro" });
+  assert.equal(r.valido, true);
+  if (r.valido) {
+    assert.equal(r.datos.marca, undefined);
+    assert.equal(r.datos.color, "Negro");
+  }
+});
