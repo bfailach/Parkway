@@ -62,6 +62,7 @@ export function MapaEspacios({ espacios, onSeleccionar }: Props) {
       <ul className="leyenda" aria-label="Convenciones">
         <li><span className="muestra plaza-libre" /> Libre</li>
         <li><span className="muestra plaza-ocupado" /> Ocupado</li>
+        <li><span className="muestra plaza-reservado" /> Reservado</li>
         <li><span className="muestra plaza-fuera_de_servicio" /> Fuera de servicio</li>
       </ul>
     </div>

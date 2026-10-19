@@ -176,7 +176,7 @@ function ReservaActiva({ reserva, ahora, minutos, onCambio }: { reserva: Reserva
         ) : (
           <div className="visor-cargando">Tu espacio es el {reserva.codigo_espacio}</div>
         )}
-        <p className="visor-ayuda">Tu espacio es el que parpadea en amarillo. Arrastra para girar el plano.</p>
+        <p className="visor-ayuda">Tu espacio es el que parpadea en azul. Arrastra para girar el plano.</p>
       </div>
     </section>
   );

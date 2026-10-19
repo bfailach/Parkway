@@ -7,18 +7,32 @@ import { Disponibilidad } from "./pages/Disponibilidad";
 import { Ingreso } from "./pages/Ingreso";
 import { Activos } from "./pages/Activos";
 import { Historial } from "./pages/Historial";
+import { Reservas } from "./pages/Reservas";
+import { Bitacora } from "./pages/Bitacora";
 import { MiParqueo } from "./pages/cliente/MiParqueo";
 import { MisVehiculos } from "./pages/cliente/MisVehiculos";
 import { MiHistorial } from "./pages/cliente/MiHistorial";
 
-type Vista = "disponibilidad" | "ingreso" | "activos" | "historial" | "mi-parqueo" | "mis-vehiculos" | "mi-historial";
+type Vista =
+  | "disponibilidad"
+  | "ingreso"
+  | "activos"
+  | "reservas"
+  | "historial"
+  | "bitacora"
+  | "mi-parqueo"
+  | "mis-vehiculos"
+  | "mi-historial";
 
 const VISTAS_PERSONAL: { id: Vista; nombre: string }[] = [
   { id: "disponibilidad", nombre: "Disponibilidad" },
   { id: "ingreso", nombre: "Registrar ingreso" },
   { id: "activos", nombre: "En el parqueadero" },
+  { id: "reservas", nombre: "Reservas" },
   { id: "historial", nombre: "Historial" },
 ];
+
+const VISTAS_ADMIN: { id: Vista; nombre: string }[] = [...VISTAS_PERSONAL, { id: "bitacora", nombre: "Bitácora" }];
 
 const VISTAS_CLIENTE: { id: Vista; nombre: string }[] = [
   { id: "mi-parqueo", nombre: "Mi parqueo" },
@@ -37,6 +51,7 @@ export default function App() {
   const [tipos, setTipos] = useState<TipoVehiculo[]>([]);
   const [idSede, setIdSede] = useState<number | null>(null);
   const [vista, setVista] = useState<Vista>("disponibilidad");
+  const [precarga, setPrecarga] = useState<{ placa: string; idTipo: number } | null>(null);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,7 +104,7 @@ export default function App() {
 
   const esPersonal = usuario.rol !== "CLIENTE";
   const sede = sedes.find((s) => s.id_parqueadero === idSede);
-  const vistas = esPersonal ? VISTAS_PERSONAL : VISTAS_CLIENTE;
+  const vistas = usuario.rol === "ADMINISTRADOR" ? VISTAS_ADMIN : esPersonal ? VISTAS_PERSONAL : VISTAS_CLIENTE;
   const vistaActual = vistas.some((v) => v.id === vista) ? vista : vistas[0].id;
 
   function salir() {
@@ -121,7 +136,7 @@ export default function App() {
       {vistas.length > 1 && (
         <nav className="navegacion" aria-label="Secciones">
           {vistas.map((v) => (
-            <button key={v.id} className="nav-item" aria-current={vistaActual === v.id ? "page" : undefined} onClick={() => setVista(v.id)}>
+            <button key={v.id} className="nav-item" aria-current={vistaActual === v.id ? "page" : undefined} onClick={() => { setPrecarga(null); setVista(v.id); }}>
               {v.nombre}
             </button>
           ))}
@@ -131,7 +146,19 @@ export default function App() {
       <main className="contenido">
         {errorCarga && <p className="alerta alerta-error" role="alert">{errorCarga}</p>}
         {sede && vistaActual === "disponibilidad" && <Disponibilidad key={`d${esPersonal}`} sede={sede} esPersonal={esPersonal} />}
-        {sede && esPersonal && vistaActual === "ingreso" && <Ingreso sede={sede} tipos={tipos} />}
+        {sede && esPersonal && vistaActual === "ingreso" && (
+          <Ingreso key={precarga?.placa ?? "nuevo"} sede={sede} tipos={tipos} inicial={precarga} />
+        )}
+        {sede && esPersonal && vistaActual === "reservas" && (
+          <Reservas
+            sede={sede}
+            onRegistrarIngreso={(r) => {
+              setPrecarga({ placa: r.placa, idTipo: r.id_tipo });
+              setVista("ingreso");
+            }}
+          />
+        )}
+        {usuario.rol === "ADMINISTRADOR" && vistaActual === "bitacora" && <Bitacora />}
         {sede && esPersonal && vistaActual === "activos" && <Activos sede={sede} />}
         {sede && esPersonal && vistaActual === "historial" && <Historial sede={sede} />}
         {sede && !esPersonal && vistaActual === "mi-parqueo" && (

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { horaCorta } from "../lib/formato";
 import { api, ApiError, Parqueadero, Registro, TipoVehiculo } from "../lib/api";
 import { useConsulta } from "../lib/useConsulta";
 import { FORMATO_PLACA, nombreTipo, normalizarPlaca } from "../lib/formato";
@@ -9,9 +10,20 @@ import { Tiquete } from "../components/Tiquete";
  * Valida la placa según el tipo de vehículo antes de enviarla. El backend
  * asigna el primer espacio libre del tipo, o el que elija el operador.
  */
-export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehiculo[] }) {
-  const [idTipo, setIdTipo] = useState(1);
-  const [placa, setPlaca] = useState("");
+export const ID_BICICLETA = 3;
+
+export function Ingreso({
+  sede,
+  tipos,
+  inicial,
+}: {
+  sede: Parqueadero;
+  tipos: TipoVehiculo[];
+  /** Placa y tipo precargados, por ejemplo desde la lista de reservas. */
+  inicial?: { placa: string; idTipo: number } | null;
+}) {
+  const [idTipo, setIdTipo] = useState(inicial?.idTipo ?? 1);
+  const [placa, setPlaca] = useState(inicial?.placa ?? "");
   const [marca, setMarca] = useState("");
   const [color, setColor] = useState("");
   const [idEspacio, setIdEspacio] = useState("");
@@ -23,6 +35,9 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
 
   const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 5000);
   const libres = useConsulta(() => api.espacios(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 10000);
+  const reservas = useConsulta(() => api.reservasSede(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 15000);
+  const reserva = (reservas.datos ?? []).find((r) => r.estado === "ACTIVA" && r.placa === normalizarPlaca(placa));
+  const esBicicleta = idTipo === ID_BICICLETA;
 
   const tiposSede = tipos.filter((t) => resumen.datos?.porTipo.some((p) => p.id_tipo === t.id_tipo) ?? true);
   const cuposTipo = resumen.datos?.porTipo.find((p) => p.id_tipo === idTipo);
@@ -36,6 +51,11 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
   useEffect(() => {
     setIdEspacio("");
   }, [idTipo, sede.id_parqueadero]);
+
+  // Si la placa tiene reserva, el tipo de vehículo se toma de la reserva.
+  useEffect(() => {
+    if (reserva && reserva.id_tipo !== idTipo) setIdTipo(reserva.id_tipo);
+  }, [reserva, idTipo]);
 
   function validar() {
     const err: Record<string, string> = {};
@@ -63,7 +83,7 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
         idTipo,
         idParqueadero: sede.id_parqueadero,
         idEspacio: idEspacio ? Number(idEspacio) : undefined,
-        marca: marca.trim() || undefined,
+        marca: esBicicleta ? undefined : marca.trim() || undefined,
         color: color.trim() || undefined,
       });
       setUltimo(r);
@@ -130,16 +150,25 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
             <span className="placa-ciudad" aria-hidden="true">BOGOTÁ D.C.</span>
           </span>
           <span className={errores.placa ? "campo-error" : "campo-ayuda"} id="ayuda-placa">
-            {errores.placa ?? `Formato: ${formato.ejemplo}`}
+            {errores.placa ?? (esBicicleta ? "Código del sticker o del marco, de 3 a 10 caracteres" : `Formato: ${formato.ejemplo}`)}
           </span>
         </label>
 
-        <div className="fila-campos">
-          <label className="campo">
-            <span className="campo-rotulo">Marca <span className="opcional">(opcional)</span></span>
-            <input value={marca} onChange={(e) => setMarca(e.target.value)} maxLength={40} aria-invalid={!!errores.marca} />
-            {errores.marca && <span className="campo-error">{errores.marca}</span>}
-          </label>
+        {reserva && (
+          <p className="alerta alerta-reserva" role="status">
+            {reserva.cliente} reservó el espacio <strong>{reserva.codigo_espacio}</strong> para esta placa (vence a las{" "}
+            {horaCorta(reserva.fecha_fin)}). Al registrar, el vehículo entra a ese espacio.
+          </p>
+        )}
+
+        <div className={esBicicleta ? "" : "fila-campos"}>
+          {!esBicicleta && (
+            <label className="campo">
+              <span className="campo-rotulo">Marca <span className="opcional">(opcional)</span></span>
+              <input value={marca} onChange={(e) => setMarca(e.target.value)} maxLength={40} aria-invalid={!!errores.marca} />
+              {errores.marca && <span className="campo-error">{errores.marca}</span>}
+            </label>
+          )}
           <label className="campo">
             <span className="campo-rotulo">Color <span className="opcional">(opcional)</span></span>
             <input value={color} onChange={(e) => setColor(e.target.value)} maxLength={20} aria-invalid={!!errores.color} />
@@ -149,8 +178,8 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
 
         <label className="campo">
           <span className="campo-rotulo">Espacio</span>
-          <select value={idEspacio} onChange={(e) => setIdEspacio(e.target.value)} aria-invalid={!!errores.idEspacio}>
-            <option value="">Asignar el primero libre</option>
+          <select value={reserva ? "" : idEspacio} onChange={(e) => setIdEspacio(e.target.value)} aria-invalid={!!errores.idEspacio} disabled={!!reserva}>
+            <option value="">{reserva ? `${reserva.codigo_espacio} (reservado)` : "Asignar el primero libre"}</option>
             {espaciosLibres.map((e) => (
               <option key={e.id_espacio} value={e.id_espacio}>{e.codigo}</option>
             ))}

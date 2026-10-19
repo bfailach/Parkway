@@ -54,6 +54,8 @@ export interface EspacioMapa {
   id_registro: number | null;
   placa: string | null;
   fecha_ingreso: string | null;
+  id_reserva?: number | null;
+  reserva_vence?: string | null;
 }
 
 export interface Registro {
@@ -108,6 +110,35 @@ export interface EstadoCliente {
   minutosReserva: number;
   dentro: (Registro & { sede: string })[];
   reservas: Reserva[];
+}
+
+export interface ReservaSede {
+  id_reserva: number;
+  placa: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  estado: Reserva["estado"];
+  id_espacio: number;
+  codigo_espacio: string;
+  id_tipo: number;
+  tipo: string;
+  cliente: string;
+  telefono: string | null;
+  marca: string | null;
+  color: string | null;
+}
+
+export interface FilaBitacora {
+  id_transaccion: number;
+  tipo_operacion: string;
+  entidad: string;
+  id_entidad: string | null;
+  estado: "INICIADA" | "CONFIRMADA" | "REVERTIDA";
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  detalle: Record<string, unknown> | null;
+  usuario: string;
+  rol: Rol;
 }
 
 export interface DatosCuenta {
@@ -216,6 +247,9 @@ export const api = {
     request<Registro[]>("GET", `/estacionamiento/activos?${qs({ idParqueadero, placa })}`),
   historial: (f: { idParqueadero: number; placa?: string; desde?: string; hasta?: string }) =>
     request<Registro[]>("GET", `/estacionamiento/historial?${qs(f)}`),
+  reservasSede: (idParqueadero: number) => request<ReservaSede[]>("GET", `/estacionamiento/reservas?${qs({ idParqueadero })}`),
+  bitacora: (f: { tipo?: string; estado?: string; desde?: string; hasta?: string }) =>
+    request<{ filas: FilaBitacora[]; tipos: string[] }>("GET", `/admin/bitacora?${qs(f)}`),
   ingreso: (datos: { placa: string; idTipo: number; idParqueadero: number; idEspacio?: number; marca?: string; color?: string }) =>
     request<Registro>("POST", "/estacionamiento/ingreso", datos),
   salida: (idRegistro: number) => request<Registro>("POST", `/estacionamiento/salida/${idRegistro}`),

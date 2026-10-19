@@ -53,7 +53,8 @@ function FilaVehiculo({ v, onCambio }: { v: VehiculoCliente; onCambio: () => voi
       <Placa placa={v.placa} tamano="md" />
       <div className="vehiculo-info">
         <strong>{nombreTipo(v.tipo)}</strong>
-        <span className="tenue">{[v.marca, v.color?.toLowerCase()].filter(Boolean).join(", ") || "Sin marca ni color"}</span>
+        <span className="tenue">{[v.tipo === "BICICLETA" ? null : v.marca, v.color?.toLowerCase()].filter(Boolean).join(", ") ||
+            (v.tipo === "BICICLETA" ? "Sin color registrado" : "Sin marca ni color")}</span>
         <span className={`chip ${v.dentro ? "chip-dentro" : v.con_reserva ? "chip-reserva" : "chip-libre"}`}>
           {v.dentro ? "Dentro del parqueadero" : v.con_reserva ? "Con reserva activa" : "Disponible"}
         </span>
@@ -89,6 +90,7 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
   const formato = FORMATO_PLACA[idTipo];
+  const esBicicleta = idTipo === 3; // las bicicletas no llevan marca
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
@@ -101,7 +103,12 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
     if (Object.keys(err).length) return;
     setEnviando(true);
     try {
-      await api.cliente.agregarVehiculo({ placa: p, idTipo, marca: marca.trim() || undefined, color: color.trim() || undefined });
+      await api.cliente.agregarVehiculo({
+        placa: p,
+        idTipo,
+        marca: esBicicleta ? undefined : marca.trim() || undefined,
+        color: color.trim() || undefined,
+      });
       setMensaje({ tipo: "ok", texto: `Agregamos ${p} a tu cuenta.` });
       setPlaca("");
       setMarca("");
@@ -149,15 +156,17 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
           <span className="placa-ciudad" aria-hidden="true">BOGOTÁ D.C.</span>
         </span>
         <span className={errores.placa ? "campo-error" : "campo-ayuda"} id="ayuda-placa-cliente">
-          {errores.placa ?? `Formato: ${formato.ejemplo}`}
+          {errores.placa ?? (esBicicleta ? "Código del sticker o del marco, de 3 a 10 caracteres" : `Formato: ${formato.ejemplo}`)}
         </span>
       </label>
 
-      <div className="fila-campos">
-        <label className="campo">
-          <span className="campo-rotulo">Marca <span className="opcional">(opcional)</span></span>
-          <input value={marca} onChange={(e) => setMarca(e.target.value)} maxLength={40} />
-        </label>
+      <div className={esBicicleta ? "" : "fila-campos"}>
+        {!esBicicleta && (
+          <label className="campo">
+            <span className="campo-rotulo">Marca <span className="opcional">(opcional)</span></span>
+            <input value={marca} onChange={(e) => setMarca(e.target.value)} maxLength={40} />
+          </label>
+        )}
         <label className="campo">
           <span className="campo-rotulo">Color <span className="opcional">(opcional)</span></span>
           <input value={color} onChange={(e) => setColor(e.target.value)} maxLength={20} />

@@ -61,7 +61,11 @@ export function Activos({ sede }: { sede: Parqueadero }) {
               {lista.map((r) => (
                 <tr key={r.id_registro}>
                   <td><Placa placa={r.placa} /></td>
-                  <td>{nombreTipo(r.tipo)}{r.marca ? <span className="tenue"> {r.marca}</span> : null}</td>
+                  <td>
+                    {nombreTipo(r.tipo)}
+                    {r.marca ? <span className="tenue"> {r.marca}</span> : null}
+                    {r.id_reserva ? <span className="chip chip-reserva chip-sm">Con reserva</span> : null}
+                  </td>
                   <td className="codigo">{r.codigo_espacio}</td>
                   <td>{horaCorta(r.fecha_ingreso)}</td>
                   <td>{duracion(r.minutos_transcurridos)}</td>

@@ -15,7 +15,7 @@ import { Vehiculo } from "./Vehiculo";
 const COLOR_ESTADO: Record<string, string> = {
   LIBRE: "#3ddc97",
   OCUPADO: "#ff4d5e",
-  RESERVADO: "#ffb020",
+  RESERVADO: "#4b90f5",
   FUERA_DE_SERVICIO: "#5c636b",
 };
 
@@ -159,7 +159,9 @@ function UnaPlaza({
           <div className="etiqueta-3d">
             <strong>{plaza.codigo}</strong>
             <span>
-              {plaza.placa ?? (plaza.estado === "LIBRE" ? "Libre" : plaza.estado === "FUERA_DE_SERVICIO" ? "Fuera de servicio" : "Ocupado")}
+              {plaza.estado === "RESERVADO"
+                ? `Reservado${plaza.placa ? ` para ${plaza.placa}` : ""}`
+                : plaza.placa ?? (plaza.estado === "LIBRE" ? "Libre" : plaza.estado === "FUERA_DE_SERVICIO" ? "Fuera de servicio" : "Ocupado")}
             </span>
           </div>
         </Html>

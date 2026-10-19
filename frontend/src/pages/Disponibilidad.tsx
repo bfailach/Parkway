@@ -40,7 +40,13 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
     setAviso(null);
     if (!esPersonal) return;
     if (p.estado !== "OCUPADO" || !p.id_registro) {
-      setAviso(`${p.codigo}: ${p.estado === "LIBRE" ? "libre" : "sin vehículo"}`);
+      const texto =
+        p.estado === "LIBRE"
+          ? "libre"
+          : p.estado === "RESERVADO"
+            ? `reservado${p.placa ? ` para ${p.placa}` : ""}. Al llegar, registre el ingreso con esa placa.`
+            : "fuera de servicio";
+      setAviso(`${p.codigo}: ${texto}`);
       return;
     }
     try {
@@ -85,6 +91,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
                 <Odometro valor={t.libres} className="cupo-libres" />
                 <span className="cupo-detalle">
                   {t.libres === 0 ? "Sin cupos" : t.libres === 1 ? "cupo libre" : "cupos libres"} de {util}
+                  {t.reservados > 0 && <span className="cupo-reservados">{t.reservados} {t.reservados === 1 ? "reservado" : "reservados"}</span>}
                 </span>
                 <span className="cupo-barra" role="img" aria-label={`${pct} % ocupado`}>
                   <span style={{ transform: `scaleX(${pct / 100})` }} />
