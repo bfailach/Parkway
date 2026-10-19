@@ -13,6 +13,10 @@ export const pool = new Pool({
   database: process.env.DB_NAME || "parkway",
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "postgres",
+  max: Number(process.env.DB_POOL_MAX) || 10,
+  // Si no hay conexiones libres en 5 s, la petición falla en lugar de
+  // quedar esperando indefinidamente.
+  connectionTimeoutMillis: 5000,
 });
 
 pool.on("error", (err) => {
