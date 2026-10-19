@@ -13,13 +13,13 @@ export async function buscarAbiertoPorPlaca(client: PoolClient, placa: string) {
 
 export async function crearIngreso(
   client: PoolClient,
-  r: { placa: string; idEspacio: number; idTarifa: number; idOperador: number }
+  r: { placa: string; idEspacio: number; idTarifa: number; idOperador: number; idReserva?: number }
 ) {
   const { rows } = await client.query(
-    `INSERT INTO registro_estacionamiento (placa, id_espacio, id_tarifa, id_operador_ingreso)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO registro_estacionamiento (placa, id_espacio, id_tarifa, id_operador_ingreso, id_reserva)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [r.placa, r.idEspacio, r.idTarifa, r.idOperador]
+    [r.placa, r.idEspacio, r.idTarifa, r.idOperador, r.idReserva ?? null]
   );
   return rows[0];
 }
@@ -61,9 +61,11 @@ const SELECT_DETALLE = `
          tv.id_tipo, tv.nombre AS tipo, v.marca, v.color,
          oi.nombre AS operador_ingreso, os.nombre AS operador_salida,
          t.valor_hora::float AS valor_hora, t.valor_fraccion::float AS valor_fraccion,
-         t.valor_dia::float AS valor_dia
+         t.valor_dia::float AS valor_dia,
+         r.id_reserva, p.nombre AS sede
     FROM registro_estacionamiento r
     JOIN espacio e        ON e.id_espacio = r.id_espacio
+    JOIN parqueadero p    ON p.id_parqueadero = e.id_parqueadero
     JOIN vehiculo v       ON v.placa = r.placa
     JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo
     JOIN usuario oi       ON oi.id_usuario = r.id_operador_ingreso
@@ -119,4 +121,16 @@ export async function totalesDelDia(idParqueadero: number) {
     [idParqueadero]
   );
   return rows[0];
+}
+
+/** Registros de los vehículos de un cliente (abiertos o cerrados). */
+export async function delCliente(idCliente: number, estado: "ABIERTO" | "CERRADO", limite = 100) {
+  const { rows } = await pool.query(
+    `${SELECT_DETALLE}
+      WHERE r.estado = $2 AND v.id_cliente = $1
+      ORDER BY COALESCE(r.fecha_salida, r.fecha_ingreso) DESC
+      LIMIT $3`,
+    [idCliente, estado, limite]
+  );
+  return rows;
 }

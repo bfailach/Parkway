@@ -14,6 +14,7 @@ BEGIN;
 DELETE FROM comprobante;
 DELETE FROM pago;
 DELETE FROM registro_estacionamiento;
+DELETE FROM reserva;
 DELETE FROM transaccion;
 DELETE FROM vehiculo WHERE id_cliente IS NULL AND placa NOT IN ('JKL456');
 UPDATE espacio SET estado = 'LIBRE', version = version + 1 WHERE estado IN ('OCUPADO', 'RESERVADO');

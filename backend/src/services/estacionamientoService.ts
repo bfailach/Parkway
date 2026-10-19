@@ -2,6 +2,7 @@ import * as espacioRepository from "../repositories/espacioRepository";
 import * as vehiculoRepository from "../repositories/vehiculoRepository";
 import * as registroRepository from "../repositories/registroRepository";
 import * as catalogoRepository from "../repositories/catalogoRepository";
+import * as reservaRepository from "../repositories/reservaRepository";
 import { transactionManager } from "../transactions/transactionManager";
 import { DatosIngreso } from "../validators/ingresoValidator";
 import { calcularMinutos, calcularValor } from "./tarifaService";
@@ -81,6 +82,7 @@ export async function historial(f: { idParqueadero: number; placa?: string; desd
 // ---------------------------------------------------------------------
 export async function registrarIngreso(datos: DatosIngreso, idOperador: number) {
   await validarSede(datos.idParqueadero);
+  await reservaRepository.expirarVencidas();
 
   const registro = await transactionManager.ejecutar(
     idOperador,
@@ -103,9 +105,17 @@ export async function registrarIngreso(datos: DatosIngreso, idOperador: number) 
         throw conflict(`El vehículo ${datos.placa} ya se encuentra dentro del parqueadero`);
       }
 
-      // 3. Espacio: el elegido por el operador o el primer libre del tipo.
+      // 3. Espacio: el reservado por el cliente, el elegido por el operador
+      //    o el primer libre del tipo.
       let espacio;
-      if (datos.idEspacio) {
+      let idReserva: number | undefined;
+      const reserva = await reservaRepository.activaPorPlaca(client, datos.placa);
+      if (reserva && reserva.id_parqueadero === datos.idParqueadero) {
+        espacio = await espacioRepository.bloquearParaAsignacion(client, reserva.id_espacio);
+        if (!espacio || espacio.estado !== "RESERVADO") throw conflict("El espacio de la reserva no está disponible");
+        await reservaRepository.cambiarEstado(client, reserva.id_reserva, "CUMPLIDA");
+        idReserva = reserva.id_reserva;
+      } else if (datos.idEspacio) {
         espacio = await espacioRepository.bloquearParaAsignacion(client, datos.idEspacio);
         if (!espacio || espacio.id_parqueadero !== datos.idParqueadero) throw notFound("El espacio no existe en esta sede");
         if (espacio.id_tipo !== datos.idTipo) throw conflict(`El espacio ${espacio.codigo} no corresponde al tipo de vehículo`);
@@ -125,6 +135,7 @@ export async function registrarIngreso(datos: DatosIngreso, idOperador: number) 
         idEspacio: espacio.id_espacio,
         idTarifa: tarifa.id_tarifa,
         idOperador,
+        idReserva,
       });
       await espacioRepository.actualizarEstado(client, espacio.id_espacio, "OCUPADO");
 
@@ -132,7 +143,7 @@ export async function registrarIngreso(datos: DatosIngreso, idOperador: number) 
     },
     {
       idEntidad: (r) => r.id_registro,
-      detalle: (r) => ({ placa: r.placa, espacio: r.codigo_espacio }),
+      detalle: (r) => ({ placa: r.placa, espacio: r.codigo_espacio, reserva: r.id_reserva ?? null }),
     }
   );
 

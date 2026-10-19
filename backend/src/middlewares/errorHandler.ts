@@ -19,8 +19,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     const mensajes: Record<string, string> = {
       ux_registro_abierto_por_placa: "El vehículo ya tiene un ingreso abierto",
       ux_registro_abierto_por_espacio: "El espacio ya fue ocupado por otro vehículo",
+      usuario_correo_key: "Ya existe una cuenta con ese correo",
+      usuario_documento_key: "Ya existe una cuenta con ese documento",
     };
-    return res.status(409).json({ error: mensajes[pgError.constraint ?? ""] ?? "Registro duplicado" });
+    const campo = pgError.constraint === "usuario_correo_key" ? "correo" : pgError.constraint === "usuario_documento_key" ? "documento" : null;
+    const error = mensajes[pgError.constraint ?? ""] ?? "Registro duplicado";
+    return res.status(409).json({ error, detalles: campo ? { [campo]: error } : undefined });
   }
   if (pgError?.code === "23514") {
     return res.status(400).json({ error: "Los datos no cumplen las reglas de validación" });

@@ -12,7 +12,7 @@
  */
 export const TIPOS_VEHICULO = { AUTOMOVIL: 1, MOTOCICLETA: 2, BICICLETA: 3 } as const;
 
-const FORMATO_PLACA: Record<number, { regex: RegExp; ejemplo: string }> = {
+export const FORMATO_PLACA: Record<number, { regex: RegExp; ejemplo: string }> = {
   [TIPOS_VEHICULO.AUTOMOVIL]: { regex: /^[A-Z]{3}\d{3}$/, ejemplo: "ABC123" },
   [TIPOS_VEHICULO.MOTOCICLETA]: { regex: /^[A-Z]{3}\d{2}[A-Z]$/, ejemplo: "ABC12D" },
   [TIPOS_VEHICULO.BICICLETA]: { regex: /^[A-Z0-9]{3,10}$/, ejemplo: "BIC0042" },
