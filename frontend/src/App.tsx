@@ -12,6 +12,7 @@ import { Bitacora } from "./pages/Bitacora";
 import { MiParqueo } from "./pages/cliente/MiParqueo";
 import { MisVehiculos } from "./pages/cliente/MisVehiculos";
 import { MiHistorial } from "./pages/cliente/MiHistorial";
+import { Selector } from "./components/Selector";
 
 type Vista =
   | "disponibilidad"
@@ -120,12 +121,13 @@ export default function App() {
         <a href="#/" className="marca" aria-label="Parkway, ir a la portada">
           <span className="senal-p senal-p-sm" aria-hidden="true">P</span>Parkway
         </a>
-        <label className="selector-sede">
-          <span className="visualmente-oculto">Sede</span>
-          <select value={idSede ?? ""} onChange={(e) => setIdSede(Number(e.target.value))}>
-            {sedes.map((s) => <option key={s.id_parqueadero} value={s.id_parqueadero}>{s.nombre}</option>)}
-          </select>
-        </label>
+        <Selector
+          className="selector-sede"
+          etiqueta="Sede"
+          valor={String(idSede ?? "")}
+          opciones={sedes.map((s) => ({ valor: String(s.id_parqueadero), texto: s.nombre }))}
+          onChange={(v) => setIdSede(Number(v))}
+        />
         <div className="usuario">
           <span className="usuario-nombre">{usuario.nombre}</span>
           <span className="usuario-rol">{NOMBRE_ROL[usuario.rol]}</span>

@@ -380,10 +380,6 @@ a { color: inherit; }
   display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
   background: var(--negro); padding: 12px var(--margen);
 }
-.selector-sede select {
-  background: var(--superficie-2); color: var(--tinta); border: 0; border-radius: var(--radio);
-  padding: 8px 12px; font-weight: 700; cursor: pointer;
-}
 .usuario { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .usuario-nombre { font-weight: 600; }
 .usuario-rol { font-size: 14px; color: var(--tinta-2); }
@@ -621,6 +617,43 @@ button.plaza-boton { cursor: pointer; }
   background: var(--superficie-2); color: var(--tinta);
 }
 .campo-otro:focus { border-color: var(--acento); outline: none; }
+
+/* Lista de selección propia: siempre se abre hacia abajo */
+.selector { position: relative; width: 100%; }
+.selector-boton {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 12px 14px; text-align: left; cursor: pointer;
+  border: 1.5px solid var(--superficie-3); border-radius: var(--radio);
+  background: var(--superficie-2); color: var(--tinta);
+  transition: border-color 0.15s;
+}
+.selector-boton:hover:not(:disabled) { border-color: #39414d; }
+.selector-boton:focus-visible, .selector.abierto .selector-boton { border-color: var(--acento); outline: none; }
+.selector-boton[aria-invalid="true"] { border-color: var(--ocupado); }
+.selector-boton:disabled { cursor: not-allowed; opacity: 0.7; }
+.selector-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selector-flecha {
+  flex: none; width: 9px; height: 9px; margin-top: -4px;
+  border-right: 2px solid var(--tinta-2); border-bottom: 2px solid var(--tinta-2);
+  transform: rotate(45deg); transition: transform 0.15s;
+}
+.selector.abierto .selector-flecha { transform: rotate(-135deg); margin-top: 4px; }
+.selector-lista {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 40;
+  margin: 0; padding: 4px; list-style: none;
+  max-height: 280px; overflow-y: auto;
+  background: var(--superficie-2); border: 1.5px solid var(--superficie-3); border-radius: var(--radio);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55);
+  animation: desplegar 0.12s var(--curva);
+}
+.selector-opcion { padding: 9px 12px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+.selector-opcion.activa { background: var(--superficie-3); }
+.selector-opcion[aria-selected="true"] { color: var(--acento-texto); font-weight: 600; }
+@keyframes desplegar { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* Sede en la barra superior */
+.barra .selector-sede { width: auto; min-width: 190px; }
+.barra .selector-sede .selector-boton { padding: 8px 12px; border: 0; font-weight: 700; }
 
 /* Personal: reservas y bitácora */
 .alerta-reserva { background: var(--acento-suave); color: #cfe0ff; }

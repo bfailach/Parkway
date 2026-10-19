@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { api } from "../lib/api";
 import { useConsulta } from "../lib/useConsulta";
 import { fechaCorta } from "../lib/formato";
+import { Selector } from "../components/Selector";
 
 const hoy = () => {
   const d = new Date();
@@ -59,21 +60,31 @@ export function Bitacora() {
       </header>
 
       <form className="filtros" onSubmit={aplicar}>
-        <label className="campo">
+        <div className="campo">
           <span className="campo-rotulo">Operación</span>
-          <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
-            <option value="">Todas</option>
-            {(bitacora.datos?.tipos ?? []).map((t) => <option key={t} value={t}>{nombreOperacion(t)}</option>)}
-          </select>
-        </label>
-        <label className="campo">
+          <Selector
+            etiqueta="Operación"
+            valor={form.tipo}
+            opciones={[
+              { valor: "", texto: "Todas" },
+              ...(bitacora.datos?.tipos ?? []).map((t) => ({ valor: t, texto: nombreOperacion(t) })),
+            ]}
+            onChange={(v) => setForm({ ...form, tipo: v })}
+          />
+        </div>
+        <div className="campo">
           <span className="campo-rotulo">Resultado</span>
-          <select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>
-            <option value="">Todos</option>
-            <option value="CONFIRMADA">Confirmadas</option>
-            <option value="REVERTIDA">Revertidas</option>
-          </select>
-        </label>
+          <Selector
+            etiqueta="Resultado"
+            valor={form.estado}
+            opciones={[
+              { valor: "", texto: "Todos" },
+              { valor: "CONFIRMADA", texto: "Confirmadas" },
+              { valor: "REVERTIDA", texto: "Revertidas" },
+            ]}
+            onChange={(v) => setForm({ ...form, estado: v })}
+          />
+        </div>
         <label className="campo">
           <span className="campo-rotulo">Desde</span>
           <input type="date" value={form.desde} onChange={(e) => setForm({ ...form, desde: e.target.value })} />

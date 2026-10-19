@@ -5,6 +5,7 @@ import { useConsulta } from "../lib/useConsulta";
 import { FORMATO_PLACA, nombreTipo, normalizarPlaca } from "../lib/formato";
 import { Tiquete } from "../components/Tiquete";
 import { CampoOpciones, COLORES, MARCAS } from "../components/CampoOpciones";
+import { Selector } from "../components/Selector";
 
 /**
  * Registro de ingreso (RF06).
@@ -192,16 +193,21 @@ export function Ingreso({
           />
         </div>
 
-        <label className="campo">
+        <div className="campo">
           <span className="campo-rotulo">Espacio</span>
-          <select value={reserva ? "" : idEspacio} onChange={(e) => setIdEspacio(e.target.value)} aria-invalid={!!errores.idEspacio} disabled={!!reserva}>
-            <option value="">{reserva ? `${reserva.codigo_espacio} (reservado)` : "Asignar el primero libre"}</option>
-            {espaciosLibres.map((e) => (
-              <option key={e.id_espacio} value={e.id_espacio}>{e.codigo}</option>
-            ))}
-          </select>
+          <Selector
+            etiqueta="Espacio"
+            valor={reserva ? "" : idEspacio}
+            disabled={!!reserva}
+            invalido={!!errores.idEspacio}
+            opciones={[
+              { valor: "", texto: reserva ? `${reserva.codigo_espacio} (reservado)` : "Asignar el primero libre" },
+              ...espaciosLibres.map((e) => ({ valor: String(e.id_espacio), texto: e.codigo })),
+            ]}
+            onChange={setIdEspacio}
+          />
           {errores.idEspacio && <span className="campo-error">{errores.idEspacio}</span>}
-        </label>
+        </div>
 
         {cuposTipo?.libres === 0 && (
           <p className="campo-ayuda aviso-cupos">No quedan cupos libres de este tipo. Solo pueden entrar vehículos con reserva.</p>

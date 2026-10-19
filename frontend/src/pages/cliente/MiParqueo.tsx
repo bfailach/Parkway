@@ -5,6 +5,7 @@ import { calcularCobro } from "../../lib/tarifa";
 import { duracion, horaCorta, nombreTipo, pesos } from "../../lib/formato";
 import { Placa } from "../../components/Placa";
 import { crearControl, soportaWebGL } from "../../three/control";
+import { Selector } from "../../components/Selector";
 
 const Escena = lazy(() => import("../../three/Escena"));
 
@@ -232,12 +233,15 @@ function FormReserva({
         <p>Apartamos el primer espacio libre para tu vehículo. Tienes {minutos} minutos para llegar.</p>
       </div>
       <form className="form-reserva" onSubmit={enviar}>
-        <label className="campo">
+        <div className="campo">
           <span className="campo-rotulo">Sede</span>
-          <select value={idSede} onChange={(e) => setIdSede(Number(e.target.value))}>
-            {sedes.map((s) => <option key={s.id_parqueadero} value={s.id_parqueadero}>{s.nombre}</option>)}
-          </select>
-        </label>
+          <Selector
+            etiqueta="Sede"
+            valor={String(idSede)}
+            opciones={sedes.map((s) => ({ valor: String(s.id_parqueadero), texto: s.nombre }))}
+            onChange={(v) => setIdSede(Number(v))}
+          />
+        </div>
 
         <fieldset className="campo">
           <legend className="campo-rotulo">Vehículo</legend>

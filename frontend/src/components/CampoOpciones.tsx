@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Selector } from "./Selector";
 
 /**
  * Lista de selección con la opción "Otro" al final. Al elegir "Otro"
@@ -24,29 +25,29 @@ export function CampoOpciones({ rotulo, opciones, valor, onChange, maxLength, er
 
   return (
     <div className="campo">
-      <label className="campo-rotulo" htmlFor={`sel-${rotulo}`}>
+      <span className="campo-rotulo">
         {rotulo} <span className="opcional">(opcional)</span>
-      </label>
-      <select
+      </span>
+      <Selector
         id={`sel-${rotulo}`}
-        value={seleccion}
-        aria-invalid={!!error}
-        onChange={(e) => {
-          if (e.target.value === OTRO) {
+        etiqueta={rotulo}
+        valor={seleccion}
+        invalido={!!error}
+        opciones={[
+          { valor: "", texto: "Sin especificar" },
+          ...opciones.map((o) => ({ valor: o, texto: o })),
+          { valor: OTRO, texto: "Otro" },
+        ]}
+        onChange={(v) => {
+          if (v === OTRO) {
             setOtro(true);
             onChange("");
           } else {
             setOtro(false);
-            onChange(e.target.value);
+            onChange(v);
           }
         }}
-      >
-        <option value="">Sin especificar</option>
-        {opciones.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-        <option value={OTRO}>Otro</option>
-      </select>
+      />
       {otro && (
         <input
           className="campo-otro"
