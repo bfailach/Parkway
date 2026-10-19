@@ -9,7 +9,41 @@ Parkway centraliza ese control. La base de datos impide que un espacio se
 ocupe dos veces y los cambios se reflejan en las pantallas de consulta y en
 el panel del personal.
 
-![Registro de ingreso](docs/capturas/3_ingreso_ok.png)
+![Portada de Parkway](docs/capturas/01_portada.jpg)
+
+## Interfaz
+
+La interfaz usa modo oscuro y una escena 3D del parqueadero construida con
+Three.js. La escena no es decorativa: dibuja cada plaza de la sede con su
+estado real en la base de datos y se actualiza cada 5 segundos. Cuando un
+operador registra un ingreso, el carro aparece entrando a su plaza; cuando
+registra una salida, el carro sale por el carril.
+
+**Portada pública**
+
+- **Primera pantalla.** Vista nocturna de la sede con los cerros orientales y
+  la luz de Monserrate al fondo. El contador muestra los cupos libres en ese
+  momento.
+- **Cómo funciona.** Al hacer scroll, la cámara sigue a un carro: llega a la
+  sede, la barrera se abre, el sistema le asigna el primer espacio libre (el
+  real, consultado en la base) y se muestra el tiquete con el cobro.
+- **Cupos libres ahora.** Cupos por tipo de vehículo en cada sede, sobre la
+  vista aérea del parqueadero. Las plazas verdes están libres.
+- **Calcula cuánto pagas.** Calculadora con las tarifas vigentes y la misma
+  regla de cobro del backend.
+
+**Panel del personal**
+
+- Plano 3D interactivo: se gira con el mouse y, al pasar sobre una plaza,
+  muestra su código y la placa. Un clic sobre un vehículo abre el registro de
+  su salida.
+- Campo de placa con forma de placa amarilla de Bogotá y validación por tipo.
+- Tiquete de papel que se "imprime" al registrar un ingreso o una salida.
+- Vista "Plano" en 2D para equipos sin aceleración gráfica.
+
+Las fuentes (Big Shoulders Display y Barlow) se incluyen en el proyecto, así
+que la interfaz funciona sin conexión a internet. Con `prefers-reduced-motion`
+activo se desactivan las animaciones automáticas.
 
 ## Estado actual
 
@@ -19,6 +53,8 @@ el panel del personal.
 | Consulta de cupos libres por sede y tipo de vehículo | RF05 | Implementado |
 | Registro de ingreso con asignación automática de espacio | RF06 | Implementado |
 | Registro de salida con cálculo de permanencia y tarifa | RF07 | Implementado |
+| Plano 3D de la sede con el estado real de cada plaza | RF05 | Implementado |
+| Salida desde el plano 3D (clic sobre el vehículo) | RF07 | Implementado |
 | Mapa de plazas, vehículos activos e historial de salidas | RF05, RF13 | Implementado |
 | Bitácora de transacciones (confirmadas y revertidas) | RF14, RNF08 | Implementado en el backend |
 | Actualización de disponibilidad sin recargar la página | RF12 | Consulta cada 5 s. WebSocket en la siguiente fase |
@@ -59,6 +95,8 @@ $4.000 + 2 × $1.500 = $7.000.
 | Elemento | Valor |
 | --- | --- |
 | Frontend | React 18, TypeScript, Vite |
+| 3D | Three.js con React Three Fiber, Drei y postprocesado (bloom) |
+| Scroll suave | Lenis |
 | Backend | Node.js, TypeScript, Express |
 | Base de datos | PostgreSQL |
 | Seguridad | JWT, contraseñas con bcrypt |
@@ -70,7 +108,8 @@ $4.000 + 2 × $1.500 = $7.000.
 Parkway/
 ├── database/
 │   ├── schema.sql                  # Tablas, claves, restricciones e índices
-│   └── seed.sql                    # Datos de prueba: usuarios, sedes, 65 espacios, tarifas
+│   ├── seed.sql                    # Datos de prueba: usuarios, sedes, 65 espacios, tarifas
+│   └── demo.sql                    # Opcional: vehículos dentro y salidas del día
 ├── backend/
 │   ├── src/
 │   │   ├── app.ts                  # Configuración de Express
@@ -89,8 +128,9 @@ Parkway/
 │   └── .env.example
 ├── frontend/
 │   └── src/
-│       ├── pages/                  # Login, Disponibilidad, Ingreso, Activos, Historial
-│       ├── components/             # Placa, Tiquete, MapaEspacios, Dialogo
+│       ├── pages/                  # Portada, Login, Disponibilidad, Ingreso, Activos, Historial
+│       ├── three/                  # Escena 3D: plazas, vehículos, entorno, cámara
+│       ├── components/             # Placa, Tiquete, Odometro, SalidaDialogo, MapaEspacios
 │       └── lib/                    # Cliente de la API, formatos, consultas periódicas
 ├── docs/
 │   ├── Proyecto_S8_Parkway.pdf     # Documento maestro
@@ -122,6 +162,15 @@ psql -h localhost -U postgres -d parkway -f database/schema.sql
 psql -h localhost -U postgres -d parkway -f database/seed.sql
 ```
 
+Para ver el parqueadero con vehículos dentro (recomendado para presentar):
+
+```bash
+psql -d parkway -f database/demo.sql
+```
+
+`demo.sql` ocupa cerca del 60 % de los espacios y registra salidas del día.
+Se puede ejecutar varias veces.
+
 `seed.sql` usa la extensión `pgcrypto` (la crea `schema.sql`) para guardar
 las contraseñas con bcrypt.
 
@@ -144,7 +193,8 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
-El frontend envía las peticiones `/api` al backend del puerto 3000.
+El frontend envía las peticiones `/api` al backend del puerto 3000. La
+portada queda en `http://localhost:5173/#/` y el panel en `#/ingresar`.
 
 ### Cuentas de prueba
 
@@ -180,6 +230,7 @@ rechazados con código 409 y ningún espacio duplicado (RNF03).
 | GET | `/api/catalogos/tipos-vehiculo` | Público | Tipos de vehículo con tarifa vigente |
 | GET | `/api/estacionamiento/resumen?idParqueadero=1` | Público | Cupos por tipo de vehículo |
 | GET | `/api/estacionamiento/disponibilidad?idParqueadero=1&idTipo=1` | Público | Espacios libres |
+| GET | `/api/estacionamiento/plano?idParqueadero=1` | Público | Estado de cada espacio, sin placas (escena 3D) |
 | GET | `/api/estacionamiento/espacios?idParqueadero=1` | Personal | Mapa de plazas con placa |
 | GET | `/api/estacionamiento/activos?idParqueadero=1&placa=ABC` | Personal | Vehículos dentro y valor acumulado |
 | GET | `/api/estacionamiento/historial?idParqueadero=1&desde=2026-10-01&hasta=2026-10-31` | Personal | Salidas registradas |
@@ -201,10 +252,20 @@ una regla de negocio lo impide, por ejemplo cuando no hay espacios libres.
 
 ## Capturas
 
-| Disponibilidad y mapa de plazas | Vehículos en el parqueadero |
+| Cómo funciona: la placa abre la barrera | El sistema asigna el espacio |
 | --- | --- |
-| ![Disponibilidad](docs/capturas/7_panel.png) | ![Activos](docs/capturas/4_activos.png) |
-| **Salida registrada** | **Validación de placa** |
-| ![Salida](docs/capturas/6_salida.png) | ![Validación](docs/capturas/2_ingreso_err.png) |
-| **Historial** | **Vista del cliente en el teléfono** |
-| ![Historial](docs/capturas/8_historial.png) | ![Cliente](docs/capturas/9_cliente_movil.png) |
+| ![Barrera](docs/capturas/02_historia_barrera.jpg) | ![Plaza asignada](docs/capturas/03_historia_plaza.jpg) |
+| **Cobro al salir** | **Cupos libres ahora** |
+| ![Cobro](docs/capturas/04_historia_cobro.jpg) | ![Cupos](docs/capturas/05_cupos_en_vivo.jpg) |
+| **Calculadora de tarifa** | **Ingreso al panel** |
+| ![Tarifas](docs/capturas/06_tarifas.jpg) | ![Login](docs/capturas/07_login.jpg) |
+| **Registrar ingreso** | **Validación de placa** |
+| ![Ingreso](docs/capturas/08_ingreso.jpg) | ![Validación](docs/capturas/09_validacion_placa.jpg) |
+| **Plano 3D del panel** | **Vehículos en el parqueadero** |
+| ![Plano 3D](docs/capturas/10_plano_3d.jpg) | ![Activos](docs/capturas/11_en_el_parqueadero.jpg) |
+| **Salida registrada** | **Historial** |
+| ![Salida](docs/capturas/12_salida.jpg) | ![Historial](docs/capturas/13_historial.jpg) |
+
+**En el celular**
+
+![Celular](docs/capturas/14_celular.jpg)
