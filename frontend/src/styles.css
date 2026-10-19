@@ -547,6 +547,68 @@ button.plaza-boton { cursor: pointer; }
 @keyframes aparecer { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
 
 /* =====================================================================
+   CLIENTE
+   ===================================================================== */
+.login-alterno { margin-top: 20px; color: var(--tinta-2); }
+.boton-peligro { background: var(--ocupado); color: #fff; }
+.boton-peligro:hover { background: #ff6b79; }
+.vivo-accion { margin-top: 28px; }
+.aviso-cupos { margin: -6px 0 14px; color: var(--reservado); }
+.vacio-accion { gap: 14px; align-content: center; }
+
+.chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.chip-sm { margin-left: 8px; font-size: 12px; padding: 2px 8px; }
+.chip-libre, .chip-cumplida { background: rgba(61, 220, 151, 0.15); color: #8ef0c4; }
+.chip-dentro { background: rgba(245, 197, 24, 0.16); color: var(--amarillo); }
+.chip-reserva, .chip-activa { background: rgba(255, 176, 32, 0.16); color: #ffcb6b; }
+.chip-cancelada, .chip-expirada { background: var(--superficie-3); color: var(--tinta-2); }
+
+/* Reserva activa */
+.reserva-activa { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 6px; margin-bottom: 24px; }
+.reserva-tarjeta { background: var(--superficie); border-radius: var(--radio); padding: 28px; display: grid; gap: 10px; justify-items: start; align-content: start; }
+.reserva-codigo { font-family: var(--display); font-weight: 900; font-size: 120px; line-height: 0.85; color: var(--libre); }
+.reserva-sede { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.cuenta-regresiva { display: grid; gap: 4px; width: 100%; margin-top: 12px; }
+.cuenta-numero { font-family: var(--display); font-weight: 900; font-size: 56px; line-height: 1; font-variant-numeric: tabular-nums; }
+.cuenta-numero.urgente { color: var(--reservado); animation: latido 1s infinite; }
+.cuenta-barra { display: block; height: 5px; background: var(--superficie-3); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.cuenta-barra span { display: block; height: 100%; background: var(--libre); transform-origin: left; transition: transform 1s linear; }
+.reserva-nota { color: var(--tinta-2); font-size: 15px; }
+.reserva-acciones { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.reserva-visor { height: auto; min-height: 460px; }
+
+/* Vehículo dentro */
+.tarjeta-dentro {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 32px; align-items: center;
+  background: var(--superficie); border-radius: var(--radio); padding: 24px 28px; margin-bottom: 24px;
+}
+.tarjeta-dentro-espacio { display: grid; }
+.tarjeta-dentro-espacio strong { font-family: var(--display); font-weight: 900; font-size: 96px; line-height: 0.9; color: var(--amarillo); }
+.tarjeta-dentro-datos { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+.tarjeta-dentro-datos .tiquete-datos { margin: 0; min-width: 180px; }
+.tarjeta-dentro-datos .tiquete-datos dt { color: var(--tinta-2); }
+.tarjeta-dentro-valor { display: grid; justify-items: end; text-align: right; }
+.tarjeta-dentro-valor strong { font-family: var(--display); font-weight: 900; font-size: 72px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* Formulario de reserva */
+.bloque-reserva { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 40px; background: var(--superficie); border-radius: var(--radio); padding: 32px; margin-bottom: 24px; }
+.bloque-reserva-texto p { color: var(--tinta-2); margin-top: 12px; max-width: 34ch; }
+.form-reserva { max-width: 520px; }
+.form-reserva-cupos { margin: 0 0 16px; color: var(--libre); font-weight: 600; }
+.form-reserva-cupos.sin-cupo { color: var(--ocupado); }
+
+/* Mis vehículos */
+.vehiculos-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.vehiculo-fila { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; background: var(--superficie); border-radius: var(--radio); padding: 16px 18px; }
+.vehiculo-fila .placa-md { font-size: 32px; min-width: 150px; }
+.vehiculo-info { display: grid; gap: 4px; justify-items: start; }
+.vehiculo-acciones { display: flex; gap: 8px; }
+.panel-form { background: var(--superficie); border-radius: var(--radio); padding: 28px; }
+.panel-form .bloque-titulo { margin-bottom: 18px; }
+.placa-entrada-sm { max-width: 300px; }
+.campo .placa-entrada-sm input { font-size: 56px; }
+
+/* =====================================================================
    RESPONSIVO
    ===================================================================== */
 @media (max-width: 900px) {
@@ -567,6 +629,10 @@ button.plaza-boton { cursor: pointer; }
   .panel-tiquete .vacio { min-height: 140px; }
   .login { grid-template-columns: 1fr; }
   .login-panel { grid-column: 1; background: rgba(15, 18, 23, 0.94); }
+  .reserva-activa, .bloque-reserva { grid-template-columns: 1fr; }
+  .reserva-visor { min-height: 340px; }
+  .tarjeta-dentro { grid-template-columns: 1fr; gap: 16px; }
+  .tarjeta-dentro-valor { justify-items: start; text-align: left; }
 }
 @media (max-width: 560px) {
   body { font-size: 16px; }
@@ -582,6 +648,8 @@ button.plaza-boton { cursor: pointer; }
   .historia-pasos h3 { font-size: 26px; }
   .historia-pasos p { font-size: 16px; }
   .visor-3d { height: 60vh; }
+  .vehiculo-fila { grid-template-columns: 1fr; }
+  .reserva-codigo { font-size: 96px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

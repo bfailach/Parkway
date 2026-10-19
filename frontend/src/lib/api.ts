@@ -76,6 +76,46 @@ export interface Registro {
   valor_dia: number;
   minutos_transcurridos?: number;
   valor_estimado?: number | null;
+  id_reserva?: number | null;
+  sede?: string;
+}
+
+export interface VehiculoCliente {
+  placa: string;
+  id_tipo: number;
+  tipo: string;
+  marca: string | null;
+  color: string | null;
+  dentro: boolean;
+  con_reserva: boolean;
+}
+
+export interface Reserva {
+  id_reserva: number;
+  placa: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  estado: "ACTIVA" | "CUMPLIDA" | "CANCELADA" | "EXPIRADA";
+  id_espacio: number;
+  codigo_espacio: string;
+  id_parqueadero: number;
+  sede: string;
+  tipo: string;
+}
+
+export interface EstadoCliente {
+  ahora: string;
+  minutosReserva: number;
+  dentro: (Registro & { sede: string })[];
+  reservas: Reserva[];
+}
+
+export interface DatosCuenta {
+  nombre: string;
+  documento: string;
+  correo: string;
+  telefono?: string;
+  contrasena: string;
 }
 
 export interface TotalesDia {
@@ -134,7 +174,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     throw new ApiError(0, "No hay conexión con el servidor. Verifique que el backend esté en ejecución.");
   }
 
-  const data = await res.json().catch(() => ({}));
+  const data = res.status === 204 ? {} : await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && token) alExpirar();
     throw new ApiError(res.status, data.error || `Error ${res.status}`, data.detalles || {});
@@ -154,6 +194,18 @@ export const api = {
   login: (correo: string, contrasena: string) =>
     request<{ token: string; usuario: Usuario }>("POST", "/auth/login", { correo, contrasena }),
   me: () => request<Usuario>("GET", "/auth/me"),
+  registro: (datos: DatosCuenta) => request<{ token: string; usuario: Usuario }>("POST", "/auth/registro", datos),
+  cliente: {
+    estado: () => request<EstadoCliente>("GET", "/cliente/estado"),
+    historial: () => request<(Registro & { sede: string })[]>("GET", "/cliente/historial"),
+    vehiculos: () => request<VehiculoCliente[]>("GET", "/cliente/vehiculos"),
+    agregarVehiculo: (v: { placa: string; idTipo: number; marca?: string; color?: string }) =>
+      request<VehiculoCliente>("POST", "/cliente/vehiculos", v),
+    quitarVehiculo: (placa: string) => request<void>("DELETE", `/cliente/vehiculos/${encodeURIComponent(placa)}`),
+    reservas: () => request<Reserva[]>("GET", "/cliente/reservas"),
+    reservar: (placa: string, idParqueadero: number) => request<Reserva>("POST", "/cliente/reservas", { placa, idParqueadero }),
+    cancelarReserva: (id: number) => request<Reserva>("POST", `/cliente/reservas/${id}/cancelar`),
+  },
   parqueaderos: () => request<Parqueadero[]>("GET", "/catalogos/parqueaderos"),
   tiposVehiculo: () => request<TipoVehiculo[]>("GET", "/catalogos/tipos-vehiculo"),
   resumen: (idParqueadero: number) => request<Resumen>("GET", `/estacionamiento/resumen?${qs({ idParqueadero })}`),

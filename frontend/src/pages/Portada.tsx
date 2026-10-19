@@ -235,6 +235,9 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
             <p className="vivo-nota">
               Las plazas verdes del plano están libres. El tablero se actualiza cada 5 segundos con los registros de la portería.
             </p>
+            <button className="boton boton-primario boton-grande vivo-accion" onClick={onIngresar}>
+              {enSesion ? "Ir a mi cuenta" : "Reservar un espacio"}
+            </button>
           </div>
         </section>
 
@@ -244,7 +247,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
         {/* Acceso del personal */}
         <section className="cierre" aria-labelledby="titulo-cierre">
           <h2 id="titulo-cierre" className="display-2 entrada">¿Trabajas en la portería?</h2>
-          <p>Registra ingresos y salidas, revisa los vehículos dentro y consulta el historial del día desde el panel.</p>
+          <p>Registra ingresos y salidas, revisa los vehículos dentro y consulta el historial del día desde el panel. Si eres cliente, crea tu cuenta para reservar.</p>
           <button className="boton boton-primario boton-grande" onClick={onIngresar}>
             {enSesion ? "Ir al panel" : "Ingresar al panel"}
           </button>

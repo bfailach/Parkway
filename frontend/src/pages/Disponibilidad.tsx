@@ -22,7 +22,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
   const [tipo, setTipo] = useState<number | null>(null);
   const [registro, setRegistro] = useState<Registro | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const control = useRef(crearControl(esPersonal ? "panel" : "vivo"));
+  const control = useRef(crearControl("panel"));
 
   const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero], 5000);
   const mapa = useConsulta(
@@ -129,7 +129,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
             <p className="visor-ayuda">
               {esPersonal
                 ? "Arrastra para girar, rueda para acercar. Haz clic en un vehículo para registrar su salida."
-                : "Las plazas con luz verde están libres."}
+                : "Arrastra para girar, rueda para acercar. Las plazas con luz verde están libres."}
             </p>
             {aviso && <p className="visor-aviso" role="status">{aviso}</p>}
           </div>

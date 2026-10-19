@@ -27,6 +27,7 @@ export function Tiquete({ registro, sede }: { registro: Registro; sede: string }
         {salida && <div><dt>Salida</dt><dd>{fechaCorta(registro.fecha_salida)}</dd></div>}
         {salida && <div><dt>Permanencia</dt><dd>{duracion(registro.minutos)}</dd></div>}
         {!salida && <div><dt>Tarifa</dt><dd>{pesos(registro.valor_hora)} la hora, {pesos(registro.valor_fraccion)} cada 15 min</dd></div>}
+        {registro.id_reserva ? <div><dt>Reserva</dt><dd>Llegó con reserva</dd></div> : null}
         <div><dt>Atendió</dt><dd>{salida ? registro.operador_salida : registro.operador_ingreso}</dd></div>
       </dl>
       {salida && (

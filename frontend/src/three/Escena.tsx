@@ -190,11 +190,13 @@ function Contenido({
   espacios,
   control,
   resaltarTipo,
+  resaltarId,
   onSeleccionar,
 }: {
   espacios: EspacioPlano[];
   control: MutableRefObject<ControlEscena>;
   resaltarTipo?: number | null;
+  resaltarId?: number | null;
   onSeleccionar?: (p: Plaza) => void;
 }) {
   const dist = useMemo(() => distribuir(espacios), [espacios]);
@@ -221,6 +223,7 @@ function Contenido({
       <Plazas
         plazas={dist.plazas}
         resaltarTipo={resaltarTipo}
+        resaltarId={resaltarId}
         interactiva={modo === "panel"}
         onSeleccionar={onSeleccionar}
       />
@@ -246,6 +249,8 @@ export interface EscenaProps {
   espacios: EspacioPlano[];
   control: MutableRefObject<ControlEscena>;
   resaltarTipo?: number | null;
+  /** Plaza que pulsa para señalarla (por ejemplo, la reservada por el cliente). */
+  resaltarId?: number | null;
   onSeleccionar?: (p: Plaza) => void;
   className?: string;
 }
@@ -259,7 +264,7 @@ function esperarFuentes() {
   return fuentesListas;
 }
 
-export default function Escena({ espacios, control, resaltarTipo, onSeleccionar, className }: EscenaProps) {
+export default function Escena({ espacios, control, resaltarTipo, resaltarId, onSeleccionar, className }: EscenaProps) {
   const [listo, setListo] = useState(false);
   useEffect(() => {
     let vivo = true;
@@ -277,7 +282,7 @@ export default function Escena({ espacios, control, resaltarTipo, onSeleccionar,
         camera={{ fov: 40, near: 0.5, far: 900, position: [-60, 40, 60] }}
       >
         <Suspense fallback={null}>
-          <Contenido espacios={espacios} control={control} resaltarTipo={resaltarTipo} onSeleccionar={onSeleccionar} />
+          <Contenido espacios={espacios} control={control} resaltarTipo={resaltarTipo} resaltarId={resaltarId} onSeleccionar={onSeleccionar} />
         </Suspense>
       </Canvas>
     </div>

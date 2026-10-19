@@ -158,15 +158,22 @@ export function Ingreso({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehicul
           {errores.idEspacio && <span className="campo-error">{errores.idEspacio}</span>}
         </label>
 
-        <button className="boton boton-primario boton-ancho" disabled={enviando || cuposTipo?.libres === 0}>
-          {enviando ? "Registrando..." : cuposTipo?.libres === 0 ? "Sin cupos para este tipo" : "Registrar ingreso"}
+        {cuposTipo?.libres === 0 && (
+          <p className="campo-ayuda aviso-cupos">No quedan cupos libres de este tipo. Solo pueden entrar vehículos con reserva.</p>
+        )}
+        <button className="boton boton-primario boton-ancho" disabled={enviando}>
+          {enviando ? "Registrando..." : "Registrar ingreso"}
         </button>
       </form>
 
       <aside className="panel-tiquete" aria-live="polite">
         {ultimo ? (
           <>
-            <p className="alerta alerta-ok">Ingreso registrado. Entregue el tiquete al conductor.</p>
+            <p className="alerta alerta-ok">
+              {ultimo.id_reserva
+                ? `El vehículo tenía reserva. Ingresó a su espacio reservado ${ultimo.codigo_espacio}.`
+                : "Ingreso registrado. Entregue el tiquete al conductor."}
+            </p>
             <Tiquete key={ultimo.id_registro} registro={ultimo} sede={sede.nombre} />
           </>
         ) : (
