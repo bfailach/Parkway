@@ -5,7 +5,7 @@ personal lleva el control de entradas y salidas en planillas o de memoria, lo
 que genera filas en la entrada, espacios asignados dos veces y una cifra de
 disponibilidad que nadie sabe con certeza.
 
-ParkFlow centraliza ese control. La base de datos impide que un espacio se
+Parkway centraliza ese control. La base de datos impide que un espacio se
 ocupe dos veces y los cambios se reflejan de inmediato en las pantallas de
 consulta y en el panel del administrador.
 
