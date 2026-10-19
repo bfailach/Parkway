@@ -1,3 +1,7 @@
+-- Los scripts están en UTF-8. En Windows, psql usa por defecto la
+-- codificación de la consola (WIN1252) y dañaría las tildes ("BogotÃ¡").
+SET client_encoding = 'UTF8';
+
 -- =====================================================================
 -- Parkway - Datos de demostración (opcional)
 -- Ejecutar después de schema.sql y seed.sql para ver el parqueadero con
@@ -28,8 +32,11 @@ SELECT
         ELSE 'BIC' || lpad(((g * 53) % 10000)::text, 4, '0')
     END AS placa,
     t.id_tipo,
-    CASE WHEN t.nombre = 'BICICLETA' THEN NULL
-         ELSE (ARRAY['Mazda', 'Renault', 'Chevrolet', 'Kia', 'Toyota', 'Nissan', 'Suzuki', 'Hyundai'])[1 + g % 8] END AS marca,
+    CASE t.nombre
+        WHEN 'BICICLETA'   THEN NULL
+        WHEN 'MOTOCICLETA' THEN (ARRAY['Yamaha', 'Honda', 'Suzuki', 'Bajaj', 'AKT', 'Kawasaki'])[1 + g % 6]
+        ELSE (ARRAY['Mazda', 'Renault', 'Chevrolet', 'Kia', 'Toyota', 'Nissan', 'Volkswagen', 'Hyundai'])[1 + g % 8]
+    END AS marca,
     (ARRAY['Blanco', 'Gris', 'Negro', 'Rojo', 'Azul', 'Plata'])[1 + g % 6] AS color,
     g
 FROM generate_series(1, 120) AS g

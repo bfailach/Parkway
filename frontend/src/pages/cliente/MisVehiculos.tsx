@@ -3,6 +3,7 @@ import { api, ApiError, TipoVehiculo, VehiculoCliente } from "../../lib/api";
 import { useConsulta } from "../../lib/useConsulta";
 import { FORMATO_PLACA, nombreTipo, normalizarPlaca } from "../../lib/formato";
 import { Placa } from "../../components/Placa";
+import { CampoOpciones, COLORES, MARCAS } from "../../components/CampoOpciones";
 
 /** Vehículos del cliente (RF04): registrar, consultar y quitar. */
 export function MisVehiculos({ tipos }: { tipos: TipoVehiculo[] }) {
@@ -89,6 +90,7 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [envios, setEnvios] = useState(0);
   const formato = FORMATO_PLACA[idTipo];
   const esBicicleta = idTipo === 3; // las bicicletas no llevan marca
 
@@ -113,6 +115,7 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
       setPlaca("");
       setMarca("");
       setColor("");
+      setEnvios((n) => n + 1);
       onAgregado();
     } catch (ex) {
       if (ex instanceof ApiError) {
@@ -134,7 +137,7 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
         <div className="segmentos">
           {tipos.map((t) => (
             <label key={t.id_tipo} className="segmento">
-              <input type="radio" name="tipo-vehiculo" checked={idTipo === t.id_tipo} onChange={() => setIdTipo(t.id_tipo)} />
+              <input type="radio" name="tipo-vehiculo" checked={idTipo === t.id_tipo} onChange={() => { setIdTipo(t.id_tipo); setMarca(""); }} />
               <span>{nombreTipo(t.nombre)}</span>
             </label>
           ))}
@@ -162,15 +165,17 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
 
       <div className={esBicicleta ? "" : "fila-campos"}>
         {!esBicicleta && (
-          <label className="campo">
-            <span className="campo-rotulo">Marca <span className="opcional">(opcional)</span></span>
-            <input value={marca} onChange={(e) => setMarca(e.target.value)} maxLength={40} />
-          </label>
+          <CampoOpciones
+            key={`marca-${idTipo}-${envios}`}
+            rotulo="Marca"
+            opciones={MARCAS[idTipo] ?? []}
+            valor={marca}
+            onChange={setMarca}
+            maxLength={40}
+            error={errores.marca}
+          />
         )}
-        <label className="campo">
-          <span className="campo-rotulo">Color <span className="opcional">(opcional)</span></span>
-          <input value={color} onChange={(e) => setColor(e.target.value)} maxLength={20} />
-        </label>
+        <CampoOpciones key={`color-${envios}`} rotulo="Color" opciones={COLORES} valor={color} onChange={setColor} maxLength={20} error={errores.color} />
       </div>
 
       <button className="boton boton-primario boton-ancho" disabled={enviando}>

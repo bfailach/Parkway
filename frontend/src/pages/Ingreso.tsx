@@ -4,6 +4,7 @@ import { api, ApiError, Parqueadero, Registro, TipoVehiculo } from "../lib/api";
 import { useConsulta } from "../lib/useConsulta";
 import { FORMATO_PLACA, nombreTipo, normalizarPlaca } from "../lib/formato";
 import { Tiquete } from "../components/Tiquete";
+import { CampoOpciones, COLORES, MARCAS } from "../components/CampoOpciones";
 
 /**
  * Registro de ingreso (RF06).
@@ -31,6 +32,7 @@ export function Ingreso({
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [ultimo, setUltimo] = useState<Registro | null>(null);
+  const [envios, setEnvios] = useState(0);
   const placaRef = useRef<HTMLInputElement>(null);
 
   const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 5000);
@@ -51,6 +53,11 @@ export function Ingreso({
   useEffect(() => {
     setIdEspacio("");
   }, [idTipo, sede.id_parqueadero]);
+
+  // La marca depende del tipo de vehículo: al cambiar de tipo se borra.
+  useEffect(() => {
+    setMarca("");
+  }, [idTipo]);
 
   // Si la placa tiene reserva, el tipo de vehículo se toma de la reserva.
   useEffect(() => {
@@ -87,6 +94,7 @@ export function Ingreso({
         color: color.trim() || undefined,
       });
       setUltimo(r);
+      setEnvios((n) => n + 1);
       setPlaca("");
       setMarca("");
       setColor("");
@@ -163,17 +171,25 @@ export function Ingreso({
 
         <div className={esBicicleta ? "" : "fila-campos"}>
           {!esBicicleta && (
-            <label className="campo">
-              <span className="campo-rotulo">Marca <span className="opcional">(opcional)</span></span>
-              <input value={marca} onChange={(e) => setMarca(e.target.value)} maxLength={40} aria-invalid={!!errores.marca} />
-              {errores.marca && <span className="campo-error">{errores.marca}</span>}
-            </label>
+            <CampoOpciones
+              key={`marca-${idTipo}-${envios}`}
+              rotulo="Marca"
+              opciones={MARCAS[idTipo] ?? []}
+              valor={marca}
+              onChange={setMarca}
+              maxLength={40}
+              error={errores.marca}
+            />
           )}
-          <label className="campo">
-            <span className="campo-rotulo">Color <span className="opcional">(opcional)</span></span>
-            <input value={color} onChange={(e) => setColor(e.target.value)} maxLength={20} aria-invalid={!!errores.color} />
-            {errores.color && <span className="campo-error">{errores.color}</span>}
-          </label>
+          <CampoOpciones
+            key={`color-${envios}`}
+            rotulo="Color"
+            opciones={COLORES}
+            valor={color}
+            onChange={setColor}
+            maxLength={20}
+            error={errores.color}
+          />
         </div>
 
         <label className="campo">

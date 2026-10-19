@@ -1,3 +1,7 @@
+-- Los scripts están en UTF-8. En Windows, psql usa por defecto la
+-- codificación de la consola (WIN1252) y dañaría las tildes ("BogotÃ¡").
+SET client_encoding = 'UTF8';
+
 -- =====================================================================
 -- Parkway (STGP) - Datos iniciales de prueba
 -- Ejecutar después de schema.sql:

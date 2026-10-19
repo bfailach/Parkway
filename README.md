@@ -52,6 +52,8 @@ parqueadero, Reservas e Historial. El administrador además ve la Bitácora.
 - **Bitácora (administrador):** todas las operaciones con su usuario,
   resultado y detalle, filtrables por operación, resultado y fechas.
 - Las bicicletas se registran sin marca, solo con su código y color.
+- Marca y color se eligen de una lista (las marcas cambian según sea carro
+  o moto). La última opción, "Otro", abre un campo para escribirla.
 
 El acento de la interfaz es el azul de la señal de parqueadero del logo. El
 amarillo se usa solo para las placas. En el plano, verde es libre, rojo
@@ -222,6 +224,11 @@ psql -d parkway -f database/demo.sql
 `demo.sql` ocupa cerca del 60 % de los espacios, registra salidas del día,
 crea dos reservas activas (ABC123 y XYZ78D) y llena la bitácora.
 Se puede ejecutar varias veces.
+
+Los tres scripts fijan `client_encoding = 'UTF8'`. Sin eso, en Windows
+`psql` los leería con la codificación de la consola y las tildes se
+guardarían dañadas ("BogotÃ¡"). Si la base se creó con una versión anterior,
+basta con volver a ejecutar los tres scripts.
 
 `seed.sql` usa la extensión `pgcrypto` (la crea `schema.sql`) para guardar
 las contraseñas con bcrypt.

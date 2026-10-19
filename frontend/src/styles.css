@@ -615,6 +615,13 @@ button.plaza-boton { cursor: pointer; }
 .placa-entrada-sm { max-width: 300px; }
 .campo .placa-entrada-sm input { font-size: 56px; }
 
+.campo-otro {
+  width: 100%; padding: 12px 14px; margin-top: 6px;
+  border: 1.5px solid var(--superficie-3); border-radius: var(--radio);
+  background: var(--superficie-2); color: var(--tinta);
+}
+.campo-otro:focus { border-color: var(--acento); outline: none; }
+
 /* Personal: reservas y bitácora */
 .alerta-reserva { background: var(--acento-suave); color: #cfe0ff; }
 .alerta-reserva strong { font-family: var(--display); font-size: 1.25em; color: #fff; }
