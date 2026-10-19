@@ -41,6 +41,11 @@ export async function resumen(idParqueadero: number) {
   return { idParqueadero, actualizado: new Date().toISOString(), totales, porTipo };
 }
 
+export async function planoPublico(idParqueadero: number) {
+  await validarSede(idParqueadero);
+  return espacioRepository.listarPlano(idParqueadero);
+}
+
 export async function mapaEspacios(idParqueadero: number) {
   await validarSede(idParqueadero);
   return espacioRepository.listarConOcupacion(idParqueadero);

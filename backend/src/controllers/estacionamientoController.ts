@@ -19,6 +19,10 @@ export const getResumen = asyncHandler(async (req, res) => {
   res.json(await estacionamientoService.resumen(sede(req)));
 });
 
+export const getPlano = asyncHandler(async (req, res) => {
+  res.json(await estacionamientoService.planoPublico(sede(req)));
+});
+
 export const getEspacios = asyncHandler(async (req, res) => {
   res.json(await estacionamientoService.mapaEspacios(sede(req)));
 });

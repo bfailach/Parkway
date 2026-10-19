@@ -44,6 +44,22 @@ export async function listarConOcupacion(idParqueadero: number) {
   return rows;
 }
 
+/**
+ * Plano público de la sede: estado de cada espacio sin datos del vehículo.
+ * Lo usa la portada para dibujar el parqueadero en 3D sin exponer placas.
+ */
+export async function listarPlano(idParqueadero: number) {
+  const { rows } = await pool.query(
+    `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo
+       FROM espacio e
+       JOIN tipo_vehiculo t ON t.id_tipo = e.id_tipo
+      WHERE e.id_parqueadero = $1
+      ORDER BY e.id_tipo, e.codigo`,
+    [idParqueadero]
+  );
+  return rows;
+}
+
 /** Conteo de espacios por tipo y estado (RF05). */
 export async function resumenPorTipo(idParqueadero: number) {
   const { rows } = await pool.query(
