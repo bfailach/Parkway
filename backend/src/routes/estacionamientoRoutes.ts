@@ -15,6 +15,9 @@ router.get("/plano", c.getPlano);
 // Operación de portería: solo operadores y administradores
 const personal = [verificarToken, requiereRol("OPERADOR", "ADMINISTRADOR")];
 
+router.get("/mis-sedes", ...personal, c.getMisSedes); // sedes asignadas al operador
+router.get("/vehiculos", ...personal, c.getBuscarVehiculos); // ?q=BICI0&idTipo=3
+router.get("/vehiculos/:placa", ...personal, c.getVehiculo); // datos guardados para el ingreso
 router.get("/espacios", ...personal, c.getEspacios);
 router.get("/totales-dia", ...personal, c.getTotalesDia);
 router.get("/activos", ...personal, c.getActivos);

@@ -21,8 +21,15 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       ux_registro_abierto_por_espacio: "El espacio ya fue ocupado por otro vehículo",
       usuario_correo_key: "Ya existe una cuenta con ese correo",
       usuario_documento_key: "Ya existe una cuenta con ese documento",
+      parqueadero_nombre_key: "Ya existe una sede con ese nombre",
+      vehiculo_pkey: "Ese vehículo ya está registrado",
     };
-    const campo = pgError.constraint === "usuario_correo_key" ? "correo" : pgError.constraint === "usuario_documento_key" ? "documento" : null;
+    const CAMPO: Record<string, string> = {
+      usuario_correo_key: "correo",
+      usuario_documento_key: "documento",
+      parqueadero_nombre_key: "nombre",
+    };
+    const campo = CAMPO[pgError.constraint ?? ""] ?? null;
     const error = mensajes[pgError.constraint ?? ""] ?? "Registro duplicado";
     return res.status(409).json({ error, detalles: campo ? { [campo]: error } : undefined });
   }

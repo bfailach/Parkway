@@ -4,8 +4,10 @@ import * as registroRepository from "../repositories/registroRepository";
 import * as espacioRepository from "../repositories/espacioRepository";
 import * as catalogoRepository from "../repositories/catalogoRepository";
 import { transactionManager } from "../transactions/transactionManager";
-import { DatosVehiculo } from "../validators/clienteValidator";
-import { normalizarPlaca } from "../validators/ingresoValidator";
+import { DatosVehiculo, PREFERENCIAS_POR_DEFECTO, validarPreferencias } from "../validators/clienteValidator";
+import { normalizarPlaca, TIPOS_VEHICULO } from "../validators/ingresoValidator";
+import * as usuarioRepository from "../repositories/usuarioRepository";
+import * as horarioService from "./horarioService";
 import { calcularMinutos, calcularValor } from "./tarifaService";
 import { badRequest, conflict, forbidden, notFound } from "../errors/AppError";
 
@@ -29,11 +31,17 @@ export function misVehiculos(idCliente: number) {
 }
 
 export async function registrarVehiculo(idCliente: number, datos: DatosVehiculo) {
-  await transactionManager.ejecutar(
+  const placa = await transactionManager.ejecutar(
     idCliente,
     "REGISTRO_VEHICULO",
     "vehiculo",
     async (client) => {
+      // Las bicicletas no tienen placa: reciben el siguiente código BICI.
+      if (datos.idTipo === TIPOS_VEHICULO.BICICLETA) {
+        const codigo = await vehiculoRepository.siguienteCodigoBicicleta(client);
+        await vehiculoRepository.crear(client, { ...datos, placa: codigo, idCliente });
+        return codigo;
+      }
       const existente = await vehiculoRepository.buscarParaActualizar(client, datos.placa);
       if (!existente) {
         await vehiculoRepository.crear(client, { ...datos, idCliente });
@@ -46,9 +54,9 @@ export async function registrarVehiculo(idCliente: number, datos: DatosVehiculo)
       await vehiculoRepository.asociarCliente(client, { placa: datos.placa, idCliente, marca: datos.marca, color: datos.color });
       return datos.placa;
     },
-    { idEntidad: (p) => p }
+    { idEntidad: (p) => p, detalle: (p) => ({ placa: p }) }
   );
-  return (await vehiculoRepository.listarDelCliente(idCliente)).find((v) => v.placa === datos.placa);
+  return (await vehiculoRepository.listarDelCliente(idCliente)).find((v) => v.placa === placa);
 }
 
 export async function quitarVehiculo(idCliente: number, placaTexto: string) {
@@ -84,6 +92,12 @@ export async function reservar(idCliente: number, body: Record<string, unknown>)
   if (!Number.isInteger(idParqueadero) || idParqueadero <= 0) errores.idParqueadero = "Seleccione la sede";
   if (Object.keys(errores).length) throw badRequest("Revise los campos del formulario", errores);
   if (!(await catalogoRepository.existeParqueadero(idParqueadero))) throw notFound("La sede no existe");
+
+  // Solo se reserva con la sede abierta y si el plazo termina antes del cierre.
+  const horarios = await horarioService.horariosDe(idParqueadero);
+  const { dia, minuto } = horarioService.ahoraLocal();
+  const motivo = horarioService.motivoParaNoReservar(horarios, dia, minuto, RESERVA_MINUTOS);
+  if (motivo) throw conflict(motivo);
 
   await reservaRepository.expirarVencidas();
 
@@ -169,4 +183,19 @@ export async function miEstado(idCliente: number) {
 
 export function miHistorial(idCliente: number) {
   return registroRepository.delCliente(idCliente, "CERRADO");
+}
+
+// ---------------------------------------------------------------------
+// Preferencias de notificación
+// ---------------------------------------------------------------------
+export async function misPreferencias(idCliente: number) {
+  const p = await usuarioRepository.preferencias(idCliente);
+  return { ...PREFERENCIAS_POR_DEFECTO, ...((p.notificaciones as object) ?? {}) };
+}
+
+export async function guardarPreferencias(idCliente: number, body: Record<string, unknown>) {
+  const v = validarPreferencias(body);
+  if (!v.valido) throw badRequest("Revise los campos del formulario", v.errores);
+  await usuarioRepository.guardarPreferencias(idCliente, "notificaciones", v.datos);
+  return v.datos;
 }

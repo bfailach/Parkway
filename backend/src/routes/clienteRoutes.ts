@@ -14,5 +14,7 @@ router.delete("/vehiculos/:placa", c.deleteVehiculo); // RF04
 router.get("/reservas", c.getReservas); // RF10
 router.post("/reservas", c.postReserva); // RF10
 router.post("/reservas/:idReserva/cancelar", c.postCancelarReserva); // RF10
+router.get("/preferencias", c.getPreferencias); // notificaciones
+router.put("/preferencias", c.putPreferencias);
 
 export default router;

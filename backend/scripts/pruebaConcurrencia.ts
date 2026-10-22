@@ -2,7 +2,8 @@
  * Prueba de concurrencia del registro de ingreso (RNF03).
  *
  * Envía N ingresos simultáneos de bicicletas a la Sede Zona T, que tiene
- * 3 espacios de bicicleta. El resultado esperado es que solo se acepten
+ * 3 espacios de bicicleta. Cada solicitud es una bicicleta sin registro, a la
+ * que el sistema le genera un código BICI nuevo. El resultado esperado es que solo se acepten
  * tantos ingresos como espacios libres y que ningún espacio quede asignado
  * a dos vehículos.
  *
@@ -20,13 +21,12 @@ async function main() {
   });
   const { token } = (await login.json()) as { token: string };
 
-  const sufijo = Date.now().toString().slice(-4);
   const respuestas = await Promise.all(
-    Array.from({ length: N }, (_, i) =>
+    Array.from({ length: N }, () =>
       fetch(`${API}/estacionamiento/ingreso`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify({ placa: `B${sufijo}${String(i).padStart(2, "0")}`, idTipo: 3, idParqueadero: 2 }),
+        body: JSON.stringify({ idTipo: 3, idParqueadero: 2, generarCodigo: true }),
       }).then(async (r) => ({ status: r.status, body: (await r.json()) as { codigo_espacio?: string; error?: string } }))
     )
   );
@@ -39,6 +39,8 @@ async function main() {
   console.log(`Aceptadas (201): ${aceptados.length} -> espacios ${espacios.join(", ") || "ninguno"}`);
   console.log(`Rechazadas (409): ${respuestas.filter((r) => r.status === 409).length}`);
   console.log(`Otros códigos: ${respuestas.filter((r) => r.status !== 201 && r.status !== 409).length}`);
+  const otro = respuestas.find((r) => r.status !== 201 && r.status !== 409);
+  if (otro) console.log(`Ejemplo de otro código: ${otro.status} ${otro.body.error}`);
   console.log(duplicados.length === 0 ? "OK: ningún espacio asignado dos veces" : `ERROR: espacios duplicados ${duplicados}`);
   process.exit(duplicados.length === 0 ? 0 : 1);
 }

@@ -23,6 +23,9 @@ DROP TABLE IF EXISTS pago CASCADE;
 DROP TABLE IF EXISTS registro_estacionamiento CASCADE;
 DROP TABLE IF EXISTS reserva CASCADE;
 DROP TABLE IF EXISTS tarifa CASCADE;
+DROP TABLE IF EXISTS horario CASCADE;
+DROP TABLE IF EXISTS operador_parqueadero CASCADE;
+DROP SEQUENCE IF EXISTS seq_bicicleta;
 DROP TABLE IF EXISTS espacio CASCADE;
 DROP TABLE IF EXISTS vehiculo CASCADE;
 DROP TABLE IF EXISTS parqueadero CASCADE;
@@ -48,7 +51,9 @@ CREATE TABLE usuario (
     turno              VARCHAR(20)   NULL,
     estado             VARCHAR(10)   NOT NULL DEFAULT 'ACTIVO'
         CHECK (estado IN ('ACTIVO', 'INACTIVO', 'BLOQUEADO')),
-    fecha_creacion     TIMESTAMP     NOT NULL DEFAULT now()
+    fecha_creacion     TIMESTAMP     NOT NULL DEFAULT now(),
+    -- Preferencias del usuario, por ejemplo las notificaciones del cliente.
+    preferencias       JSONB         NOT NULL DEFAULT '{}'::jsonb
 );
 
 -- =====================================================================
@@ -64,9 +69,38 @@ CREATE TABLE tipo_vehiculo (
 -- =====================================================================
 CREATE TABLE parqueadero (
     id_parqueadero    SERIAL PRIMARY KEY,
-    nombre            VARCHAR(80)  NOT NULL,
+    nombre            VARCHAR(80)  NOT NULL UNIQUE,
     direccion         VARCHAR(150),
+    ciudad            VARCHAR(60)  NOT NULL DEFAULT 'Bogotá',
+    latitud           NUMERIC(9, 6) CHECK (latitud BETWEEN -90 AND 90),
+    longitud          NUMERIC(9, 6) CHECK (longitud BETWEEN -180 AND 180),
     capacidad_total   INT NOT NULL CHECK (capacidad_total > 0)
+);
+
+-- =====================================================================
+-- Tabla: horario
+-- Horario de atención de cada sede por día de la semana (ISO: 1 = lunes,
+-- 7 = domingo). Un día sin fila es un día cerrado. La hora de cierre
+-- puede ser 24:00 para atender hasta la medianoche.
+-- =====================================================================
+CREATE TABLE horario (
+    id_parqueadero  INT NOT NULL REFERENCES parqueadero (id_parqueadero) ON DELETE CASCADE,
+    dia             SMALLINT NOT NULL CHECK (dia BETWEEN 1 AND 7),
+    abre            TIME NOT NULL,
+    cierra          TIME NOT NULL,
+    PRIMARY KEY (id_parqueadero, dia),
+    CHECK (cierra > abre)
+);
+
+-- =====================================================================
+-- Tabla: operador_parqueadero
+-- Sedes en las que puede trabajar cada operador. El administrador tiene
+-- acceso a todas sin necesidad de filas aquí.
+-- =====================================================================
+CREATE TABLE operador_parqueadero (
+    id_usuario      INT NOT NULL REFERENCES usuario (id_usuario) ON DELETE CASCADE,
+    id_parqueadero  INT NOT NULL REFERENCES parqueadero (id_parqueadero) ON DELETE CASCADE,
+    PRIMARY KEY (id_usuario, id_parqueadero)
 );
 
 -- =====================================================================
@@ -81,6 +115,10 @@ CREATE TABLE vehiculo (
 );
 
 CREATE INDEX idx_vehiculo_cliente ON vehiculo (id_cliente);
+
+-- Las bicicletas no tienen placa: al registrarlas reciben un código único
+-- BICI001, BICI002... tomado de esta secuencia.
+CREATE SEQUENCE seq_bicicleta START 1;
 
 -- =====================================================================
 -- Tabla: espacio
@@ -101,10 +139,13 @@ CREATE INDEX idx_espacio_parqueadero_estado ON espacio (id_parqueadero, estado);
 
 -- =====================================================================
 -- Tabla: tarifa
--- Restricción: una sola tarifa activa por tipo de vehículo
+-- Cada sede tiene sus tarifas. Restricción: una sola tarifa activa por
+-- sede y tipo de vehículo. Al cambiar una tarifa, la anterior queda
+-- inactiva y los registros que la usaron la conservan.
 -- =====================================================================
 CREATE TABLE tarifa (
     id_tarifa       SERIAL PRIMARY KEY,
+    id_parqueadero  INT NOT NULL REFERENCES parqueadero (id_parqueadero) ON DELETE CASCADE,
     id_tipo         SMALLINT NOT NULL REFERENCES tipo_vehiculo (id_tipo),
     valor_hora      NUMERIC(10, 2) NOT NULL CHECK (valor_hora >= 0),
     valor_fraccion  NUMERIC(10, 2) NOT NULL CHECK (valor_fraccion >= 0),
@@ -113,9 +154,9 @@ CREATE TABLE tarifa (
     activa          BOOLEAN NOT NULL DEFAULT true
 );
 
--- Índice único parcial: solo una tarifa activa por tipo de vehículo
+-- Índice único parcial: solo una tarifa activa por sede y tipo de vehículo
 CREATE UNIQUE INDEX ux_tarifa_activa_por_tipo
-    ON tarifa (id_tipo)
+    ON tarifa (id_parqueadero, id_tipo)
     WHERE activa = true;
 
 -- =====================================================================
@@ -169,6 +210,7 @@ CREATE UNIQUE INDEX ux_registro_abierto_por_espacio
     WHERE estado = 'ABIERTO';
 
 CREATE INDEX idx_registro_placa ON registro_estacionamiento (placa);
+CREATE INDEX idx_registro_salida ON registro_estacionamiento (fecha_salida) WHERE estado = 'CERRADO';
 
 -- =====================================================================
 -- Tabla: pago

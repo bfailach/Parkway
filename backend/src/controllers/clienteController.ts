@@ -41,3 +41,11 @@ export const postCancelarReserva = asyncHandler<Req>(async (req, res) => {
 export const getHistorial = asyncHandler<Req>(async (req, res) => {
   res.json(await clienteService.miHistorial(id(req)));
 });
+
+export const getPreferencias = asyncHandler<Req>(async (req, res) => {
+  res.json(await clienteService.misPreferencias(id(req)));
+});
+
+export const putPreferencias = asyncHandler<Req>(async (req, res) => {
+  res.json(await clienteService.guardarPreferencias(id(req), req.body ?? {}));
+});

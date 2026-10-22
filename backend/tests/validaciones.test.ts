@@ -9,7 +9,8 @@ test("normaliza la placa", () => {
 test("acepta placas válidas por tipo", () => {
   assert.equal(validarIngreso({ placa: "ABC123", idTipo: 1, idParqueadero: 1 }).valido, true);
   assert.equal(validarIngreso({ placa: "XYZ12D", idTipo: 2, idParqueadero: 1 }).valido, true);
-  assert.equal(validarIngreso({ placa: "BIC0042", idTipo: 3, idParqueadero: 2 }).valido, true);
+  assert.equal(validarIngreso({ placa: "BICI001", idTipo: 3, idParqueadero: 2 }).valido, true);
+  assert.equal(validarIngreso({ placa: "BIC0042", idTipo: 3, idParqueadero: 2 }).valido, false);
 });
 
 test("rechaza placas con formato incorrecto", () => {
@@ -33,8 +34,16 @@ test("limita la longitud de marca y color", () => {
   assert.ok(r.errores.color);
 });
 
+test("una bicicleta sin registro puede entrar con un código nuevo", () => {
+  const r = validarIngreso({ idTipo: 3, idParqueadero: 2, generarCodigo: true });
+  assert.equal(r.valido, true);
+  assert.equal(r.datos?.generarCodigo, true);
+  // generarCodigo solo aplica a bicicletas
+  assert.equal(validarIngreso({ idTipo: 1, idParqueadero: 2, generarCodigo: true }).valido, false);
+});
+
 test("el ingreso de una bicicleta ignora la marca", () => {
-  const r = validarIngreso({ placa: "BIC0042", idTipo: 3, idParqueadero: 2, marca: "GW" });
+  const r = validarIngreso({ placa: "bici012", idTipo: 3, idParqueadero: 2, marca: "GW" });
   assert.equal(r.valido, true);
   assert.equal(r.datos?.marca, undefined);
 });

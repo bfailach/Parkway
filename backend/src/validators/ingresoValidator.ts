@@ -6,16 +6,17 @@
  * Formatos de placa en Colombia:
  * - Automóvil:   tres letras y tres números (ABC123)
  * - Motocicleta: tres letras, dos números y una letra (ABC12D)
- * - Bicicleta:   no tiene placa oficial. Se usa un código interno de
- *                3 a 10 caracteres alfanuméricos (por ejemplo, el número
- *                de marco o del sticker entregado en portería).
+ * - Bicicleta:   no tiene placa. Al registrarla recibe un código único
+ *                BICI001, BICI002... (secuencia seq_bicicleta). El operador
+ *                busca ese código en el ingreso o genera uno nuevo para
+ *                una bicicleta que llega sin registro.
  */
 export const TIPOS_VEHICULO = { AUTOMOVIL: 1, MOTOCICLETA: 2, BICICLETA: 3 } as const;
 
 export const FORMATO_PLACA: Record<number, { regex: RegExp; ejemplo: string }> = {
   [TIPOS_VEHICULO.AUTOMOVIL]: { regex: /^[A-Z]{3}\d{3}$/, ejemplo: "ABC123" },
   [TIPOS_VEHICULO.MOTOCICLETA]: { regex: /^[A-Z]{3}\d{2}[A-Z]$/, ejemplo: "ABC12D" },
-  [TIPOS_VEHICULO.BICICLETA]: { regex: /^[A-Z0-9]{3,10}$/, ejemplo: "BIC0042" },
+  [TIPOS_VEHICULO.BICICLETA]: { regex: /^BICI\d{3,7}$/, ejemplo: "BICI001" },
 };
 
 export interface DatosIngreso {
@@ -25,6 +26,8 @@ export interface DatosIngreso {
   idEspacio?: number;
   marca?: string;
   color?: string;
+  /** Solo bicicletas: generar un código nuevo para una bicicleta sin registro. */
+  generarCodigo?: boolean;
 }
 
 export interface ResultadoValidacion {
@@ -58,9 +61,12 @@ export function validarIngreso(body: Record<string, unknown>): ResultadoValidaci
   const idTipo = enteroPositivo(body.idTipo);
   if (!idTipo || !FORMATO_PLACA[idTipo]) errores.idTipo = "Seleccione un tipo de vehículo válido";
 
-  const placa = normalizarPlaca(body.placa);
-  if (!placa) {
-    errores.placa = "La placa es obligatoria";
+  const generarCodigo = idTipo === TIPOS_VEHICULO.BICICLETA && body.generarCodigo === true;
+  const placa = generarCodigo ? "" : normalizarPlaca(body.placa);
+  if (generarCodigo) {
+    // El código se asigna dentro de la transacción del ingreso.
+  } else if (!placa) {
+    errores.placa = idTipo === TIPOS_VEHICULO.BICICLETA ? "Busque el código de la bicicleta" : "La placa es obligatoria";
   } else if (idTipo && FORMATO_PLACA[idTipo] && !FORMATO_PLACA[idTipo].regex.test(placa)) {
     errores.placa = `Formato inválido. Ejemplo: ${FORMATO_PLACA[idTipo].ejemplo}`;
   }
@@ -90,6 +96,7 @@ export function validarIngreso(body: Record<string, unknown>): ResultadoValidaci
       // Las bicicletas no llevan marca.
       marca: idTipo === TIPOS_VEHICULO.BICICLETA ? undefined : marca ?? undefined,
       color: color ?? undefined,
+      generarCodigo: generarCodigo || undefined,
     },
   };
 }

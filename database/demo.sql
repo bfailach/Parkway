@@ -1,6 +1,8 @@
 -- Los scripts están en UTF-8. En Windows, psql usa por defecto la
 -- codificación de la consola (WIN1252) y dañaría las tildes ("BogotÃ¡").
 SET client_encoding = 'UTF8';
+-- Las fechas se guardan en hora de Bogotá, la misma que usa el backend.
+SET TIME ZONE 'America/Bogota';
 
 -- =====================================================================
 -- Parkway - Datos de demostración (opcional)
@@ -29,7 +31,7 @@ SELECT
     CASE t.nombre
         WHEN 'AUTOMOVIL'   THEN chr(65 + (g * 7) % 26) || chr(65 + (g * 11) % 26) || chr(65 + (g * 5) % 26) || lpad(((g * 137) % 1000)::text, 3, '0')
         WHEN 'MOTOCICLETA' THEN chr(65 + (g * 3) % 26) || chr(65 + (g * 13) % 26) || chr(65 + (g * 17) % 26) || lpad(((g * 41) % 100)::text, 2, '0') || chr(65 + (g * 19) % 26)
-        ELSE 'BIC' || lpad(((g * 53) % 10000)::text, 4, '0')
+        ELSE 'BICI' || lpad(nextval('seq_bicicleta')::text, 3, '0')
     END AS placa,
     t.id_tipo,
     CASE t.nombre
@@ -51,7 +53,7 @@ ON CONFLICT (placa) DO NOTHING;
 
 -- Ingresos abiertos: cerca del 60 % de los espacios libres de cada tipo
 WITH candidatos AS (
-    SELECT e.id_espacio, e.id_tipo,
+    SELECT e.id_espacio, e.id_tipo, e.id_parqueadero,
            row_number() OVER (PARTITION BY e.id_tipo ORDER BY md5(e.id_espacio::text)) AS n_espacio,
            count(*) OVER (PARTITION BY e.id_tipo) AS total
       FROM espacio e
@@ -72,14 +74,14 @@ SELECT p.placa, el.id_espacio, ta.id_tarifa,
        now() - ((10 + (el.n_espacio * 37) % 230) * interval '1 minute')
   FROM elegidos el
   JOIN placas p ON p.id_tipo = el.id_tipo AND p.n_placa = el.n_espacio
-  JOIN tarifa ta ON ta.id_tipo = el.id_tipo AND ta.activa;
+  JOIN tarifa ta ON ta.id_tipo = el.id_tipo AND ta.id_parqueadero = el.id_parqueadero AND ta.activa;
 
 UPDATE espacio SET estado = 'OCUPADO', version = version + 1
  WHERE id_espacio IN (SELECT id_espacio FROM registro_estacionamiento WHERE estado = 'ABIERTO');
 
 -- Salidas del día, con valor calculado según la tarifa (horas + fracciones de 15 min, tope por día)
 WITH libres AS (
-    SELECT e.id_espacio, e.id_tipo, row_number() OVER (PARTITION BY e.id_tipo ORDER BY e.codigo) AS n
+    SELECT e.id_espacio, e.id_tipo, e.id_parqueadero, row_number() OVER (PARTITION BY e.id_tipo ORDER BY e.codigo) AS n
       FROM espacio e WHERE e.estado = 'LIBRE'
 ),
 placas AS (
@@ -94,7 +96,7 @@ salidas AS (
            now() - ((5 + (l.n * 29) % 120) * interval '1 minute') AS salida
       FROM libres l
       JOIN placas p ON p.id_tipo = l.id_tipo AND p.n = l.n
-      JOIN tarifa ta ON ta.id_tipo = l.id_tipo AND ta.activa
+      JOIN tarifa ta ON ta.id_tipo = l.id_tipo AND ta.id_parqueadero = l.id_parqueadero AND ta.activa
      WHERE l.n <= 6
 )
 INSERT INTO registro_estacionamiento
@@ -107,6 +109,38 @@ SELECT s.placa, s.id_espacio, s.id_tarifa,
        LEAST((s.minutos / 60) * s.valor_hora + ceil((s.minutos % 60) / 15.0) * s.valor_fraccion, s.valor_dia),
        'CERRADO'
   FROM salidas s;
+
+-- Visitas de los últimos 7 días, para probar los filtros del historial.
+-- Incluye algunas del carro del cliente de prueba (ABC123).
+WITH visitas AS (
+    SELECT s.n AS g,
+           CASE WHEN s.n % 9 = 0 THEN 'ABC123' ELSE dv.placa END AS placa,
+           CASE WHEN s.n % 9 = 0 THEN 1 ELSE dv.id_tipo END AS id_tipo,
+           1 + s.n % 2 AS id_parqueadero,
+           15 + (s.n * 47) % 420 AS minutos,
+           date_trunc('day', now()) - ((1 + s.n % 7) * interval '1 day')
+             + ((6 * 60 + (s.n * 71) % (14 * 60)) * interval '1 minute') AS ingreso
+      FROM generate_series(1, 90) AS s (n)
+      JOIN demo_vehiculo dv ON dv.g = 1 + (s.n * 13) % 120
+),
+con_espacio AS (
+    SELECT v.*, (SELECT e.id_espacio FROM espacio e
+                  WHERE e.id_parqueadero = v.id_parqueadero AND e.id_tipo = v.id_tipo
+                  ORDER BY md5(e.id_espacio::text || v.g) LIMIT 1) AS id_espacio
+      FROM visitas v
+)
+INSERT INTO registro_estacionamiento
+    (placa, id_espacio, id_tarifa, id_operador_ingreso, id_operador_salida,
+     fecha_ingreso, fecha_salida, minutos, valor_calculado, estado)
+SELECT c.placa, c.id_espacio, ta.id_tarifa,
+       (SELECT id_usuario FROM usuario WHERE correo = 'operador1@parkway.test'),
+       (SELECT id_usuario FROM usuario WHERE correo = 'operador2@parkway.test'),
+       c.ingreso, c.ingreso + c.minutos * interval '1 minute', c.minutos,
+       LEAST((c.minutos / 60) * ta.valor_hora + ceil((c.minutos % 60) / 15.0) * ta.valor_fraccion, ta.valor_dia),
+       'CERRADO'
+  FROM con_espacio c
+  JOIN tarifa ta ON ta.id_tipo = c.id_tipo AND ta.id_parqueadero = c.id_parqueadero AND ta.activa
+ WHERE c.id_espacio IS NOT NULL;
 
 -- Reservas de ejemplo: dos activas (clientes de seed.sql) y dos terminadas hoy
 WITH libre_auto AS (

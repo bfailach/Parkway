@@ -7,6 +7,11 @@ dotenv.config();
 // Todas las operaciones de una misma unidad de trabajo deben tomar el
 // cliente con `pool.connect()` y reutilizarlo hasta el COMMIT/ROLLBACK,
 // en vez de usar `pool.query()` directamente para transacciones.
+// Las fechas se guardan como TIMESTAMP sin zona horaria. La sesión de la
+// base usa la misma zona horaria que Node para que now() y CURRENT_DATE
+// coincidan con la hora que muestra la aplicación.
+const zonaNode = (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC").replace(/[^A-Za-z0-9/_+-]/g, "");
+
 // En producción (Render, Neon, etc.) basta con DATABASE_URL. Con DB_SSL=true
 // la conexión va cifrada, como exigen las bases de datos en la nube.
 const comunes = {
@@ -15,6 +20,7 @@ const comunes = {
   // quedar esperando indefinidamente.
   connectionTimeoutMillis: 5000,
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+  options: `-c TimeZone=${zonaNode}`,
 };
 
 export const pool = process.env.DATABASE_URL
@@ -28,6 +34,9 @@ export const pool = process.env.DATABASE_URL
       ...comunes,
     });
 
+// Las fechas se guardan como TIMESTAMP sin zona horaria. La sesión de la
+// base usa la misma zona horaria que Node para que now() y CURRENT_DATE
+// coincidan con la hora que muestra la aplicación.
 pool.on("error", (err) => {
   // eslint-disable-next-line no-console
   console.error("Error inesperado en el pool de conexiones de PostgreSQL", err);

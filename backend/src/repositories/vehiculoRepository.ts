@@ -57,11 +57,49 @@ export async function listarDelCliente(idCliente: number) {
   return rows;
 }
 
-/** Completa marca y color si el vehículo no los tenía registrados. */
-export async function completarDatos(client: PoolClient, placa: string, marca?: string, color?: string) {
+/**
+ * Actualiza marca y color con los datos que confirma el operador en el
+ * ingreso. El formulario se llena con los datos guardados, así que un
+ * valor distinto es una corrección del operador. Un campo vacío conserva
+ * lo que ya estaba.
+ */
+export async function actualizarDatos(client: PoolClient, placa: string, marca?: string, color?: string) {
   if (!marca && !color) return;
   await client.query(
-    `UPDATE vehiculo SET marca = COALESCE(marca, $2), color = COALESCE(color, $3) WHERE placa = $1`,
+    `UPDATE vehiculo SET marca = COALESCE($2, marca), color = COALESCE($3, color) WHERE placa = $1`,
     [placa, marca ?? null, color ?? null]
   );
+}
+
+/** Siguiente código de bicicleta: BICI001, BICI002... */
+export async function siguienteCodigoBicicleta(client: PoolClient): Promise<string> {
+  const { rows } = await client.query(`SELECT 'BICI' || lpad(nextval('seq_bicicleta')::text, 3, '0') AS codigo`);
+  return rows[0].codigo;
+}
+
+const SELECT_CON_DUENO = `
+  SELECT v.placa, v.id_tipo, t.nombre AS tipo, v.marca, v.color,
+         u.nombre AS cliente, u.telefono,
+         EXISTS (SELECT 1 FROM registro_estacionamiento r WHERE r.placa = v.placa AND r.estado = 'ABIERTO') AS dentro
+    FROM vehiculo v
+    JOIN tipo_vehiculo t ON t.id_tipo = v.id_tipo
+    LEFT JOIN usuario u  ON u.id_usuario = v.id_cliente`;
+
+/** Datos guardados de un vehículo, para llenar el formulario de ingreso. */
+export async function obtenerConDueno(placa: string) {
+  const { rows } = await pool.query(`${SELECT_CON_DUENO} WHERE v.placa = $1`, [placa]);
+  return rows[0] ?? null;
+}
+
+/** Búsqueda por placa o código (las bicicletas se buscan por su código BICI). */
+export async function buscar(texto: string, idTipo?: number, limite = 8) {
+  const { rows } = await pool.query(
+    `${SELECT_CON_DUENO}
+      WHERE v.placa LIKE '%' || $1 || '%'
+        AND ($2::int IS NULL OR v.id_tipo = $2)
+      ORDER BY (v.placa LIKE $1 || '%') DESC, v.placa
+      LIMIT $3`,
+    [texto, idTipo ?? null, limite]
+  );
+  return rows;
 }

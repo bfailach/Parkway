@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validarCuenta, validarVehiculo } from "../src/validators/clienteValidator";
+import { validarCuenta, validarPreferencias, validarVehiculo } from "../src/validators/clienteValidator";
 
 const cuenta = { nombre: "Ana Pérez", documento: "1.020.304.050", correo: "Ana@Correo.co", telefono: "300 123 4567", contrasena: "clave1234" };
 
@@ -39,11 +39,27 @@ test("valida la placa del vehículo según el tipo", () => {
   if (!r.valido) assert.match(r.errores.placa, /ABC12D/);
 });
 
-test("las bicicletas no guardan marca", () => {
-  const r = validarVehiculo({ placa: "BIC0042", idTipo: 3, marca: "GW", color: "Negro" });
+test("las bicicletas no llevan placa ni marca: el código lo asigna el sistema", () => {
+  const r = validarVehiculo({ idTipo: 3, marca: "GW", color: "Negro" });
   assert.equal(r.valido, true);
   if (r.valido) {
+    assert.equal(r.datos.placa, "");
     assert.equal(r.datos.marca, undefined);
     assert.equal(r.datos.color, "Negro");
+  }
+});
+
+test("valida las preferencias de notificación", () => {
+  const ok = validarPreferencias({ cadaMinutos: 15, montoAviso: 20000 });
+  assert.equal(ok.valido, true);
+  if (ok.valido) {
+    assert.equal(ok.datos.cadaMinutos, 15);
+    assert.equal(ok.datos.activas, true); // valor por defecto
+  }
+  const mal = validarPreferencias({ cadaMinutos: 7, montoAviso: 50 });
+  assert.equal(mal.valido, false);
+  if (!mal.valido) {
+    assert.ok(mal.errores.cadaMinutos);
+    assert.ok(mal.errores.montoAviso);
   }
 });

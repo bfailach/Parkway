@@ -2,6 +2,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Hora del negocio. Debe coincidir con la de los scripts SQL (SET TIME ZONE).
+process.env.TZ ||= "America/Bogota";
+
 // eslint-disable-next-line import/first
 import { app } from "./app";
 // eslint-disable-next-line import/first

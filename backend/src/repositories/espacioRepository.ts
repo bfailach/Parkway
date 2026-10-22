@@ -33,13 +33,16 @@ export async function listarConOcupacion(idParqueadero: number) {
   const { rows } = await pool.query(
     `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo,
             r.id_registro, COALESCE(r.placa, rs.placa) AS placa, r.fecha_ingreso,
-            rs.id_reserva, rs.fecha_fin AS reserva_vence
+            rs.id_reserva, rs.fecha_fin AS reserva_vence,
+            v.marca, v.color, u.nombre AS cliente
        FROM espacio e
        JOIN tipo_vehiculo t ON t.id_tipo = e.id_tipo
        LEFT JOIN registro_estacionamiento r
               ON r.id_espacio = e.id_espacio AND r.estado = 'ABIERTO'
        LEFT JOIN reserva rs
               ON rs.id_espacio = e.id_espacio AND rs.estado = 'ACTIVA'
+       LEFT JOIN vehiculo v ON v.placa = COALESCE(r.placa, rs.placa)
+       LEFT JOIN usuario u  ON u.id_usuario = v.id_cliente
       WHERE e.id_parqueadero = $1
       ORDER BY e.id_tipo, e.codigo`,
     [idParqueadero]
@@ -48,14 +51,17 @@ export async function listarConOcupacion(idParqueadero: number) {
 }
 
 /**
- * Plano público de la sede: estado de cada espacio sin datos del vehículo.
- * Lo usa la portada para dibujar el parqueadero en 3D sin exponer placas.
+ * Plano público de la sede: estado de cada espacio sin placas ni dueños.
+ * Incluye marca y color del vehículo estacionado (lo que cualquiera ve en
+ * el parqueadero) para dibujar el modelo 3D correspondiente.
  */
 export async function listarPlano(idParqueadero: number) {
   const { rows } = await pool.query(
-    `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo
+    `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo, v.marca, v.color
        FROM espacio e
        JOIN tipo_vehiculo t ON t.id_tipo = e.id_tipo
+       LEFT JOIN registro_estacionamiento r ON r.id_espacio = e.id_espacio AND r.estado = 'ABIERTO'
+       LEFT JOIN vehiculo v ON v.placa = r.placa
       WHERE e.id_parqueadero = $1
       ORDER BY e.id_tipo, e.codigo`,
     [idParqueadero]

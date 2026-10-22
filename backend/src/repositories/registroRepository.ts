@@ -83,22 +83,89 @@ export async function listarActivos(idParqueadero: number, placa?: string) {
   return rows;
 }
 
-export async function listarHistorial(f: {
+export interface FiltrosHistorial {
   idParqueadero: number;
   placa?: string;
+  idTipo?: number;
+  marca?: string;
+  color?: string;
   desde?: string;
   hasta?: string;
+  /** Permanencia mínima y máxima en minutos. */
+  minutosMin?: number;
+  minutosMax?: number;
+  /** Valor pagado mínimo y máximo. */
+  valorMin?: number;
+  valorMax?: number;
+  orden?: "fecha" | "valor" | "tiempo";
   limite: number;
-}) {
+}
+
+/**
+ * Condiciones comunes del historial. Los valores van como parámetros ($n),
+ * nunca concatenados al SQL.
+ */
+function condiciones(f: FiltrosHistorial, params: unknown[]) {
+  const where = [`r.estado = 'CERRADO'`, `e.id_parqueadero = $${params.push(f.idParqueadero)}`];
+  if (f.placa) where.push(`r.placa LIKE '%' || $${params.push(f.placa)} || '%'`);
+  if (f.idTipo) where.push(`v.id_tipo = $${params.push(f.idTipo)}`);
+  if (f.marca) where.push(`v.marca ILIKE '%' || $${params.push(f.marca)} || '%'`);
+  if (f.color) where.push(`v.color ILIKE '%' || $${params.push(f.color)} || '%'`);
+  if (f.desde) where.push(`r.fecha_salida >= $${params.push(f.desde)}::date`);
+  if (f.hasta) where.push(`r.fecha_salida < $${params.push(f.hasta)}::date + 1`);
+  return where;
+}
+
+/** Rangos de tiempo y valor sobre una expresión (por visita o por total). */
+function rangos(f: FiltrosHistorial, params: unknown[], minutos: string, valor: string) {
+  const c: string[] = [];
+  if (f.minutosMin != null) c.push(`${minutos} >= $${params.push(f.minutosMin)}`);
+  if (f.minutosMax != null) c.push(`${minutos} <= $${params.push(f.minutosMax)}`);
+  if (f.valorMin != null) c.push(`${valor} >= $${params.push(f.valorMin)}`);
+  if (f.valorMax != null) c.push(`${valor} <= $${params.push(f.valorMax)}`);
+  return c;
+}
+
+const ORDEN_VISITA = { fecha: "r.fecha_salida DESC", valor: "r.valor_calculado DESC, r.fecha_salida DESC", tiempo: "r.minutos DESC, r.fecha_salida DESC" };
+const ORDEN_VEHICULO = { fecha: "ultima_salida DESC", valor: "valor_total DESC", tiempo: "minutos_total DESC" };
+
+/** Salidas registradas, una fila por visita. */
+export async function listarHistorial(f: FiltrosHistorial) {
+  const params: unknown[] = [];
+  const where = [...condiciones(f, params), ...rangos(f, params, "r.minutos", "r.valor_calculado")];
   const { rows } = await pool.query(
     `${SELECT_DETALLE}
-      WHERE r.estado = 'CERRADO' AND e.id_parqueadero = $1
-        AND ($2::text IS NULL OR r.placa LIKE '%' || $2 || '%')
-        AND ($3::date IS NULL OR r.fecha_salida >= $3::date)
-        AND ($4::date IS NULL OR r.fecha_salida <  $4::date + 1)
-      ORDER BY r.fecha_salida DESC
-      LIMIT $5`,
-    [f.idParqueadero, f.placa || null, f.desde || null, f.hasta || null, f.limite]
+      WHERE ${where.join(" AND ")}
+      ORDER BY ${ORDEN_VISITA[f.orden ?? "fecha"]}
+      LIMIT $${params.push(f.limite)}`,
+    params
+  );
+  return rows;
+}
+
+/**
+ * Historial agrupado por vehículo: visitas, tiempo total y dinero gastado
+ * en la sede. Los rangos de tiempo y valor se aplican a los totales.
+ */
+export async function historialPorVehiculo(f: FiltrosHistorial) {
+  const params: unknown[] = [];
+  const where = condiciones(f, params);
+  const having = rangos(f, params, "sum(r.minutos)", "sum(r.valor_calculado)");
+  const { rows } = await pool.query(
+    `SELECT r.placa, tv.id_tipo, tv.nombre AS tipo, v.marca, v.color, u.nombre AS cliente,
+            count(*)::int AS visitas, sum(r.minutos)::int AS minutos_total,
+            sum(r.valor_calculado)::float AS valor_total, max(r.fecha_salida) AS ultima_salida
+       FROM registro_estacionamiento r
+       JOIN espacio e        ON e.id_espacio = r.id_espacio
+       JOIN vehiculo v       ON v.placa = r.placa
+       JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo
+       LEFT JOIN usuario u   ON u.id_usuario = v.id_cliente
+      WHERE ${where.join(" AND ")}
+      GROUP BY r.placa, tv.id_tipo, tv.nombre, v.marca, v.color, u.nombre
+      ${having.length ? `HAVING ${having.join(" AND ")}` : ""}
+      ORDER BY ${ORDEN_VEHICULO[f.orden ?? "fecha"]}
+      LIMIT $${params.push(f.limite)}`,
+    params
   );
   return rows;
 }
