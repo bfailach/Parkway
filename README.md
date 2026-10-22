@@ -2,8 +2,9 @@
 
 Sistema transaccional para la gestión de parqueaderos. Muestra los cupos
 libres de cada sede en tiempo real, registra ingresos y salidas con cálculo
-automático del cobro, permite a los clientes reservar un espacio antes de
-llegar y deja cada operación en una bitácora.
+automático del cobro, permite a los clientes reservar un espacio dentro del
+horario de la sede y deja cada operación en una bitácora. El administrador
+crea las sedes con sus espacios, tarifas, horario y operadores.
 
 Proyecto de Sistemas Transaccionales, Universidad Manuela Beltrán.
 Grupo 2: Bryan Failach, Alejandro Castellanos y Brayan Bello.
@@ -26,9 +27,13 @@ en pocos segundos.
 | Rol | Funciones |
 | --- | --- |
 | Visitante | Ver los cupos libres por sede, el recorrido de cómo funciona y calcular el cobro. |
-| Cliente | Crear su cuenta, registrar sus vehículos, reservar un espacio por 30 minutos, ver su vehículo dentro con el valor acumulado y consultar su historial. |
-| Operador | Registrar ingresos (con asignación automática de espacio) y salidas, ver las reservas que vienen en camino, los vehículos dentro, el plano 3D y el historial del día. |
-| Administrador | Todo lo del operador, más la bitácora de transacciones. |
+| Cliente | Crear su cuenta, registrar sus vehículos (las bicicletas reciben un código BICI), reservar un espacio por 30 minutos dentro del horario de la sede, ver su vehículo dentro con el valor acumulado, configurar avisos de tiempo y dinero y consultar su historial. |
+| Operador | Registrar ingresos y salidas en las sedes que tiene asignadas. Al digitar una placa conocida, el formulario trae la marca y el color guardados. Ve las reservas en camino, los vehículos dentro, el plano 3D y 2D y el historial con filtros. |
+| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores) y la bitácora de transacciones. |
+
+Todos los usuarios pueden cambiar entre modo oscuro y claro y ajustar la
+accesibilidad: tamaño del texto, alto contraste, movimiento reducido, letra de
+lectura fácil, símbolos de estado en el plano y plano 2D en lugar del 3D.
 
 El detalle de cada pantalla, con capturas, está en
 [docs/FRONTEND.md](docs/FRONTEND.md).
@@ -47,7 +52,10 @@ El detalle de cada pantalla, con capturas, está en
 | Actualización de la disponibilidad sin recargar la página | RF12 | Consulta cada 5 s. WebSocket en la siguiente fase |
 | Historial de salidas y totales del día | RF13 | Implementado |
 | Bitácora de transacciones con consulta para el administrador | RF14, RNF08 | Implementado |
-| Pagos y comprobantes, anulación, gestión de tarifas y usuarios | RF02, RF08, RF09, RF11 | Siguiente fase |
+| Gestión de sedes: espacios, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
+| Horario de atención: no se aceptan reservas fuera del horario | RF10 | Implementado |
+| Notificaciones configurables de tiempo, valor y vencimiento de la reserva | RF03 | Implementado |
+| Pagos y comprobantes, anulación, gestión de usuarios | RF02, RF08, RF09 | Siguiente fase |
 | Predicción de ocupación con IA | RF15 | Diseñado en el documento maestro (sección 13) |
 
 ## Tecnologías
@@ -130,6 +138,25 @@ minutos iniciada por el valor de la fracción. El cobro de un día nunca supera
 el valor día. Ejemplo para automóvil: 1 h 20 min cuesta $4.000 + 2 × $1.500 =
 $7.000.
 
+**Datos guardados del vehículo.** Cuando el operador digita una placa que ya
+existe, el formulario de ingreso trae la marca y el color guardados y dice de
+quién es el vehículo. El operador puede cambiarlos; al registrar, el vehículo
+queda con los datos que confirmó.
+
+**Bicicletas.** No tienen placa. Al agregar una bicicleta, el cliente recibe
+un código único (BICI001, BICI002...) que le dice al operador al llegar. En el
+ingreso, el operador busca el código; si la bicicleta llega sin registro, el
+sistema genera uno nuevo.
+
+**Sedes y operadores.** Cada sede tiene sus propias tarifas y su horario por
+día de la semana. Un operador solo puede registrar ingresos y salidas en las
+sedes que el administrador le asignó. Al reducir los espacios de una sede se
+quitan los libres de número más alto que nunca se usaron; los que tienen
+historial se conservan.
+
+**Horario.** El cliente no puede reservar si la sede está cerrada o si cierra
+antes de que venza la reserva.
+
 **Reservas (RF10).** El cliente reserva con uno de sus vehículos y el sistema
 aparta el primer espacio libre de ese tipo, que queda RESERVADO y no se cuenta
 como libre. Tiene 30 minutos para llegar (`RESERVA_MINUTOS` en `backend/.env`).
@@ -144,9 +171,9 @@ la reserva se cancela.
 - Un espacio no puede quedar asignado a dos vehículos, ni con varios
   operadores registrando ingresos al mismo tiempo (`FOR UPDATE SKIP LOCKED` e
   índices únicos parciales).
-- La placa debe coincidir con el formato del tipo: automóvil `ABC123`,
-  motocicleta `ABC12D` y bicicleta, un código de 3 a 10 caracteres. Las
-  bicicletas no llevan marca.
+- La placa debe coincidir con el formato del tipo: automóvil `ABC123` y
+  motocicleta `ABC12D`. Las bicicletas usan el código `BICI001` que asigna el
+  sistema y no llevan marca.
 - Los datos se validan en el formulario y otra vez en el backend.
 - Cada operación queda en la tabla `transaccion` con el usuario, el resultado
   y, si falló, el motivo.
@@ -155,12 +182,12 @@ la reserva se cancela.
 
 ```bash
 cd backend
-npm test                                   # 16 pruebas unitarias: tarifas, placas, cuentas y vehículos
+npm test                                   # 28 pruebas unitarias: tarifas, placas, cuentas, vehículos, horarios y sedes
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
-La prueba de concurrencia envía 20 ingresos simultáneos de bicicleta a la
-Sede Zona T, que tiene 3 espacios. Resultado: 3 aceptados, 17 rechazados con
+La prueba de concurrencia, con la base recién cargada con `seed.sql`, envía
+20 ingresos simultáneos de bicicleta a la Sede Zona T, que tiene 3 espacios. Resultado: 3 aceptados, 17 rechazados con
 código 409 y ningún espacio duplicado (RNF03).
 
 ## Estructura del repositorio
@@ -169,13 +196,13 @@ código 409 y ningún espacio duplicado (RNF03).
 Parkway/
 ├── database/
 │   ├── schema.sql          # Tablas, claves, restricciones e índices
-│   ├── seed.sql            # Usuarios, sedes, 65 espacios y tarifas de prueba
+│   ├── seed.sql            # Usuarios, sedes, 71 espacios y tarifas de prueba
 │   └── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
 ├── backend/
 │   ├── src/
-│   │   ├── routes/         # Rutas Express por módulo (auth, estacionamiento, cliente, admin)
+│   │   ├── routes/         # Rutas Express por módulo (auth, catálogos, estacionamiento, cliente, admin)
 │   │   ├── controllers/    # Reciben la petición y responden
-│   │   ├── services/       # Reglas de negocio: ingreso, salida, reservas, tarifas, sesión
+│   │   ├── services/       # Reglas de negocio: ingreso, salida, reservas, horarios, sedes, acceso, tarifas
 │   │   ├── validators/     # Validación de datos de entrada
 │   │   ├── repositories/   # Acceso a datos con SQL parametrizado
 │   │   ├── transactions/   # Gestor de transacciones (BEGIN/COMMIT/ROLLBACK y bitácora)
@@ -185,8 +212,8 @@ Parkway/
 │   └── scripts/            # Prueba de concurrencia
 ├── frontend/
 │   └── src/
-│       ├── pages/          # Una pantalla por función (cliente/ para las del cliente)
-│       ├── components/     # Placa, Tiquete, Selector, Odometro, diálogos
+│       ├── pages/          # Una pantalla por función (cliente/ y admin/ por rol)
+│       ├── components/     # Placa, Tiquete, Selector, apariencia, notificaciones, diálogos
 │       ├── three/          # Escena 3D del parqueadero
 │       └── lib/            # Cliente de la API, formatos, rutas y cálculo de tarifa
 ├── render.yaml             # Despliegue en Render
@@ -208,13 +235,17 @@ Parkway/
 | POST | `/api/auth/registro` | Público | Crea una cuenta de cliente e inicia la sesión |
 | GET | `/api/auth/me` | Sesión | Usuario de la sesión |
 | GET | `/api/catalogos/parqueaderos` | Público | Sedes |
-| GET | `/api/catalogos/tipos-vehiculo` | Público | Tipos de vehículo con tarifa vigente |
+| GET | `/api/catalogos/tipos-vehiculo?idParqueadero=1` | Público | Tipos de vehículo con la tarifa vigente de la sede |
+| GET | `/api/catalogos/parqueaderos/:id/horario` | Público | Horario de la sede y si está abierta ahora |
 | GET | `/api/estacionamiento/resumen?idParqueadero=1` | Público | Cupos por tipo de vehículo |
 | GET | `/api/estacionamiento/disponibilidad?idParqueadero=1&idTipo=1` | Público | Espacios libres |
 | GET | `/api/estacionamiento/plano?idParqueadero=1` | Público | Estado de cada espacio, sin placas |
+| GET | `/api/estacionamiento/mis-sedes` | Personal | Sedes asignadas al operador (todas para el administrador) |
+| GET | `/api/estacionamiento/vehiculos?q=BICI0&idTipo=3` | Personal | Buscar vehículos por placa o código |
+| GET | `/api/estacionamiento/vehiculos/:placa` | Personal | Marca, color y dueño guardados de un vehículo |
 | GET | `/api/estacionamiento/espacios?idParqueadero=1` | Personal | Plazas con la placa del vehículo o de la reserva |
 | GET | `/api/estacionamiento/activos?idParqueadero=1&placa=ABC` | Personal | Vehículos dentro y valor acumulado |
-| GET | `/api/estacionamiento/historial?idParqueadero=1&desde=…&hasta=…` | Personal | Salidas registradas |
+| GET | `/api/estacionamiento/historial?idParqueadero=1&placa=…&idTipo=…&marca=…&color=…&desde=…&hasta=…&minutosMin=…&minutosMax=…&valorMin=…&valorMax=…&orden=…&agrupar=vehiculo` | Personal | Salidas registradas con filtros, o totales por vehículo |
 | GET | `/api/estacionamiento/totales-dia?idParqueadero=1` | Personal | Ingresos, salidas y valor del día |
 | GET | `/api/estacionamiento/reservas?idParqueadero=1` | Personal | Reservas activas y del día, con el cliente |
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
@@ -225,6 +256,11 @@ Parkway/
 | DELETE | `/api/cliente/vehiculos/:placa` | Cliente | Quitar un vehículo de la cuenta |
 | GET, POST | `/api/cliente/reservas` | Cliente | Consultar y crear reservas |
 | POST | `/api/cliente/reservas/:idReserva/cancelar` | Cliente | Cancelar una reserva activa |
+| GET, PUT | `/api/cliente/preferencias` | Cliente | Configuración de las notificaciones |
+| GET, POST | `/api/admin/parqueaderos` | Administrador | Consultar y crear sedes con espacios, tarifas, horario y operadores |
+| GET, PUT | `/api/admin/parqueaderos/:id` | Administrador | Consultar y editar una sede |
+| PATCH | `/api/admin/espacios/:id` | Administrador | Marcar un espacio fuera de servicio o habilitarlo |
+| GET | `/api/admin/operadores` | Administrador | Operadores disponibles para asignar |
 | GET | `/api/admin/bitacora?tipo=…&estado=…&desde=…&hasta=…` | Administrador | Bitácora de transacciones |
 
 Errores: 400 si un campo no es válido (con el detalle por campo), 401 sin
@@ -242,7 +278,7 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 ## Siguientes pasos
 
 - Pagos con pasarela, comprobantes y anulación (RF08, RF09).
-- Gestión de tarifas y usuarios desde el panel del administrador (RF02, RF11).
+- Gestión de usuarios desde el panel del administrador (RF02).
 - Actualización en tiempo real con WebSocket en lugar de consultas cada 5
   segundos (RF12).
 - Predicción de ocupación por hora con Prophet, a partir del historial de

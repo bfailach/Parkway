@@ -1,9 +1,10 @@
 # Frontend de Parkway
 
-Aplicación web en React 18 con TypeScript y Vite. Usa modo oscuro con el azul
-de la señal de parqueadero como color de acción; el amarillo se reserva para
-las placas. Tiene una escena 3D del parqueadero hecha con Three.js que dibuja
-cada plaza con su estado real en la base de datos.
+Aplicación web en React 18 con TypeScript y Vite. Tiene modo oscuro y claro,
+con el azul de la señal de parqueadero como color de acción; el amarillo se
+reserva para las placas. Una escena 3D hecha con Three.js dibuja cada plaza
+con su estado real en la base de datos y cada carro con la silueta del modelo
+más conocido de su marca.
 
 ## Contenido
 
@@ -11,7 +12,8 @@ cada plaza con su estado real en la base de datos.
 - [Ingreso y creación de cuenta](#ingreso-y-creación-de-cuenta)
 - [Pantallas del cliente](#pantallas-del-cliente)
 - [Pantallas del operador](#pantallas-del-operador)
-- [Pantalla del administrador](#pantalla-del-administrador)
+- [Pantallas del administrador](#pantallas-del-administrador)
+- [Modo claro y accesibilidad](#modo-claro-y-accesibilidad)
 - [En el celular](#en-el-celular)
 - [Cómo está hecha la escena 3D](#cómo-está-hecha-la-escena-3d)
 - [Organización del código](#organización-del-código)
@@ -55,27 +57,41 @@ enviar y otra vez en el backend.
 
 ## Pantallas del cliente
 
-Pestañas: Mi parqueo, Mis vehículos, Cupos por sede y Mi historial.
+Pestañas: Mi parqueo, Mis vehículos, Cupos por sede, Mi historial y
+Notificaciones.
 
 - **Mi parqueo.** Si tiene una reserva, muestra el espacio, la cuenta
   regresiva de 30 minutos y el plano 3D con su plaza parpadeando en azul. Si
   su vehículo está dentro, muestra el espacio, el tiempo y el valor
   acumulado, que se actualiza cada segundo. Si no tiene nada activo, muestra
-  el formulario para reservar.
+  el formulario para reservar con el horario de la sede. Si la sede está
+  cerrada o cierra antes de que venza la reserva, el botón se desactiva y el
+  backend también rechaza la reserva.
 - **Mis vehículos.** Agrega placas con la validación por tipo. Marca y color
   se eligen de una lista con la opción "Otro" al final; las marcas cambian
-  según sea carro o moto y las bicicletas no llevan marca.
+  según sea carro o moto. Las bicicletas no tienen placa ni marca: al
+  agregarlas, el sistema les da un código único (BICI001, BICI002...) que el
+  cliente le dice al operador al llegar.
 - **Cupos por sede.** El plano 3D de cada sede, sin placas de otros clientes.
 - **Mi historial.** Visitas con su valor y reservas con su estado.
+- **Notificaciones.** El cliente elige cada cuánto ver el tiempo y el valor
+  acumulado de su vehículo, un tope de dinero para recibir un aviso, cuántos
+  minutos antes avisar que vence la reserva y si quiere avisos de entrada y
+  salida. Se guardan en su cuenta. Los avisos aparecen en la página y,
+  si el cliente lo permite, también como notificaciones del navegador.
 
 | Reserva activa | Mis vehículos | Cupos por sede |
 | --- | --- | --- |
 | ![Reserva](capturas/10_cliente_reserva.jpg) | ![Vehículos](capturas/11_cliente_vehiculos.jpg) | ![Cupos](capturas/12_cliente_cupos.jpg) |
 
+| Bicicleta con su código | Notificaciones |
+| --- | --- |
+| ![Bicicleta](capturas/29_cliente_bicicleta.jpg) | ![Notificaciones](capturas/30_notificaciones.jpg) |
+
 ## Pantallas del operador
 
 Pestañas: Disponibilidad, Registrar ingreso, En el parqueadero, Reservas e
-Historial.
+Historial. El selector de sede muestra solo las sedes asignadas al operador.
 
 **Registrar ingreso.** El campo de placa tiene la forma de una placa de
 Bogotá y valida el formato según el tipo de vehículo. Al registrar, el
@@ -84,6 +100,16 @@ sistema asigna el espacio y "imprime" el tiquete.
 | Validación de placa | Ingreso registrado |
 | --- | --- |
 | ![Validación](capturas/13_validacion_placa.jpg) | ![Ingreso](capturas/14_ingreso.jpg) |
+
+Si la placa ya existe, el formulario dice de quién es el vehículo y llena la
+marca y el color guardados; el operador puede cambiarlos. Para bicicletas, el
+operador busca el código que dio el cliente; la lista muestra el color, el
+dueño y si ya está dentro. Si la bicicleta llega sin registro, se le genera un
+código al registrar el ingreso.
+
+| Datos guardados del vehículo | Búsqueda de bicicleta |
+| --- | --- |
+| ![Datos guardados](capturas/25_ingreso_datos_guardados.jpg) | ![Bicicleta](capturas/26_ingreso_bicicleta.jpg) |
 
 **Reservas.** Lista a los clientes que vienen en camino, con su teléfono, el
 espacio apartado y el tiempo que les queda. El botón "Registrar ingreso" abre
@@ -97,29 +123,68 @@ reservado y el tiquete lo indica.
 
 **Disponibilidad.** Cupos por tipo, movimiento del día y el plano 3D, que se
 gira con el mouse. Al pasar sobre una plaza muestra su código y la placa; un
-clic sobre un vehículo abre el registro de su salida. La vista "Plano" ofrece
-lo mismo en 2D.
+clic abre el detalle de la plaza, desde donde se registra la salida. La vista "Plano" muestra
+en cada plaza la placa o el código de bicicleta del vehículo; al hacer clic se
+abre el detalle con el vehículo, el dueño, la hora de ingreso, el valor hasta
+ahora y el botón para registrar la salida.
 
 | Disponibilidad | Salida desde el plano 3D | Salida registrada |
 | --- | --- | --- |
 | ![Disponibilidad](capturas/18_disponibilidad.jpg) | ![Salida 3D](capturas/19_salida_desde_3d.jpg) | ![Salida](capturas/20_salida.jpg) |
 
+![Plano 2D con el detalle de una plaza](capturas/27_plano_detalle.jpg)
+
 **En el parqueadero** lista los vehículos dentro con su tiempo y valor
 acumulado, y permite registrar la salida. **Historial** muestra las salidas
-con filtros por placa y fechas, y el total cobrado.
+con filtros por placa o código, tipo de vehículo, marca, color, fechas, horas
+de permanencia y valor pagado, y se puede ordenar por fecha, valor o tiempo.
+La vista "Por vehículo" suma las visitas, el tiempo y el dinero de cada
+vehículo.
 
 | En el parqueadero | Historial |
 | --- | --- |
-| ![Activos](capturas/21_en_el_parqueadero.jpg) | ![Historial](capturas/22_historial.jpg) |
+| ![Activos](capturas/21_en_el_parqueadero.jpg) | ![Historial con filtros](capturas/28_historial_filtros.jpg) |
 
-## Pantalla del administrador
+## Pantallas del administrador
 
-Tiene las mismas pestañas del operador más **Bitácora**: todas las
+Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes** y
+**Bitácora**.
+
+**Sedes.** El administrador crea o edita cada sede con:
+
+- nombre, dirección, ciudad y coordenadas;
+- cantidad de espacios y tarifa (hora, fracción de 15 minutos y día) por tipo
+  de vehículo;
+- horario de atención por día de la semana, con atajos para 24 horas o lunes
+  a sábado;
+- los operadores que tienen acceso a la sede.
+
+Mientras edita, la vista previa 3D se arma con los espacios del formulario.
+En una sede existente, un clic sobre un espacio libre lo marca fuera de
+servicio o lo habilita de nuevo.
+
+| Lista de sedes | Editar una sede | Horario y operadores |
+| --- | --- | --- |
+| ![Sedes](capturas/31_sedes.jpg) | ![Editar](capturas/32_editar_sede.jpg) | ![Horario](capturas/33_horario_operadores.jpg) |
+
+**Bitácora:** todas las
 operaciones del sistema con su usuario, resultado y detalle, filtrables por
 operación, resultado y fechas. Las operaciones revertidas muestran el motivo
 del error.
 
 ![Bitácora](capturas/23_bitacora.jpg)
+
+## Modo claro y accesibilidad
+
+El botón de la luna cambia entre modo oscuro y claro; la escena 3D cambia
+con él. El botón de accesibilidad abre un panel con tamaño del texto, alto
+contraste, movimiento reducido, letra de lectura fácil, símbolos de estado en
+el plano (para no depender solo del color) y plano 2D en lugar del 3D. Las
+opciones se guardan en el navegador.
+
+| Modo claro | Cliente en modo claro | Accesibilidad |
+| --- | --- | --- |
+| ![Modo claro](capturas/35_modo_claro.jpg) | ![Cliente claro](capturas/36_cliente_claro.jpg) | ![Accesibilidad](capturas/34_accesibilidad.jpg) |
 
 ## En el celular
 
@@ -131,7 +196,15 @@ portada mira a lo largo del carril y los textos pasan a una sola columna.
 ## Cómo está hecha la escena 3D
 
 La escena no usa modelos descargados ni imágenes: todo se dibuja con código a
-partir de los datos de la base.
+partir de los datos de la base, con el aspecto de una maqueta de
+presentación: superficies mate, luz suave y sombras difusas.
+
+**Vehículos por marca.** Cada carro se construye extruyendo una silueta
+lateral simplificada, al estilo de los íconos de carros de las apps de
+transporte. `three/modelos.ts` asigna a cada marca la forma de su modelo más
+conocido (por ejemplo, Renault con un compacto alto tipo Renault 4, Ford con
+un fastback, Suzuki con un todoterreno pequeño) y toma el color guardado del
+vehículo. Las motos también cambian de forma según la marca.
 
 **Librerías.** Three.js dibuja en el navegador con WebGL. React Three Fiber
 permite escribir la escena como componentes de React. Drei aporta el control
@@ -146,9 +219,11 @@ una fila de plazas a cada lado, con medidas por tipo de vehículo (carro 2,7 ×
 
 | Archivo | Qué dibuja |
 | --- | --- |
-| `three/Vehiculo.tsx` | Carros, motos y bicicletas con primitivas; luces delanteras y traseras emisivas |
+| `three/modelos.ts` | Siluetas por marca y colores por nombre |
+| `three/Vehiculo.tsx` | Carros extruidos desde la silueta, motos y bicicletas; luces delanteras y traseras |
+| `three/tema.ts` | Paletas oscura y clara de la escena |
 | `three/Plazas.tsx` | Líneas, testigo de estado (verde libre, rojo ocupado, azul reservado), conos fuera de servicio, animación de entrada y salida |
-| `three/Entorno.tsx` | Barrera y caseta, postes de luz de sodio, calle con tráfico, edificios, cerros y Monserrate |
+| `three/Entorno.tsx` | Lote, barrera, postes, árboles y entorno de la portada |
 | `three/texturas.ts` | Placas y ventanas de edificios dibujadas en un canvas |
 | `three/Escena.tsx` | Cámara, luces, niebla y efectos |
 | `three/control.ts` | Estado compartido con la página, sin Three.js |
@@ -176,20 +251,23 @@ frontend/src/
 │   ├── Reservas.tsx        # Reservas de la sede (personal)
 │   ├── Historial.tsx       # Salidas registradas
 │   ├── Bitacora.tsx        # Bitácora (administrador)
-│   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial
-├── components/             # Placa, Tiquete, Selector, CampoOpciones, Odometro, diálogos
+│   ├── admin/              # Sedes: crear y editar
+│   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial, Notificaciones
+├── components/             # Placa, Tiquete, Selector, CampoOpciones, Apariencia, Notificador, diálogos
 ├── three/                  # Escena 3D
 ├── lib/
 │   ├── api.ts              # Cliente HTTP y tipos de la API
 │   ├── useConsulta.ts      # Consultas que se repiten cada N segundos
 │   ├── tarifa.ts           # Regla de cobro (igual a la del backend)
 │   ├── formato.ts          # Pesos, horas, duraciones y formatos de placa
+│   ├── apariencia.ts       # Tema y opciones de accesibilidad
 │   └── ruta.ts             # Rutas por hash (#/, #/ingresar, #/panel)
 └── styles.css              # Estilos y variables de color
 ```
 
 ## Diseño y accesibilidad
 
+- **Temas:** oscuro (por defecto) y claro, con un botón en el encabezado.
 - **Colores:** fondo negro, azul `#2f7bea` para botones, enlaces y foco, y
   amarillo `#f5c518` solo para placas. En los planos, verde es libre, rojo
   ocupado y azul reservado.
