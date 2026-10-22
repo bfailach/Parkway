@@ -1,0 +1,31 @@
+# Despliegue en Render: un servicio web (API + frontend) y una base PostgreSQL.
+# En Render: New > Blueprint y elegir este repositorio.
+services:
+  - type: web
+    name: parkway
+    runtime: node
+    plan: free
+    region: ohio
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: parkway-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: RESERVA_MINUTOS
+        value: "30"
+
+databases:
+  - name: parkway-db
+    plan: free
+    region: ohio
+    databaseName: parkway
+    user: parkway

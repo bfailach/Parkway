@@ -96,6 +96,12 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
+### Publicarlo en internet
+
+El repositorio incluye `render.yaml` para desplegarlo en Render con un solo
+servicio (API y frontend) y una base PostgreSQL. Los pasos están en
+[docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
 ### Cuentas de prueba
 
 | Rol | Correo | Contraseña | Datos |
@@ -183,10 +189,13 @@ Parkway/
 │       ├── components/     # Placa, Tiquete, Selector, Odometro, diálogos
 │       ├── three/          # Escena 3D del parqueadero
 │       └── lib/            # Cliente de la API, formatos, rutas y cálculo de tarifa
+├── render.yaml             # Despliegue en Render
+├── package.json            # Compila y arranca todo desde la raíz
 └── docs/
     ├── Proyecto_S8_Parkway.pdf     # Documento maestro
     ├── FRONTEND.md                 # Pantallas, 3D y diseño
     ├── INSTALACION_WINDOWS.md      # Instalación paso a paso en Windows
+    ├── DESPLIEGUE.md               # Publicación en Render
     └── capturas/                   # Capturas de la interfaz
 ```
 
