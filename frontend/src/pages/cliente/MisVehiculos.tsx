@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 import { api, ApiError, TipoVehiculo, VehiculoCliente } from "../../lib/api";
 import { useConsulta } from "../../lib/useConsulta";
 import { FORMATO_PLACA, nombreTipo, normalizarPlaca } from "../../lib/formato";
-import { Placa } from "../../components/Placa";
+import { IconoBici, Placa } from "../../components/Placa";
 import { CampoOpciones, COLORES, MARCAS } from "../../components/CampoOpciones";
 
 /** Vehículos del cliente (RF04): registrar, consultar y quitar. */
@@ -98,20 +98,26 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
     e.preventDefault();
     const p = normalizarPlaca(placa);
     const err: Record<string, string> = {};
-    if (!p) err.placa = "Escriba la placa";
-    else if (!formato.regex.test(p)) err.placa = `Formato inválido. Ejemplo: ${formato.ejemplo}`;
+    // Las bicicletas no tienen placa: el sistema les asigna un código.
+    if (!esBicicleta && !p) err.placa = "Escriba la placa";
+    else if (!esBicicleta && !formato.regex.test(p)) err.placa = `Formato inválido. Ejemplo: ${formato.ejemplo}`;
     setErrores(err);
     setMensaje(null);
     if (Object.keys(err).length) return;
     setEnviando(true);
     try {
-      await api.cliente.agregarVehiculo({
-        placa: p,
+      const v = await api.cliente.agregarVehiculo({
+        placa: esBicicleta ? undefined : p,
         idTipo,
         marca: esBicicleta ? undefined : marca.trim() || undefined,
         color: color.trim() || undefined,
       });
-      setMensaje({ tipo: "ok", texto: `Agregamos ${p} a tu cuenta.` });
+      setMensaje({
+        tipo: "ok",
+        texto: esBicicleta
+          ? `Tu bicicleta quedó registrada con el código ${v.placa}. Díselo al operador cuando llegues.`
+          : `Agregamos ${v.placa} a tu cuenta.`,
+      });
       setPlaca("");
       setMarca("");
       setColor("");
@@ -144,24 +150,34 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
         </div>
       </fieldset>
 
-      <label className="campo campo-placa">
-        <span className="campo-rotulo">Placa</span>
-        <span className={`placa-entrada placa-entrada-sm ${errores.placa ? "con-error" : ""}`}>
-          <input
-            value={placa}
-            onChange={(e) => setPlaca(normalizarPlaca(e.target.value).slice(0, formato.max))}
-            placeholder={formato.ejemplo}
-            autoComplete="off"
-            spellCheck={false}
-            aria-invalid={!!errores.placa}
-            aria-describedby="ayuda-placa-cliente"
-          />
-          <span className="placa-ciudad" aria-hidden="true">BOGOTÁ D.C.</span>
-        </span>
-        <span className={errores.placa ? "campo-error" : "campo-ayuda"} id="ayuda-placa-cliente">
-          {errores.placa ?? (esBicicleta ? "Código del sticker o del marco, de 3 a 10 caracteres" : `Formato: ${formato.ejemplo}`)}
-        </span>
-      </label>
+      {esBicicleta ? (
+        <div className="bici-nueva">
+          <IconoBici />
+          <p>
+            Las bicicletas no tienen placa. Al agregarla te damos un código único, con la forma <strong>BICI001</strong>, que el
+            operador busca cuando llegas.
+          </p>
+        </div>
+      ) : (
+        <label className="campo campo-placa">
+          <span className="campo-rotulo">Placa</span>
+          <span className={`placa-entrada placa-entrada-sm ${errores.placa ? "con-error" : ""}`}>
+            <input
+              value={placa}
+              onChange={(e) => setPlaca(normalizarPlaca(e.target.value).slice(0, formato.max))}
+              placeholder={formato.ejemplo}
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={!!errores.placa}
+              aria-describedby="ayuda-placa-cliente"
+            />
+            <span className="placa-ciudad" aria-hidden="true">BOGOTÁ D.C.</span>
+          </span>
+          <span className={errores.placa ? "campo-error" : "campo-ayuda"} id="ayuda-placa-cliente">
+            {errores.placa ?? `Formato: ${formato.ejemplo}`}
+          </span>
+        </label>
+      )}
 
       <div className={esBicicleta ? "" : "fila-campos"}>
         {!esBicicleta && (
@@ -179,7 +195,7 @@ function FormVehiculo({ tipos, onAgregado }: { tipos: TipoVehiculo[]; onAgregado
       </div>
 
       <button className="boton boton-primario boton-ancho" disabled={enviando}>
-        {enviando ? "Agregando..." : "Agregar vehículo"}
+        {enviando ? "Agregando..." : esBicicleta ? "Agregar y recibir código" : "Agregar vehículo"}
       </button>
     </form>
   );

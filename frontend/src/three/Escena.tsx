@@ -1,6 +1,6 @@
 import { MutableRefObject, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars } from "@react-three/drei";
+import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { distribuir, EspacioPlano, MEDIO_CARRIL, Plaza } from "./layout";
@@ -8,6 +8,8 @@ import { Entorno, CALLE_X_OFFSET } from "./Entorno";
 import { Plazas } from "./Plazas";
 import { Vehiculo } from "./Vehiculo";
 import { ControlEscena, PLACA_HISTORIA, plazaAsignada } from "./control";
+import { PALETA_CLARA, PALETA_OSCURA, TemaEscena, usePaleta } from "./tema";
+import { movimientoReducido, useApariencia } from "../lib/apariencia";
 
 /**
  * Escena 3D del parqueadero.
@@ -41,7 +43,9 @@ function Rig({
   const carro = useRef<THREE.Group>(null);
   const mirar = useRef(new THREE.Vector3(0, 0, 0));
   const objetivo = plazaAsignada(plazas);
-  const reducido = useMemo(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
+  const { movimiento } = useApariencia();
+  const reducido = useMemo(() => movimientoReducido(), [movimiento]); // eslint-disable-line react-hooks/exhaustive-deps
+  const paleta = usePaleta();
 
   // Trayectos del carro de la historia: calle -> barrera, barrera -> plaza.
   const rutas = useMemo(() => {
@@ -157,9 +161,9 @@ function Rig({
   return (
     <>
       <group ref={carro}>
-        <Vehiculo tipo="AUTOMOVIL" color="#c9ced4" placa={PLACA_HISTORIA} luces />
-        <pointLight position={[2.5, 5, -3]} color="#ffd9a0" intensity={9} distance={12} decay={1.4} />
-        <pointLight position={[0, 1.0, -4]} color="#ffffff" intensity={3} distance={3.5} decay={2} />
+        <Vehiculo tipo="AUTOMOVIL" color="#2f6fd6" marca="Toyota" placa={PLACA_HISTORIA} luces />
+        {!paleta.claro && <pointLight position={[2.5, 5, -3]} color="#dfe8ff" intensity={7} distance={12} decay={1.4} />}
+        <pointLight position={[0, 1.0, -4]} color="#ffffff" intensity={paleta.claro ? 1 : 3} distance={3.5} decay={2} />
       </group>
       {objetivo && <ResaltarPlaza plaza={objetivo} control={control} />}
     </>
@@ -203,22 +207,32 @@ function Contenido({
   const barreraRef = useRef<THREE.Group | null>(null);
   const modo = control.current.modo;
   const { camera } = useThree();
+  const paleta = usePaleta();
   const cx = (dist.minX + dist.maxX) / 2;
+  const cz = (dist.zNorte + dist.zSur) / 2;
+  const extension = Math.max(dist.largo, (dist.zSur - dist.zNorte) * 1.4);
 
   useEffect(() => {
     if (modo === "panel") {
-      camera.position.set(cx - 4, dist.largo * 0.5 + 10, dist.largo * 0.42 + 8);
-      camera.lookAt(cx, 0, -2);
+      camera.position.set(cx - 4, extension * 0.5 + 10, cz + extension * 0.42 + 8);
+      camera.lookAt(cx, 0, cz - 2);
     }
-  }, [modo, cx, dist.largo, camera]);
+  }, [modo, cx, cz, extension, camera]);
 
   return (
     <>
-      <color attach="background" args={["#030407"]} />
-      <fog attach="fog" args={["#030407", 70, 300]} />
-      <hemisphereLight args={["#3a4a6e", "#0a0b0f", 0.55]} />
-      <directionalLight position={[-40, 60, 30]} intensity={0.35} color="#9db4ff" />
-      <Stars radius={260} depth={60} count={1800} factor={5} saturation={0} fade speed={0.4} />
+      <color attach="background" args={[paleta.fondo]} />
+      <fog attach="fog" args={[paleta.fondo, paleta.niebla[0] + extension * 0.4, paleta.niebla[1] + extension]} />
+      <hemisphereLight args={[paleta.cieloArriba, paleta.cieloAbajo, paleta.luzAmbiente]} />
+      <directionalLight position={[-40, 60, 30]} intensity={paleta.luzSol} color={paleta.colorSol} />
+      <directionalLight position={[50, 30, -40]} intensity={paleta.luzSol * 0.35} color={paleta.claro ? "#ffffff" : "#7ea2ff"} />
+      {/* Reflejos suaves de estudio en la pintura, sin descargar imágenes */}
+      <Environment resolution={128} frames={1}>
+        <Lightformer form="rect" intensity={2.2 * paleta.entorno} position={[0, 12, 0]} rotation-x={Math.PI / 2} scale={[30, 8, 1]} />
+        <Lightformer form="rect" intensity={1.2 * paleta.entorno} position={[-14, 4, 6]} rotation-y={Math.PI / 2} scale={[20, 3, 1]} />
+        <Lightformer form="rect" intensity={1.2 * paleta.entorno} position={[14, 4, -6]} rotation-y={-Math.PI / 2} scale={[20, 3, 1]} />
+        <Lightformer form="ring" color={paleta.claro ? "#ffffff" : "#9db8ff"} intensity={0.8 * paleta.entorno} position={[0, 6, -14]} scale={6} />
+      </Environment>
       <Entorno dist={dist} barreraRef={barreraRef} />
       <Plazas
         plazas={dist.plazas}
@@ -230,17 +244,19 @@ function Contenido({
       {modo !== "panel" && <Rig control={control} plazas={dist.plazas} dist={dist} barreraRef={barreraRef} />}
       {modo === "panel" && (
         <OrbitControls
-          target={[cx, 0, -2]}
+          target={[cx, 0, cz - 2]}
           enableDamping
           maxPolarAngle={Math.PI / 2.25}
-          minDistance={12}
-          maxDistance={dist.largo * 1.6 + 30}
+          minDistance={10}
+          maxDistance={extension * 1.6 + 30}
         />
       )}
-      <EffectComposer multisampling={0}>
-        <Bloom intensity={1.15} luminanceThreshold={0.62} luminanceSmoothing={0.2} mipmapBlur />
-        <Vignette offset={0.25} darkness={0.75} />
-      </EffectComposer>
+      {!paleta.claro && (
+        <EffectComposer multisampling={4}>
+          <Bloom intensity={0.55} luminanceThreshold={0.78} luminanceSmoothing={0.2} mipmapBlur />
+          <Vignette offset={0.3} darkness={0.55} />
+        </EffectComposer>
+      )}
     </>
   );
 }
@@ -266,6 +282,11 @@ function esperarFuentes() {
 
 export default function Escena({ espacios, control, resaltarTipo, resaltarId, onSeleccionar, className }: EscenaProps) {
   const [listo, setListo] = useState(false);
+  // Si el navegador apaga el contexto 3D (por ejemplo, por falta de memoria
+  // gráfica), se crea uno nuevo; tras tres intentos se deja de insistir.
+  const [intento, setIntento] = useState(0);
+  const { tema } = useApariencia();
+  const paleta = tema === "claro" ? PALETA_CLARA : PALETA_OSCURA;
   useEffect(() => {
     let vivo = true;
     esperarFuentes().then(() => vivo && setListo(true));
@@ -277,13 +298,26 @@ export default function Escena({ espacios, control, resaltarTipo, resaltarId, on
   return (
     <div className={className} aria-hidden={control.current.modo !== "panel"}>
       <Canvas
+        key={intento}
+        onCreated={({ gl }) => {
+          gl.domElement.addEventListener(
+            "webglcontextlost",
+            (e) => {
+              e.preventDefault();
+              if (intento < 3) setTimeout(() => setIntento((i) => i + 1), 400);
+            },
+            { once: true }
+          );
+        }}
         dpr={[1, 1.6]}
-        gl={{ antialias: false, powerPreference: "high-performance" }}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
         camera={{ fov: 40, near: 0.5, far: 900, position: [-60, 40, 60] }}
       >
-        <Suspense fallback={null}>
-          <Contenido espacios={espacios} control={control} resaltarTipo={resaltarTipo} resaltarId={resaltarId} onSeleccionar={onSeleccionar} />
-        </Suspense>
+        <TemaEscena.Provider value={paleta}>
+          <Suspense fallback={null}>
+            <Contenido espacios={espacios} control={control} resaltarTipo={resaltarTipo} resaltarId={resaltarId} onSeleccionar={onSeleccionar} />
+          </Suspense>
+        </TemaEscena.Provider>
       </Canvas>
     </div>
   );

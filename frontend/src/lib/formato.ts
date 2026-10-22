@@ -33,7 +33,31 @@ export const pluralTipo = (t: string) => PLURAL_TIPO[t] ?? t;
 export const FORMATO_PLACA: Record<number, { regex: RegExp; ejemplo: string; max: number }> = {
   1: { regex: /^[A-Z]{3}\d{3}$/, ejemplo: "ABC123", max: 6 },
   2: { regex: /^[A-Z]{3}\d{2}[A-Z]$/, ejemplo: "ABC12D", max: 6 },
-  3: { regex: /^[A-Z0-9]{3,10}$/, ejemplo: "BIC0042", max: 10 },
+  3: { regex: /^BICI\d{3,7}$/, ejemplo: "BICI001", max: 11 },
 };
 
 export const normalizarPlaca = (p: string) => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+export const NOMBRE_DIA = ["", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+/** "06:00" -> "6:00", "24:00" -> "medianoche" */
+export const horaTexto = (h: string) => (h === "24:00" ? "medianoche" : h.replace(/^0(\d)/, "$1"));
+
+/** Resume un horario semanal: "Lun a sáb 6:00 a 22:00 · Dom 8:00 a 20:00". */
+export function resumenHorario(horarios: { dia: number; abre: string; cierra: string }[]): string {
+  if (!horarios.length) return "Sin horario";
+  if (horarios.length === 7 && horarios.every((h) => h.abre === "00:00" && h.cierra === "24:00")) return "Abierta las 24 horas";
+  const grupos: { desde: number; hasta: number; abre: string; cierra: string }[] = [];
+  horarios.forEach((h) => {
+    const g = grupos[grupos.length - 1];
+    if (g && g.hasta === h.dia - 1 && g.abre === h.abre && g.cierra === h.cierra) g.hasta = h.dia;
+    else grupos.push({ desde: h.dia, hasta: h.dia, abre: h.abre, cierra: h.cierra });
+  });
+  const corto = (d: number) => NOMBRE_DIA[d].slice(0, 3).toLowerCase();
+  return grupos
+    .map((g) => {
+      const dias = g.desde === g.hasta ? corto(g.desde) : `${corto(g.desde)} a ${corto(g.hasta)}`;
+      return `${dias.charAt(0).toUpperCase()}${dias.slice(1)} ${horaTexto(g.abre)} a ${horaTexto(g.cierra)}`;
+    })
+    .join(" · ");
+}

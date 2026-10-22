@@ -2,6 +2,7 @@ import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { api, ApiError, Usuario, sesion } from "../lib/api";
 import { crearControl, soportaWebGL } from "../three/control";
 import type { EspacioMapa } from "../lib/api";
+import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
 
 const Escena = lazy(() => import("../three/Escena"));
 
@@ -59,7 +60,13 @@ export function Login({ onIngresar, onVolver }: { onIngresar: (u: Usuario) => vo
         </Suspense>
       )}
       <main className="login-panel">
-        <button className="boton boton-texto login-volver" onClick={onVolver}>Volver a la portada</button>
+        <div className="login-arriba">
+          <button className="boton boton-texto login-volver" onClick={onVolver}>Volver a la portada</button>
+          <div className="controles">
+            <BotonAccesibilidad />
+            <BotonTema />
+          </div>
+        </div>
         {modo === "crear" ? (
           <CrearCuenta onCreada={onIngresar} onIngresar={() => setModo("ingresar")} />
         ) : (

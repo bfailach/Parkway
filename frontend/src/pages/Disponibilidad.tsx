@@ -1,7 +1,9 @@
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
-import { api, Parqueadero, Registro } from "../lib/api";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { api, EspacioMapa, Parqueadero, Registro } from "../lib/api";
 import { useConsulta } from "../lib/useConsulta";
-import { horaCorta, pesos, pluralTipo } from "../lib/formato";
+import { duracion, horaCorta, nombreTipo, pesos, pluralTipo } from "../lib/formato";
+import { leerApariencia } from "../lib/apariencia";
+import { Placa } from "../components/Placa";
 import { MapaEspacios } from "../components/MapaEspacios";
 import { Odometro } from "../components/Odometro";
 import { SalidaDialogo } from "../components/SalidaDialogo";
@@ -12,16 +14,17 @@ const Escena = lazy(() => import("../three/Escena"));
 
 /**
  * Panel de disponibilidad (RF05).
- * El cliente ve los cupos por tipo de vehículo y el plano 3D sin placas.
- * El personal ve las placas, puede girar el plano y registrar la salida
- * de un vehículo haciendo clic sobre su plaza.
+ * El cliente ve los cupos por tipo de vehículo y el plano sin placas.
+ * El personal ve las placas y los códigos de bicicleta. En el plano 3D y
+ * en el 2D, un clic sobre una plaza abre su detalle; si está ocupada, desde
+ * ahí se registra la salida.
  */
 export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPersonal: boolean }) {
   const webgl = useMemo(soportaWebGL, []);
-  const [vista, setVista] = useState<"3d" | "plano">(webgl ? "3d" : "plano");
+  const [vista, setVista] = useState<"3d" | "plano">(webgl && !leerApariencia().plano2d ? "3d" : "plano");
   const [tipo, setTipo] = useState<number | null>(null);
   const [registro, setRegistro] = useState<Registro | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [idSeleccion, setIdSeleccion] = useState<number | null>(null);
   const control = useRef(crearControl("panel"));
 
   const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero], 5000);
@@ -36,27 +39,9 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
     15000
   );
 
-  async function seleccionarPlaza(p: Plaza) {
-    setAviso(null);
-    if (!esPersonal) return;
-    if (p.estado !== "OCUPADO" || !p.id_registro) {
-      const texto =
-        p.estado === "LIBRE"
-          ? "libre"
-          : p.estado === "RESERVADO"
-            ? `reservado${p.placa ? ` para ${p.placa}` : ""}. Al llegar, registre el ingreso con esa placa.`
-            : "fuera de servicio";
-      setAviso(`${p.codigo}: ${texto}`);
-      return;
-    }
-    try {
-      const activos = await api.activos(sede.id_parqueadero, p.placa ?? undefined);
-      const r = activos.find((a) => a.id_registro === p.id_registro);
-      if (r) setRegistro(r);
-    } catch (e) {
-      setAviso(e instanceof Error ? e.message : "No se pudo cargar el vehículo");
-    }
-  }
+  useEffect(() => setIdSeleccion(null), [sede.id_parqueadero]);
+  const seleccion = (mapa.datos ?? []).find((e) => e.id_espacio === idSeleccion) ?? null;
+  const seleccionar = (id: number) => setIdSeleccion((actual) => (actual === id ? null : id));
 
   const r = resumen.datos;
 
@@ -130,18 +115,28 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
                 espacios={mapa.datos}
                 control={control}
                 resaltarTipo={tipo}
-                onSeleccionar={seleccionarPlaza}
+                resaltarId={idSeleccion}
+                onSeleccionar={(p: Plaza) => seleccionar(p.id_espacio)}
               />
             </Suspense>
             <p className="visor-ayuda">
               {esPersonal
-                ? "Arrastra para girar, rueda para acercar. Haz clic en un vehículo para registrar su salida."
+                ? "Arrastra para girar, rueda para acercar. Haz clic en una plaza para ver el vehículo."
                 : "Arrastra para girar, rueda para acercar. Las plazas con luz verde están libres."}
             </p>
-            {aviso && <p className="visor-aviso" role="status">{aviso}</p>}
+            {seleccion && (
+              <DetalleEspacio espacio={seleccion} sede={sede} esPersonal={esPersonal} onCerrar={() => setIdSeleccion(null)} onSalida={setRegistro} flotante />
+            )}
           </div>
         )}
-        {vista === "plano" && mapa.datos && mapa.datos.length > 0 && <MapaEspacios espacios={mapa.datos} />}
+        {vista === "plano" && mapa.datos && mapa.datos.length > 0 && (
+          <div className="plano-con-detalle">
+            <MapaEspacios espacios={mapa.datos} onSeleccionar={(e) => seleccionar(e.id_espacio)} seleccionado={idSeleccion} />
+            {seleccion && (
+              <DetalleEspacio espacio={seleccion} sede={sede} esPersonal={esPersonal} onCerrar={() => setIdSeleccion(null)} onSalida={setRegistro} />
+            )}
+          </div>
+        )}
       </section>
 
       <SalidaDialogo
@@ -149,11 +144,100 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
         sede={sede.nombre}
         onCerrar={() => setRegistro(null)}
         onRegistrada={() => {
+          setIdSeleccion(null);
           mapa.recargar();
           resumen.recargar();
           totales.recargar();
         }}
       />
     </div>
+  );
+}
+
+const ESTADO: Record<EspacioMapa["estado"], string> = {
+  LIBRE: "Libre",
+  OCUPADO: "Ocupado",
+  RESERVADO: "Reservado",
+  FUERA_DE_SERVICIO: "Fuera de servicio",
+};
+
+/**
+ * Detalle de una plaza: el vehículo que la ocupa (placa o código de
+ * bicicleta, marca, color, dueño, tiempo y valor) o la reserva. El cliente
+ * no ve placas ni dueños, solo el estado y el tipo de vehículo.
+ */
+function DetalleEspacio({
+  espacio: e,
+  sede,
+  esPersonal,
+  onCerrar,
+  onSalida,
+  flotante = false,
+}: {
+  espacio: EspacioMapa;
+  sede: Parqueadero;
+  esPersonal: boolean;
+  onCerrar: () => void;
+  onSalida: (r: Registro) => void;
+  flotante?: boolean;
+}) {
+  const [registro, setRegistro] = useState<Registro | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRegistro(null);
+    setError(null);
+    if (!esPersonal || e.estado !== "OCUPADO" || !e.placa) return;
+    let vigente = true;
+    api
+      .activos(sede.id_parqueadero, e.placa)
+      .then((lista) => vigente && setRegistro(lista.find((r) => r.id_registro === e.id_registro) ?? null))
+      .catch((x) => vigente && setError(x.message));
+    return () => {
+      vigente = false;
+    };
+  }, [e.id_espacio, e.id_registro, e.placa, e.estado, esPersonal, sede.id_parqueadero]);
+
+  const vehiculo = [nombreTipo(e.tipo), e.marca, e.color?.toLowerCase()].filter(Boolean).join(", ");
+
+  return (
+    <aside className={`ficha-espacio ${flotante ? "ficha-flotante" : ""}`} aria-label={`Espacio ${e.codigo}`} aria-live="polite">
+      <header className="ficha-cabeza">
+        <div>
+          <span className="ficha-codigo">{e.codigo}</span>
+          <span className={`chip chip-estado-${e.estado.toLowerCase()}`}>{ESTADO[e.estado]}</span>
+        </div>
+        <button type="button" className="aviso-cerrar" aria-label="Cerrar detalle" onClick={onCerrar}>×</button>
+      </header>
+
+      {e.estado === "OCUPADO" && (
+        <>
+          {esPersonal && e.placa && <Placa placa={e.placa} tamano="md" />}
+          <dl className="tiquete-datos">
+            <div><dt>Vehículo</dt><dd>{vehiculo}</dd></div>
+            {esPersonal && <div><dt>Dueño</dt><dd>{e.cliente ?? "Visitante sin cuenta"}</dd></div>}
+            {esPersonal && e.fecha_ingreso && <div><dt>Ingresó</dt><dd>{horaCorta(e.fecha_ingreso)}</dd></div>}
+            {registro && <div><dt>Tiempo</dt><dd>{duracion(registro.minutos_transcurridos)}</dd></div>}
+            {registro && <div><dt>Valor hasta ahora</dt><dd>{pesos(registro.valor_estimado)}</dd></div>}
+          </dl>
+          {error && <p className="alerta alerta-error">{error}</p>}
+          {esPersonal && (
+            <button className="boton boton-primario boton-ancho" disabled={!registro} onClick={() => registro && onSalida(registro)}>
+              Registrar salida
+            </button>
+          )}
+        </>
+      )}
+      {e.estado === "RESERVADO" && (
+        <dl className="tiquete-datos">
+          {esPersonal && e.placa && <div><dt>Reservado para</dt><dd><Placa placa={e.placa} /></dd></div>}
+          {esPersonal && e.cliente && <div><dt>Cliente</dt><dd>{e.cliente}</dd></div>}
+          {e.reserva_vence && <div><dt>Vence</dt><dd>{horaCorta(e.reserva_vence)}</dd></div>}
+          <div><dt>Tipo</dt><dd>{nombreTipo(e.tipo)}</dd></div>
+        </dl>
+      )}
+      {e.estado === "LIBRE" && <p className="tenue">Libre para {nombreTipo(e.tipo).toLowerCase()}. El próximo ingreso de este tipo puede ocuparlo.</p>}
+      {e.estado === "FUERA_DE_SERVICIO" && <p className="tenue">En mantenimiento. No se asigna a ningún vehículo.</p>}
+    </aside>
   );
 }

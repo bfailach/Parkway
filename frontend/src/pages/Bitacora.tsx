@@ -17,6 +17,9 @@ const OPERACION: Record<string, string> = {
   EXPIRACION: "Reserva expirada",
   REGISTRO_VEHICULO: "Registro de vehículo",
   QUITAR_VEHICULO: "Vehículo retirado",
+  CREAR_PARQUEADERO: "Sede creada",
+  EDITAR_PARQUEADERO: "Sede editada",
+  ESTADO_ESPACIO: "Estado de espacio",
 };
 const nombreOperacion = (t: string) => OPERACION[t] ?? t;
 
@@ -30,6 +33,9 @@ function detalle(d: Record<string, unknown> | null) {
   if (d.minutos != null) partes.push(`${d.minutos} min`);
   if (d.valor != null) partes.push(`$ ${Number(d.valor).toLocaleString("es-CO")}`);
   if (d.reserva) partes.push("con reserva");
+  if (typeof d.nombre === "string") partes.push(d.nombre);
+  if (d.estado === "FUERA_DE_SERVICIO") partes.push("fuera de servicio");
+  if (d.estado === "LIBRE") partes.push("habilitado");
   return partes.join(", ");
 }
 

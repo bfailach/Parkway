@@ -8,6 +8,8 @@ import { Odometro } from "../components/Odometro";
 import { Placa } from "../components/Placa";
 import { crearControl, plazaAsignada, PLACA_HISTORIA, soportaWebGL } from "../three/control";
 import { distribuir } from "../three/layout";
+import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
+import { movimientoReducido } from "../lib/apariencia";
 
 const Escena = lazy(() => import("../three/Escena"));
 
@@ -50,8 +52,11 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
 
   useEffect(() => {
     api.parqueaderos().then(setSedes).catch(() => {});
-    api.tiposVehiculo().then(setTipos).catch(() => {});
   }, []);
+  // Las tarifas son de cada sede.
+  useEffect(() => {
+    api.tiposVehiculo(idSede).then(setTipos).catch(() => {});
+  }, [idSede]);
 
   const plano = useConsulta(() => api.plano(idSede), [idSede], 5000);
   const resumen = useConsulta(() => api.resumen(idSede), [idSede], 5000);
@@ -61,7 +66,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
 
   // Scroll suave y control de la cámara según la sección visible.
   useEffect(() => {
-    const reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducido = movimientoReducido();
     const lenis = reducido ? null : new Lenis({ lerp: 0.1 });
     let raf = 0;
     const bucle = (t: number) => {
@@ -133,6 +138,10 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
           <button onClick={() => irA("cupos")}>Cupos</button>
           <button onClick={() => irA("tarifas")}>Tarifas</button>
         </nav>
+        <div className="controles">
+          <BotonAccesibilidad />
+          <BotonTema />
+        </div>
         <button className="boton boton-primario" onClick={onIngresar}>
           {enSesion ? "Ir al panel" : "Ingresar"}
         </button>
@@ -220,7 +229,12 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
                 </button>
               ))}
             </div>
-            {sede && <p className="vivo-direccion">{sede.direccion}</p>}
+            {sede && (
+              <p className="vivo-direccion">
+                {sede.direccion}, {sede.ciudad}
+                <span className={`estado-sede ${sede.abierto ? "abierta" : "cerrada"}`}>{sede.estado_horario}</span>
+              </p>
+            )}
             <dl className="vivo-tipos entrada" style={{ ["--retardo" as string]: "160ms" }}>
               {resumen.datos?.porTipo.map((t) => (
                 <div key={t.id_tipo} className={t.libres === 0 ? "lleno" : ""}>
@@ -242,7 +256,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
         </section>
 
         {/* Calculadora de tarifa */}
-        <Tarifas tipos={tipos} />
+        <Tarifas tipos={tipos} sedes={sedes} idSede={idSede} onSede={setIdSede} />
 
         {/* Acceso del personal */}
         <section className="cierre" aria-labelledby="titulo-cierre">
@@ -262,7 +276,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
   );
 }
 
-function Tarifas({ tipos }: { tipos: TipoVehiculo[] }) {
+function Tarifas({ tipos, sedes, idSede, onSede }: { tipos: TipoVehiculo[]; sedes: Parqueadero[]; idSede: number; onSede: (id: number) => void }) {
   const conTarifa = tipos.filter((t) => t.valor_hora != null);
   const [idTipo, setIdTipo] = useState(1);
   const [minutos, setMinutos] = useState(95);
@@ -274,8 +288,15 @@ function Tarifas({ tipos }: { tipos: TipoVehiculo[] }) {
       <div className="tarifas-texto">
         <h2 id="titulo-tarifas" className="display-2 entrada">Calcula cuánto pagas</h2>
         <p>Mueve el tiempo y mira el valor exacto. Es el mismo cálculo que hace la portería al registrar tu salida.</p>
+        <div className="sedes" role="tablist" aria-label="Sede de las tarifas">
+          {sedes.map((s) => (
+            <button key={s.id_parqueadero} role="tab" aria-selected={s.id_parqueadero === idSede} className="sede-tab" onClick={() => onSede(s.id_parqueadero)}>
+              {s.nombre}
+            </button>
+          ))}
+        </div>
         <table className="tarifas-tabla">
-          <caption className="visualmente-oculto">Tarifas vigentes</caption>
+          <caption className="visualmente-oculto">Tarifas vigentes de {sedes.find((s) => s.id_parqueadero === idSede)?.nombre}</caption>
           <thead>
             <tr>
               <th scope="col">Vehículo</th>

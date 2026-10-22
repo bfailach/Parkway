@@ -13,11 +13,119 @@ export interface Usuario {
   turno?: string | null;
 }
 
+export interface Horario {
+  /** 1 = lunes ... 7 = domingo */
+  dia: number;
+  abre: string;
+  cierra: string;
+}
+
+export interface TarifaSede {
+  id_parqueadero?: number;
+  id_tipo: number;
+  valor_hora: number;
+  valor_fraccion: number;
+  valor_dia: number;
+}
+
 export interface Parqueadero {
   id_parqueadero: number;
   nombre: string;
   direccion: string;
+  ciudad?: string;
+  latitud?: number | null;
+  longitud?: number | null;
   capacidad_total: number;
+  horarios?: Horario[];
+  abierto?: boolean;
+  estado_horario?: string;
+  tarifas?: TarifaSede[];
+}
+
+export interface EstadoHorario {
+  abierto: boolean;
+  minutosParaCerrar: number | null;
+  mensaje: string;
+  horarios: Horario[];
+}
+
+export interface VehiculoRegistrado {
+  placa: string;
+  id_tipo: number;
+  tipo: string;
+  marca: string | null;
+  color: string | null;
+  cliente: string | null;
+  telefono: string | null;
+  dentro: boolean;
+}
+
+export interface FiltrosHistorial {
+  idParqueadero: number;
+  placa?: string;
+  idTipo?: number;
+  marca?: string;
+  color?: string;
+  desde?: string;
+  hasta?: string;
+  minutosMin?: number;
+  minutosMax?: number;
+  valorMin?: number;
+  valorMax?: number;
+  orden?: "fecha" | "valor" | "tiempo";
+}
+
+export interface HistorialVehiculo {
+  placa: string;
+  id_tipo: number;
+  tipo: string;
+  marca: string | null;
+  color: string | null;
+  cliente: string | null;
+  visitas: number;
+  minutos_total: number;
+  valor_total: number;
+  ultima_salida: string;
+}
+
+export interface PreferenciasNotificacion {
+  activas: boolean;
+  navegador: boolean;
+  cadaMinutos: number;
+  montoAviso: number | null;
+  minutosAntesReserva: number;
+  alEntrarSalir: boolean;
+}
+
+export interface Operador {
+  id_usuario: number;
+  nombre: string;
+  correo: string;
+  turno: string | null;
+  estado: string;
+  sedes: number[];
+}
+
+export interface SedeAdmin extends Parqueadero {
+  espacios: Record<string, number>;
+  fuera_de_servicio: number;
+  ocupados: number;
+  horarios: Horario[];
+  tarifas: TarifaSede[];
+  operadores: number[];
+  lista_espacios?: { id_espacio: number; codigo: string; estado: EspacioMapa["estado"]; id_tipo: number; tipo: string }[];
+}
+
+export interface DatosSede {
+  nombre: string;
+  direccion: string;
+  ciudad: string;
+  latitud: number | null;
+  longitud: number | null;
+  espacios: Record<number, number>;
+  tarifas: { idTipo: number; valor_hora: number; valor_fraccion: number; valor_dia: number }[];
+  horarios: Horario[];
+  operadores: number[];
 }
 
 export interface TipoVehiculo {
@@ -56,6 +164,9 @@ export interface EspacioMapa {
   fecha_ingreso: string | null;
   id_reserva?: number | null;
   reserva_vence?: string | null;
+  marca?: string | null;
+  color?: string | null;
+  cliente?: string | null;
 }
 
 export interface Registro {
@@ -230,27 +341,43 @@ export const api = {
     estado: () => request<EstadoCliente>("GET", "/cliente/estado"),
     historial: () => request<(Registro & { sede: string })[]>("GET", "/cliente/historial"),
     vehiculos: () => request<VehiculoCliente[]>("GET", "/cliente/vehiculos"),
-    agregarVehiculo: (v: { placa: string; idTipo: number; marca?: string; color?: string }) =>
+    agregarVehiculo: (v: { placa?: string; idTipo: number; marca?: string; color?: string }) =>
       request<VehiculoCliente>("POST", "/cliente/vehiculos", v),
     quitarVehiculo: (placa: string) => request<void>("DELETE", `/cliente/vehiculos/${encodeURIComponent(placa)}`),
     reservas: () => request<Reserva[]>("GET", "/cliente/reservas"),
     reservar: (placa: string, idParqueadero: number) => request<Reserva>("POST", "/cliente/reservas", { placa, idParqueadero }),
     cancelarReserva: (id: number) => request<Reserva>("POST", `/cliente/reservas/${id}/cancelar`),
+    preferencias: () => request<PreferenciasNotificacion>("GET", "/cliente/preferencias"),
+    guardarPreferencias: (p: PreferenciasNotificacion) => request<PreferenciasNotificacion>("PUT", "/cliente/preferencias", p),
+  },
+  admin: {
+    sedes: () => request<SedeAdmin[]>("GET", "/admin/parqueaderos"),
+    sede: (id: number) => request<SedeAdmin>("GET", `/admin/parqueaderos/${id}`),
+    crearSede: (d: DatosSede) => request<SedeAdmin>("POST", "/admin/parqueaderos", d),
+    editarSede: (id: number, d: DatosSede) => request<SedeAdmin>("PUT", `/admin/parqueaderos/${id}`, d),
+    estadoEspacio: (id: number, estado: "LIBRE" | "FUERA_DE_SERVICIO") => request<void>("PATCH", `/admin/espacios/${id}`, { estado }),
+    operadores: () => request<Operador[]>("GET", "/admin/operadores"),
   },
   parqueaderos: () => request<Parqueadero[]>("GET", "/catalogos/parqueaderos"),
-  tiposVehiculo: () => request<TipoVehiculo[]>("GET", "/catalogos/tipos-vehiculo"),
+  misSedes: () => request<Parqueadero[]>("GET", "/estacionamiento/mis-sedes"),
+  horario: (id: number) => request<EstadoHorario>("GET", `/catalogos/parqueaderos/${id}/horario`),
+  tiposVehiculo: (idParqueadero?: number) => request<TipoVehiculo[]>("GET", `/catalogos/tipos-vehiculo?${qs({ idParqueadero })}`),
+  buscarVehiculos: (q: string, idTipo?: number) => request<VehiculoRegistrado[]>("GET", `/estacionamiento/vehiculos?${qs({ q, idTipo })}`),
+  vehiculo: (placa: string) => request<VehiculoRegistrado>("GET", `/estacionamiento/vehiculos/${encodeURIComponent(placa)}`),
   resumen: (idParqueadero: number) => request<Resumen>("GET", `/estacionamiento/resumen?${qs({ idParqueadero })}`),
   plano: (idParqueadero: number) => request<EspacioMapa[]>("GET", `/estacionamiento/plano?${qs({ idParqueadero })}`),
   espacios: (idParqueadero: number) => request<EspacioMapa[]>("GET", `/estacionamiento/espacios?${qs({ idParqueadero })}`),
   totalesDia: (idParqueadero: number) => request<TotalesDia>("GET", `/estacionamiento/totales-dia?${qs({ idParqueadero })}`),
   activos: (idParqueadero: number, placa?: string) =>
     request<Registro[]>("GET", `/estacionamiento/activos?${qs({ idParqueadero, placa })}`),
-  historial: (f: { idParqueadero: number; placa?: string; desde?: string; hasta?: string }) =>
-    request<Registro[]>("GET", `/estacionamiento/historial?${qs(f)}`),
+  historial: (f: FiltrosHistorial) =>
+    request<Registro[]>("GET", `/estacionamiento/historial?${qs(f as unknown as Record<string, string | number | undefined>)}`),
+  historialPorVehiculo: (f: FiltrosHistorial) =>
+    request<HistorialVehiculo[]>("GET", `/estacionamiento/historial?${qs({ ...(f as unknown as Record<string, string | number | undefined>), agrupar: "vehiculo" })}`),
   reservasSede: (idParqueadero: number) => request<ReservaSede[]>("GET", `/estacionamiento/reservas?${qs({ idParqueadero })}`),
   bitacora: (f: { tipo?: string; estado?: string; desde?: string; hasta?: string }) =>
     request<{ filas: FilaBitacora[]; tipos: string[] }>("GET", `/admin/bitacora?${qs(f)}`),
-  ingreso: (datos: { placa: string; idTipo: number; idParqueadero: number; idEspacio?: number; marca?: string; color?: string }) =>
+  ingreso: (datos: { placa?: string; idTipo: number; idParqueadero: number; idEspacio?: number; marca?: string; color?: string; generarCodigo?: boolean }) =>
     request<Registro>("POST", "/estacionamiento/ingreso", datos),
   salida: (idRegistro: number) => request<Registro>("POST", `/estacionamiento/salida/${idRegistro}`),
 };

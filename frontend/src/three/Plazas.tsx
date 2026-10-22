@@ -4,6 +4,8 @@ import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { colorVehiculo, Plaza } from "./layout";
 import { Vehiculo } from "./Vehiculo";
+import { colorDeNombre } from "./modelos";
+import { PaletaEscena, usePaleta } from "./tema";
 
 /**
  * Plazas del parqueadero: líneas de demarcación, testigo de estado al
@@ -16,12 +18,30 @@ const COLOR_ESTADO: Record<string, string> = {
   LIBRE: "#3ddc97",
   OCUPADO: "#ff4d5e",
   RESERVADO: "#4b90f5",
-  FUERA_DE_SERVICIO: "#5c636b",
+  FUERA_DE_SERVICIO: "#7b838c",
+};
+const COLOR_ESTADO_CLARO: Record<string, string> = {
+  LIBRE: "#14a56c",
+  OCUPADO: "#e0384a",
+  RESERVADO: "#2f6fe0",
+  FUERA_DE_SERVICIO: "#9aa2ab",
 };
 
-const matLinea = new THREE.MeshStandardMaterial({ color: "#e9ecef", emissive: "#e9ecef", emissiveIntensity: 0.25, roughness: 0.6 });
-const matCono = new THREE.MeshStandardMaterial({ color: "#ff7a1a", emissive: "#ff5a00", emissiveIntensity: 0.4 });
-const matFranja = new THREE.MeshStandardMaterial({ color: "#f4f4f4" });
+const materialesPlaza = new Map<boolean, { linea: THREE.Material; cono: THREE.Material; franja: THREE.Material }>();
+function matsPlaza(p: PaletaEscena) {
+  let m = materialesPlaza.get(p.claro);
+  if (!m) {
+    m = {
+      linea: new THREE.MeshStandardMaterial({ color: p.linea, emissive: p.linea, emissiveIntensity: p.lineaBrillo, roughness: 0.6 }),
+      cono: new THREE.MeshStandardMaterial({ color: "#ff7a1a", roughness: 0.5 }),
+      franja: new THREE.MeshStandardMaterial({ color: "#f4f4f4" }),
+    };
+    materialesPlaza.set(p.claro, m);
+  }
+  return m;
+}
+
+const colorDe = (p: Plaza) => colorDeNombre(p.color) ?? colorVehiculo(p.id_espacio);
 
 function PlazaVehiculo({ plaza, animarEntrada }: { plaza: Plaza; animarEntrada: boolean }) {
   const ref = useRef<THREE.Group>(null);
@@ -40,7 +60,8 @@ function PlazaVehiculo({ plaza, animarEntrada }: { plaza: Plaza; animarEntrada: 
     <Vehiculo
       ref={ref}
       tipo={plaza.tipo}
-      color={colorVehiculo(plaza.id_espacio)}
+      color={colorDe(plaza)}
+      marca={plaza.marca}
       placa={plaza.placa}
       luces={animarEntrada}
       position={[plaza.x, 0, plaza.z]}
@@ -65,7 +86,8 @@ function VehiculoSaliendo({ plaza, alTerminar }: { plaza: Plaza; alTerminar: () 
     <Vehiculo
       ref={ref}
       tipo={plaza.tipo}
-      color={colorVehiculo(plaza.id_espacio)}
+      color={colorDe(plaza)}
+      marca={plaza.marca}
       luces
       position={[plaza.x, 0, plaza.z]}
       rotation={[0, plaza.fila === 1 ? 0 : Math.PI, 0]}
@@ -88,6 +110,8 @@ function UnaPlaza({
   interactiva: boolean;
   onSeleccionar?: (p: Plaza) => void;
 }) {
+  const paleta = usePaleta();
+  const mats = matsPlaza(paleta);
   const [hover, setHover] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const anterior = useRef(plaza.estado);
@@ -103,12 +127,12 @@ function UnaPlaza({
   useFrame(({ clock }) => {
     const m = testigo.current;
     if (!m) return;
-    const base = atenuada ? 0.15 : plaza.estado === "LIBRE" ? 2.2 : 1.2;
+    const base = (atenuada ? 0.12 : plaza.estado === "LIBRE" ? 1.5 : 0.8) * paleta.testigoBrillo;
     const pulso = resaltada ? 1 + Math.sin(clock.elapsedTime * 5) * 0.8 : 1;
     m.emissiveIntensity = base * pulso * (hover ? 1.6 : 1);
   });
 
-  const color = COLOR_ESTADO[plaza.estado];
+  const color = (paleta.claro ? COLOR_ESTADO_CLARO : COLOR_ESTADO)[plaza.estado];
   const fondoZ = plaza.z + (plaza.fila === 1 ? -plaza.fondo / 2 : plaza.fondo / 2);
   const lados = [plaza.x - plaza.ancho / 2, plaza.x + plaza.ancho / 2];
 
@@ -116,13 +140,13 @@ function UnaPlaza({
     <group>
       {/* líneas laterales */}
       {lados.map((x) => (
-        <mesh key={x} position={[x, 0.012, plaza.z]} material={matLinea}>
-          <boxGeometry args={[0.1, 0.02, plaza.fondo]} />
+        <mesh key={x} position={[x, 0.012, plaza.z]} material={mats.linea}>
+          <boxGeometry args={[0.08, 0.02, plaza.fondo]} />
         </mesh>
       ))}
       {/* testigo de estado al fondo de la plaza */}
-      <mesh position={[plaza.x, 0.03, fondoZ + (plaza.fila === 1 ? 0.25 : -0.25)]}>
-        <boxGeometry args={[plaza.ancho - 0.5, 0.05, 0.22]} />
+      <mesh position={[plaza.x, 0.025, fondoZ + (plaza.fila === 1 ? 0.22 : -0.22)]}>
+        <boxGeometry args={[plaza.ancho - 0.6, 0.03, 0.12]} />
         <meshStandardMaterial ref={testigo} color={color} emissive={color} emissiveIntensity={2} toneMapped={false} />
       </mesh>
       {/* zona clicable */}
@@ -143,10 +167,10 @@ function UnaPlaza({
         <group position={[plaza.x, 0, plaza.z]}>
           {[-0.6, 0.6].map((dz) => (
             <group key={dz} position={[0, 0, dz]}>
-              <mesh position={[0, 0.36, 0]} material={matCono}>
+              <mesh position={[0, 0.36, 0]} material={mats.cono}>
                 <coneGeometry args={[0.22, 0.72, 14]} />
               </mesh>
-              <mesh position={[0, 0.4, 0]} material={matFranja}>
+              <mesh position={[0, 0.4, 0]} material={mats.franja}>
                 <cylinderGeometry args={[0.135, 0.165, 0.1, 14]} />
               </mesh>
             </group>

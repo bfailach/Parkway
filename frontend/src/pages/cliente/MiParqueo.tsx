@@ -2,7 +2,9 @@ import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { api, ApiError, Parqueadero, Reserva, VehiculoCliente } from "../../lib/api";
 import { useConsulta } from "../../lib/useConsulta";
 import { calcularCobro } from "../../lib/tarifa";
-import { duracion, horaCorta, nombreTipo, pesos } from "../../lib/formato";
+import { duracion, horaCorta, nombreTipo, pesos, resumenHorario } from "../../lib/formato";
+import { useApariencia } from "../../lib/apariencia";
+import { MapaEspacios } from "../../components/MapaEspacios";
 import { Placa } from "../../components/Placa";
 import { crearControl, soportaWebGL } from "../../three/control";
 import { Selector } from "../../components/Selector";
@@ -118,6 +120,7 @@ export function MiParqueo({
 
 function ReservaActiva({ reserva, ahora, minutos, onCambio }: { reserva: Reserva; ahora: number; minutos: number; onCambio: () => void }) {
   const webgl = useMemo(soportaWebGL, []);
+  const { plano2d } = useApariencia();
   const control = useRef(crearControl("panel"));
   const plano = useConsulta(() => api.plano(reserva.id_parqueadero), [reserva.id_parqueadero], 10000);
   const [confirmando, setConfirmando] = useState(false);
@@ -169,15 +172,17 @@ function ReservaActiva({ reserva, ahora, minutos, onCambio }: { reserva: Reserva
         )}
       </div>
 
-      <div className="visor-3d reserva-visor">
-        {webgl && plano.datos ? (
+      <div className={`visor-3d reserva-visor ${plano2d && plano.datos ? "reserva-visor-2d" : ""}`}>
+        {plano2d && plano.datos ? (
+          <MapaEspacios espacios={plano.datos} resaltado={reserva.id_espacio} />
+        ) : webgl && plano.datos ? (
           <Suspense fallback={<div className="visor-cargando">Cargando plano 3D...</div>}>
             <Escena className="visor-3d-lienzo" espacios={plano.datos} control={control} resaltarId={reserva.id_espacio} />
           </Suspense>
         ) : (
           <div className="visor-cargando">Tu espacio es el {reserva.codigo_espacio}</div>
         )}
-        <p className="visor-ayuda">Tu espacio es el que parpadea en azul. Arrastra para girar el plano.</p>
+        {!plano2d && <p className="visor-ayuda">Tu espacio es el que parpadea en azul. Arrastra para girar el plano.</p>}
       </div>
     </section>
   );
@@ -201,6 +206,8 @@ function FormReserva({
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const resumen = useConsulta(() => api.resumen(idSede), [idSede], 5000);
+  // Solo se puede reservar con la sede abierta y si la reserva termina antes del cierre.
+  const horario = useConsulta(() => api.horario(idSede), [idSede], 60000);
 
   useEffect(() => {
     if (!vehiculos.some((v) => v.placa === placa)) setPlaca(vehiculos[0]?.placa ?? "");
@@ -210,6 +217,10 @@ function FormReserva({
   const cupos = resumen.datos?.porTipo.find((t) => t.id_tipo === vehiculo?.id_tipo);
   const sinCupo = cupos != null && cupos.libres === 0;
   const tipoSinEspacios = resumen.datos != null && vehiculo != null && !cupos;
+  const h = horario.datos;
+  const cerrada = h != null && !h.abierto;
+  const cierraPronto = h != null && h.abierto && h.minutosParaCerrar != null && h.minutosParaCerrar < minutos;
+  const sinHorario = cerrada || cierraPronto;
 
   async function enviar(ev: FormEvent) {
     ev.preventDefault();
@@ -258,6 +269,19 @@ function FormReserva({
           </div>
         </fieldset>
 
+        {h && (
+          <div className={`horario-reserva ${sinHorario ? "horario-cerrado" : ""}`} aria-live="polite">
+            <strong>
+              {cerrada
+                ? h.mensaje
+                : cierraPronto
+                  ? `Cierra en ${h.minutosParaCerrar} min: ya no alcanza para una reserva de ${minutos} min`
+                  : h.mensaje}
+            </strong>
+            <span className="tenue">{resumenHorario(h.horarios)}</span>
+          </div>
+        )}
+
         <p className={`form-reserva-cupos ${sinCupo || tipoSinEspacios ? "sin-cupo" : ""}`} aria-live="polite">
           {tipoSinEspacios
             ? "Esta sede no tiene espacios para este tipo de vehículo."
@@ -269,8 +293,8 @@ function FormReserva({
         </p>
 
         {error && <p className="alerta alerta-error" role="alert">{error}</p>}
-        <button className="boton boton-primario boton-ancho" disabled={enviando || !vehiculo || sinCupo || tipoSinEspacios}>
-          {enviando ? "Reservando..." : "Reservar espacio"}
+        <button className="boton boton-primario boton-ancho" disabled={enviando || !vehiculo || sinCupo || tipoSinEspacios || sinHorario}>
+          {enviando ? "Reservando..." : sinHorario ? "Fuera del horario de la sede" : "Reservar espacio"}
         </button>
       </form>
     </section>

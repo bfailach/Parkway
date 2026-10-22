@@ -22,15 +22,27 @@ export const PLACA_HISTORIA = "PKW026";
 
 /** Plaza que el sistema asignaría ahora: el primer automóvil libre desde la entrada. */
 export function plazaAsignada(plazas: Plaza[]): Plaza | undefined {
-  const autos = plazas.filter((p) => p.tipo === "AUTOMOVIL").sort((a, b) => a.x - b.x);
+  // Solo el carril de la entrada, que es el que recorre la historia.
+  const autos = plazas.filter((p) => p.tipo === "AUTOMOVIL" && p.carril === 0).sort((a, b) => a.x - b.x);
   return autos.find((p) => p.estado === "LIBRE") ?? autos[Math.floor(autos.length / 2)];
 }
 
+let webglDisponible: boolean | null = null;
+
+/**
+ * Indica si el navegador puede dibujar 3D. La prueba se hace una sola vez y
+ * el contexto de prueba se libera: los navegadores admiten pocos contextos
+ * WebGL a la vez y, si se acumulan, apagan los más antiguos.
+ */
 export function soportaWebGL() {
+  if (webglDisponible !== null) return webglDisponible;
   try {
     const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+    const gl = (c.getContext("webgl2") || c.getContext("webgl")) as WebGLRenderingContext | null;
+    webglDisponible = !!gl;
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
-    return false;
+    webglDisponible = false;
   }
+  return webglDisponible;
 }
