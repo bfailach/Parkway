@@ -93,6 +93,7 @@ en cada carpeta; `npm install` solo se repite si cambian las dependencias.
 | `createdb` o `psql` no se reconoce | Falta la carpeta de PostgreSQL en el PATH. Corre la línea `$env:Path += ...` del paso 3. |
 | `password authentication failed for user "postgres"` | La contraseña no coincide. Si no la recuerdas, mira la sección siguiente. |
 | `database/schema.sql: No such file or directory` | Estás en `backend` o `frontend`. Vuelve a la carpeta principal con `cd ..`. |
+| El backend muestra `column ... does not exist` o `relation ... does not exist` | La base tiene la estructura de una versión anterior. Después de cada `git pull` que cambie `database/`, vuelve a ejecutar los tres scripts del paso 3 (borran y recrean las tablas con los datos de ejemplo). |
 | Aparece "BogotÃ¡" en lugar de "Bogotá" | La base se creó con una versión anterior de los scripts. Vuelve a ejecutar los tres scripts del paso 3; ahora fijan la codificación UTF-8. |
 | La página carga pero no muestra datos | El backend no está corriendo, o `DB_PASSWORD` en `backend\.env` es incorrecta. Revisa la terminal del backend. |
 | `port 3000 is already in use` o `port 5173` | El servidor ya está abierto en otra terminal. Ciérrala o presiona Ctrl+C en ella. |

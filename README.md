@@ -4,7 +4,9 @@ Sistema transaccional para la gestión de parqueaderos. Muestra los cupos
 libres de cada sede en tiempo real, registra ingresos y salidas con cálculo
 automático del cobro, permite a los clientes reservar un espacio dentro del
 horario de la sede y deja cada operación en una bitácora. El administrador
-crea las sedes con sus espacios, tarifas, horario y operadores.
+crea las sedes con sus pisos, espacios, tarifas, horario y operadores. Cada
+sede se ve como una maqueta 3D donde los vehículos entran y salen en tiempo
+real.
 
 Proyecto de Sistemas Transaccionales, Universidad Manuela Beltrán.
 Grupo 2: Bryan Failach, Alejandro Castellanos y Brayan Bello.
@@ -45,14 +47,14 @@ El detalle de cada pantalla, con capturas, está en
 | Inicio de sesión con JWT, control de acceso por rol y creación de cuenta de cliente | RF01 | Implementado |
 | Estado e historial del cliente (vehículo dentro, valor acumulado, visitas) | RF03 | Implementado |
 | Vehículos del cliente: registrar, consultar y quitar | RF04 | Implementado |
-| Consulta de cupos libres por sede y tipo, con plano 3D y 2D | RF05 | Implementado |
+| Consulta de cupos libres por sede y tipo, con plano 3D y 2D, filtro por piso y animación de ingresos y salidas | RF05 | Implementado |
 | Registro de ingreso con asignación automática de espacio | RF06 | Implementado |
 | Registro de salida con cálculo de permanencia y tarifa | RF07 | Implementado |
 | Reservas: reservar, cancelar, expirar a los 30 minutos, vista del operador | RF10 | Implementado |
 | Actualización de la disponibilidad sin recargar la página | RF12 | Consulta cada 5 s. WebSocket en la siguiente fase |
 | Historial de salidas y totales del día | RF13 | Implementado |
 | Bitácora de transacciones con consulta para el administrador | RF14, RNF08 | Implementado |
-| Gestión de sedes: espacios, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
+| Gestión de sedes: pisos, espacios por piso, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
 | Horario de atención: no se aceptan reservas fuera del horario | RF10 | Implementado |
 | Notificaciones configurables de tiempo, valor y vencimiento de la reserva | RF03 | Implementado |
 | Pagos y comprobantes, anulación, gestión de usuarios | RF02, RF08, RF09 | Siguiente fase |
@@ -63,7 +65,7 @@ El detalle de cada pantalla, con capturas, está en
 | Elemento | Valor |
 | --- | --- |
 | Frontend | React 18, TypeScript, Vite |
-| 3D | Three.js con React Three Fiber, Drei y postprocesado (bloom) |
+| 3D | Three.js con React Three Fiber, Drei y postprocesado (oclusión ambiental y bloom) |
 | Backend | Node.js, TypeScript, Express |
 | Base de datos | PostgreSQL |
 | Seguridad | JWT, contraseñas con bcrypt |
@@ -148,6 +150,11 @@ un código único (BICI001, BICI002...) que le dice al operador al llegar. En el
 ingreso, el operador busca el código; si la bicicleta llega sin registro, el
 sistema genera uno nuevo.
 
+**Pisos.** Una sede puede tener de 1 a 6 pisos, unidos por una rampa en
+espiral. El ingreso asigna primero los espacios del piso 1 y luego los de los
+pisos de arriba. En los pisos 2 en adelante el código del espacio lleva el
+número del piso: 2A-01 es el automóvil 01 del piso 2.
+
 **Sedes y operadores.** Cada sede tiene sus propias tarifas y su horario por
 día de la semana. Un operador solo puede registrar ingresos y salidas en las
 sedes que el administrador le asignó. Al reducir los espacios de una sede se
@@ -196,7 +203,7 @@ código 409 y ningún espacio duplicado (RNF03).
 Parkway/
 ├── database/
 │   ├── schema.sql          # Tablas, claves, restricciones e índices
-│   ├── seed.sql            # Usuarios, sedes, 71 espacios y tarifas de prueba
+│   ├── seed.sql            # Usuarios, dos sedes (una de dos pisos), 71 espacios y tarifas
 │   └── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
 ├── backend/
 │   ├── src/
@@ -257,7 +264,7 @@ Parkway/
 | GET, POST | `/api/cliente/reservas` | Cliente | Consultar y crear reservas |
 | POST | `/api/cliente/reservas/:idReserva/cancelar` | Cliente | Cancelar una reserva activa |
 | GET, PUT | `/api/cliente/preferencias` | Cliente | Configuración de las notificaciones |
-| GET, POST | `/api/admin/parqueaderos` | Administrador | Consultar y crear sedes con espacios, tarifas, horario y operadores |
+| GET, POST | `/api/admin/parqueaderos` | Administrador | Consultar y crear sedes con pisos, espacios por piso, tarifas, horario y operadores |
 | GET, PUT | `/api/admin/parqueaderos/:id` | Administrador | Consultar y editar una sede |
 | PATCH | `/api/admin/espacios/:id` | Administrador | Marcar un espacio fuera de servicio o habilitarlo |
 | GET | `/api/admin/operadores` | Administrador | Operadores disponibles para asignar |

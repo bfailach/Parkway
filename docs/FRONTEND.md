@@ -2,9 +2,10 @@
 
 Aplicación web en React 18 con TypeScript y Vite. Tiene modo oscuro y claro,
 con el azul de la señal de parqueadero como color de acción; el amarillo se
-reserva para las placas. Una escena 3D hecha con Three.js dibuja cada plaza
-con su estado real en la base de datos y cada carro con la silueta del modelo
-más conocido de su marca.
+reserva para las placas. Una escena 3D hecha con Three.js dibuja la sede
+como una maqueta flotante, con sus pisos, su rampa en espiral y cada plaza
+con su estado real en la base de datos. Los vehículos entran y salen
+animados cuando el operador registra cada movimiento.
 
 ## Contenido
 
@@ -21,8 +22,8 @@ más conocido de su marca.
 
 ## Portada pública
 
-La primera pantalla muestra la sede de noche, con los cerros orientales y la
-luz de Monserrate al fondo, y un contador con los cupos libres en ese momento.
+La primera pantalla muestra la maqueta de la sede girando despacio y un
+contador con los cupos libres en ese momento.
 
 ![Portada](capturas/01_portada.jpg)
 
@@ -122,7 +123,10 @@ reservado y el tiquete lo indica.
 | ![Reservas](capturas/15_operador_reservas.jpg) | ![Aviso](capturas/16_aviso_reserva.jpg) | ![Ingreso con reserva](capturas/17_ingreso_con_reserva.jpg) |
 
 **Disponibilidad.** Cupos por tipo, movimiento del día y el plano 3D, que se
-gira con el mouse. Al pasar sobre una plaza muestra su código y la placa; un
+gira con el mouse. En una sede de varios pisos, el filtro "Todos, Piso 1,
+Piso 2..." deja ver un solo piso: los demás quedan translúcidos y la cámara
+baja a la altura del piso elegido. El mismo filtro aplica al plano 2D, que
+agrupa las plazas por piso. Al pasar sobre una plaza muestra su código y la placa; un
 clic abre el detalle de la plaza, desde donde se registra la salida. La vista "Plano" muestra
 en cada plaza la placa o el código de bicicleta del vehículo; al hacer clic se
 abre el detalle con el vehículo, el dueño, la hora de ingreso, el valor hasta
@@ -133,6 +137,17 @@ ahora y el botón para registrar la salida.
 | ![Disponibilidad](capturas/18_disponibilidad.jpg) | ![Salida 3D](capturas/19_salida_desde_3d.jpg) | ![Salida](capturas/20_salida.jpg) |
 
 ![Plano 2D con el detalle de una plaza](capturas/27_plano_detalle.jpg)
+
+**Animación en tiempo real.** Cuando se registra un ingreso, el vehículo
+aparece en el borde de la maqueta, espera a que se levante la talanquera,
+sube por la rampa si su plaza está en otro piso y entra de frente a su
+plaza. Cuando se registra la salida, sale de reversa, baja por la rampa y se
+va por la talanquera de salida. Lo ve cualquier pantalla que tenga abierto
+el plano, porque el plano se consulta cada 5 segundos.
+
+| Solo el piso 1 | Un ingreso al piso 2, en cuatro momentos |
+| --- | --- |
+| ![Filtro de piso](capturas/37_filtro_piso.jpg) | ![Animación de ingreso](capturas/38_animacion_ingreso.jpg) |
 
 **En el parqueadero** lista los vehículos dentro con su tiempo y valor
 acumulado, y permite registrar la salida. **Historial** muestra las salidas
@@ -153,19 +168,24 @@ Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes** y
 **Sedes.** El administrador crea o edita cada sede con:
 
 - nombre, dirección, ciudad y coordenadas;
-- cantidad de espacios y tarifa (hora, fracción de 15 minutos y día) por tipo
-  de vehículo;
+- cantidad de pisos (de 1 a 6) y espacios de cada tipo de vehículo en cada
+  piso; en los pisos 2 en adelante los códigos llevan el número del piso
+  (2A-01 es el automóvil 01 del piso 2);
+- tarifa (hora, fracción de 15 minutos y día) por tipo de vehículo;
 - horario de atención por día de la semana, con atajos para 24 horas o lunes
   a sábado;
 - los operadores que tienen acceso a la sede.
 
-Mientras edita, la vista previa 3D se arma con los espacios del formulario.
+Mientras edita, la vista previa 3D se arma con los pisos y espacios del
+formulario, con el mismo filtro de pisos.
 En una sede existente, un clic sobre un espacio libre lo marca fuera de
 servicio o lo habilita de nuevo.
 
 | Lista de sedes | Editar una sede | Horario y operadores |
 | --- | --- | --- |
 | ![Sedes](capturas/31_sedes.jpg) | ![Editar](capturas/32_editar_sede.jpg) | ![Horario](capturas/33_horario_operadores.jpg) |
+
+![Nueva sede de tres pisos](capturas/39_editor_pisos.jpg)
 
 **Bitácora:** todas las
 operaciones del sistema con su usuario, resultado y detalle, filtrables por
@@ -189,15 +209,35 @@ opciones se guardan en el navegador.
 ## En el celular
 
 La interfaz se adapta desde 360 px de ancho. En el teléfono, la cámara de la
-portada mira a lo largo del carril y los textos pasan a una sola columna.
+portada se aleja para mostrar la maqueta completa y los textos pasan a una
+sola columna.
 
 ![Celular](capturas/24_celular.jpg)
 
 ## Cómo está hecha la escena 3D
 
 La escena no usa modelos descargados ni imágenes: todo se dibuja con código a
-partir de los datos de la base, con el aspecto de una maqueta de
-presentación: superficies mate, luz suave y sombras difusas.
+partir de los datos de la base. El estilo es el de una maqueta flotante
+sobre un fondo liso, sin árboles, edificios ni paisaje: una base con bordes
+redondeados, losas de concreto, asfalto gris, líneas amarillas, columnas con
+franjas de peligro, barandas de concreto, una rampa en espiral y un núcleo
+blanco de escaleras. La luz es de estudio, con sombras suaves y oclusión
+ambiental para que las piezas se vean como objetos de una maqueta.
+
+**La sede.** `three/layout.ts` convierte la lista de espacios en posiciones.
+Cada piso se arma con carriles paralelos y una fila de plazas a cada lado,
+con medidas por tipo de vehículo (carro 2,7 × 5,2 m). Al oeste corre la vía
+de circulación, que une los carriles con la entrada al sur. Todos los pisos
+comparten la huella del piso más largo; si la sede tiene más de un piso, la
+rampa en espiral se ubica al suroeste y cada vuelta sube un piso. Si se
+agregan espacios o pisos en la base, la maqueta crece sola.
+
+**Los recorridos.** `three/rutas.ts` calcula el camino de cada vehículo como
+una curva suave: desde el borde de la maqueta, por la talanquera, la vía de
+circulación, la espiral (si hace falta) y el carril, hasta la plaza. La
+salida empieza con un tramo en reversa. Los vehículos aceleran, frenan ante
+la talanquera, se inclinan en la rampa y avisan su posición para que la
+talanquera se levante cuando se acercan.
 
 **Vehículos por marca.** Cada carro se construye extruyendo una silueta
 lateral simplificada, al estilo de los íconos de carros de las apps de
@@ -208,31 +248,34 @@ vehículo. Las motos también cambian de forma según la marca.
 
 **Librerías.** Three.js dibuja en el navegador con WebGL. React Three Fiber
 permite escribir la escena como componentes de React. Drei aporta el control
-de cámara, las estrellas y las etiquetas sobre las plazas. Postprocessing
-agrega el brillo (bloom) de las luces.
+de cámara, las piezas redondeadas y las etiquetas sobre las plazas.
+Postprocessing agrega la oclusión ambiental (N8AO) y, en modo oscuro, el
+brillo de las luces.
 
 **Datos.** La página consulta el estado de cada espacio cada 5 segundos
 (`/api/estacionamiento/plano`, o `/espacios` para el personal, que incluye
-placas). `three/layout.ts` convierte esa lista en posiciones: un carril con
-una fila de plazas a cada lado, con medidas por tipo de vehículo (carro 2,7 ×
-5,2 m). Si se agregan espacios en la base, el parqueadero crece solo.
+placas). Cada espacio trae su piso.
 
-| Archivo | Qué dibuja |
+| Archivo | Qué dibuja o calcula |
 | --- | --- |
+| `three/layout.ts` | Posición de cada plaza por piso, vía de circulación, rampa y base |
+| `three/Estructura.tsx` | Base, acceso con talanqueras y caseta, losas, columnas, barandas, rampa en espiral y núcleo |
+| `three/Plazas.tsx` | Líneas, testigo de estado (verde libre, rojo ocupado, azul reservado), conos fuera de servicio y vehículos |
+| `three/rutas.ts` | Recorridos de entrada y salida y el movimiento de los vehículos |
+| `three/Vehiculo.tsx` | Carros extruidos desde la silueta, motos y bicicletas; versión translúcida para los pisos atenuados |
 | `three/modelos.ts` | Siluetas por marca y colores por nombre |
-| `three/Vehiculo.tsx` | Carros extruidos desde la silueta, motos y bicicletas; luces delanteras y traseras |
-| `three/tema.ts` | Paletas oscura y clara de la escena |
-| `three/Plazas.tsx` | Líneas, testigo de estado (verde libre, rojo ocupado, azul reservado), conos fuera de servicio, animación de entrada y salida |
-| `three/Entorno.tsx` | Lote, barrera, postes, árboles y entorno de la portada |
-| `three/texturas.ts` | Placas y ventanas de edificios dibujadas en un canvas |
-| `three/Escena.tsx` | Cámara, luces, niebla y efectos |
+| `three/materiales.ts` | Materiales compartidos y su versión translúcida para el filtro de pisos |
+| `three/tema.ts` | Paletas clara y oscura de la maqueta |
+| `three/texturas.ts` | Placas y sombra difusa dibujadas en un canvas |
+| `three/Escena.tsx` | Cámara, luces, fondo y efectos |
 | `three/control.ts` | Estado compartido con la página, sin Three.js |
 
 **Cámara.** Tiene cuatro modos: portada (vuelo lento con paralaje del mouse),
-historia (sigue el scroll), vivo (vista aérea) y panel (el usuario la gira y
+historia (sigue el scroll; si la plaza está bajo otro piso, la cámara baja y
+sigue al carro entre losas), vivo (vista aérea) y panel (el usuario la gira y
 selecciona plazas).
 
-**Rendimiento.** La escena se descarga en un archivo aparte de unos 900 kB,
+**Rendimiento.** La escena se descarga en un archivo aparte de unos 1,2 MB,
 así que la página aparece primero. Si el equipo no soporta WebGL se muestra el
 plano 2D, y si el sistema tiene activada la opción de reducir movimiento la
 cámara no se mueve sola.
@@ -253,7 +296,7 @@ frontend/src/
 │   ├── Bitacora.tsx        # Bitácora (administrador)
 │   ├── admin/              # Sedes: crear y editar
 │   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial, Notificaciones
-├── components/             # Placa, Tiquete, Selector, CampoOpciones, Apariencia, Notificador, diálogos
+├── components/             # Placa, Tiquete, Selector, CampoOpciones, FiltroPisos, Apariencia, Notificador, diálogos
 ├── three/                  # Escena 3D
 ├── lib/
 │   ├── api.ts              # Cliente HTTP y tipos de la API
