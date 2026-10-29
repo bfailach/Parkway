@@ -81,7 +81,7 @@ UPDATE espacio SET estado = 'OCUPADO', version = version + 1
 
 -- Salidas del día, con valor calculado según la tarifa (horas + fracciones de 15 min, tope por día)
 WITH libres AS (
-    SELECT e.id_espacio, e.id_tipo, e.id_parqueadero, row_number() OVER (PARTITION BY e.id_tipo ORDER BY e.codigo) AS n
+    SELECT e.id_espacio, e.id_tipo, e.id_parqueadero, row_number() OVER (PARTITION BY e.id_tipo ORDER BY e.piso, e.codigo) AS n
       FROM espacio e WHERE e.estado = 'LIBRE'
 ),
 placas AS (
@@ -147,13 +147,13 @@ WITH libre_auto AS (
     SELECT id_espacio FROM espacio e JOIN parqueadero p USING (id_parqueadero)
      WHERE p.nombre = 'Sede Chapinero' AND e.estado = 'LIBRE'
        AND e.id_tipo = (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'AUTOMOVIL')
-     ORDER BY e.codigo LIMIT 1
+     ORDER BY e.piso, e.codigo LIMIT 1
 ),
 libre_moto AS (
     SELECT id_espacio FROM espacio e JOIN parqueadero p USING (id_parqueadero)
      WHERE p.nombre = 'Sede Chapinero' AND e.estado = 'LIBRE'
        AND e.id_tipo = (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'MOTOCICLETA')
-     ORDER BY e.codigo LIMIT 1
+     ORDER BY e.piso, e.codigo LIMIT 1
 ),
 nuevas AS (
     INSERT INTO reserva (id_cliente, id_espacio, placa, fecha_inicio, fecha_fin, estado)

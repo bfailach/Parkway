@@ -65,13 +65,15 @@ export async function crear(body: Record<string, unknown>, idAdmin: number) {
     "parqueadero",
     async (client) => {
       const nuevo = await parqueaderoRepository.crear(client, d);
-      for (const [idTipo, n] of Object.entries(d.espacios)) {
-        await parqueaderoRepository.agregarEspacios(client, nuevo, Number(idTipo), n);
+      for (const [i, porTipo] of d.espaciosPorPiso.entries()) {
+        for (const [idTipo, n] of Object.entries(porTipo)) {
+          await parqueaderoRepository.agregarEspacios(client, nuevo, i + 1, Number(idTipo), n);
+        }
       }
       await guardarDetalle(client, nuevo, d);
       return nuevo;
     },
-    { idEntidad: (i) => i, detalle: () => ({ nombre: d.nombre, espacios: d.espacios }) }
+    { idEntidad: (i) => i, detalle: () => ({ nombre: d.nombre, pisos: d.pisos, espacios: d.espacios }) }
   );
   return obtener(id);
 }
@@ -87,17 +89,22 @@ export async function actualizar(id: number, body: Record<string, unknown>, idAd
       if (!(await parqueaderoRepository.bloquear(client, id))) throw notFound("La sede no existe");
       await parqueaderoRepository.actualizarDatos(client, id, d);
 
+      // Se recorren los pisos que tiene y los que tendrá: al quitar pisos,
+      // sus espacios deben poder borrarse.
       const actuales = await parqueaderoRepository.contarEspacios(client, id);
-      for (const [tipo, deseado] of Object.entries(d.espacios)) {
-        const idTipo = Number(tipo);
-        const actual = actuales[idTipo] ?? 0;
-        if (deseado > actual) await parqueaderoRepository.agregarEspacios(client, id, idTipo, deseado - actual);
-        if (deseado < actual) {
-          const quitados = await parqueaderoRepository.quitarEspacios(client, id, idTipo, actual - deseado);
-          if (quitados < actual - deseado) {
-            throw conflict(
-              `Solo se pueden quitar ${quitados} espacios de ${NOMBRE_TIPO[idTipo]}: los demás están ocupados, reservados o tienen historial. Márquelos fuera de servicio en su lugar.`
-            );
+      const ultimoPiso = Math.max(d.pisos, ...Object.keys(actuales).map(Number));
+      for (let piso = 1; piso <= ultimoPiso; piso++) {
+        for (const idTipo of [1, 2, 3]) {
+          const deseado = d.espaciosPorPiso[piso - 1]?.[idTipo] ?? 0;
+          const actual = actuales[piso]?.[idTipo] ?? 0;
+          if (deseado > actual) await parqueaderoRepository.agregarEspacios(client, id, piso, idTipo, deseado - actual);
+          if (deseado < actual) {
+            const quitados = await parqueaderoRepository.quitarEspacios(client, id, piso, idTipo, actual - deseado);
+            if (quitados < actual - deseado) {
+              throw conflict(
+                `En el piso ${piso} solo se pueden quitar ${quitados} espacios de ${NOMBRE_TIPO[idTipo]}: los demás están ocupados, reservados o tienen historial. Márquelos fuera de servicio en su lugar.`
+              );
+            }
           }
         }
       }
@@ -105,7 +112,7 @@ export async function actualizar(id: number, body: Record<string, unknown>, idAd
       await guardarDetalle(client, id, d);
       return id;
     },
-    { idEntidad: (i) => i, detalle: () => ({ nombre: d.nombre, espacios: d.espacios }) }
+    { idEntidad: (i) => i, detalle: () => ({ nombre: d.nombre, pisos: d.pisos, espacios: d.espacios }) }
   );
   return obtener(id);
 }

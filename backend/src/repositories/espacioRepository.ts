@@ -14,6 +14,7 @@ export interface Espacio {
   id_parqueadero: number;
   id_tipo: number;
   codigo: string;
+  piso: number;
   estado: "LIBRE" | "RESERVADO" | "OCUPADO" | "FUERA_DE_SERVICIO";
   version: number;
 }
@@ -22,7 +23,7 @@ export async function listarDisponibles(idParqueadero: number, idTipo: number): 
   const { rows } = await pool.query(
     `SELECT * FROM espacio
      WHERE id_parqueadero = $1 AND id_tipo = $2 AND estado = 'LIBRE'
-     ORDER BY codigo`,
+     ORDER BY piso, codigo`,
     [idParqueadero, idTipo]
   );
   return rows;
@@ -31,7 +32,7 @@ export async function listarDisponibles(idParqueadero: number, idTipo: number): 
 /** Mapa completo de espacios de una sede, con la placa del vehículo que lo ocupa. */
 export async function listarConOcupacion(idParqueadero: number) {
   const { rows } = await pool.query(
-    `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo,
+    `SELECT e.id_espacio, e.codigo, e.piso, e.estado, e.id_tipo, t.nombre AS tipo,
             r.id_registro, COALESCE(r.placa, rs.placa) AS placa, r.fecha_ingreso,
             rs.id_reserva, rs.fecha_fin AS reserva_vence,
             v.marca, v.color, u.nombre AS cliente
@@ -44,7 +45,7 @@ export async function listarConOcupacion(idParqueadero: number) {
        LEFT JOIN vehiculo v ON v.placa = COALESCE(r.placa, rs.placa)
        LEFT JOIN usuario u  ON u.id_usuario = v.id_cliente
       WHERE e.id_parqueadero = $1
-      ORDER BY e.id_tipo, e.codigo`,
+      ORDER BY e.piso, e.id_tipo, e.codigo`,
     [idParqueadero]
   );
   return rows;
@@ -57,13 +58,13 @@ export async function listarConOcupacion(idParqueadero: number) {
  */
 export async function listarPlano(idParqueadero: number) {
   const { rows } = await pool.query(
-    `SELECT e.id_espacio, e.codigo, e.estado, e.id_tipo, t.nombre AS tipo, v.marca, v.color
+    `SELECT e.id_espacio, e.codigo, e.piso, e.estado, e.id_tipo, t.nombre AS tipo, v.marca, v.color
        FROM espacio e
        JOIN tipo_vehiculo t ON t.id_tipo = e.id_tipo
        LEFT JOIN registro_estacionamiento r ON r.id_espacio = e.id_espacio AND r.estado = 'ABIERTO'
        LEFT JOIN vehiculo v ON v.placa = r.placa
       WHERE e.id_parqueadero = $1
-      ORDER BY e.id_tipo, e.codigo`,
+      ORDER BY e.piso, e.id_tipo, e.codigo`,
     [idParqueadero]
   );
   return rows;
@@ -101,7 +102,7 @@ export async function tomarPrimerLibre(
   const { rows } = await client.query(
     `SELECT * FROM espacio
       WHERE id_parqueadero = $1 AND id_tipo = $2 AND estado = 'LIBRE'
-      ORDER BY codigo
+      ORDER BY piso, codigo
       LIMIT 1
       FOR UPDATE SKIP LOCKED`,
     [idParqueadero, idTipo]

@@ -19,7 +19,11 @@ export interface DatosParqueadero {
   ciudad: string;
   latitud: number | null;
   longitud: number | null;
-  /** Cantidad de espacios por tipo de vehículo: { 1: 30, 2: 10, 3: 0 }. */
+  /** Cantidad de pisos (1 a MAX_PISOS). */
+  pisos: number;
+  /** Espacios por piso y tipo: espaciosPorPiso[0] es el piso 1, { 1: 15, 2: 10, 3: 6 }. */
+  espaciosPorPiso: Record<number, number>[];
+  /** Total de espacios por tipo de vehículo en toda la sede. */
   espacios: Record<number, number>;
   tarifas: TarifaSede[];
   horarios: Horario[];
@@ -29,6 +33,7 @@ export interface DatosParqueadero {
 type Resultado = { valido: true; datos: DatosParqueadero } | { valido: false; errores: Record<string, string> };
 
 export const MAX_ESPACIOS_POR_TIPO = 300;
+export const MAX_PISOS = 6;
 const TIPOS = Object.values(TIPOS_VEHICULO) as number[];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -62,16 +67,40 @@ export function validarParqueadero(body: Record<string, unknown>): Resultado {
     errores[latitud === null ? "latitud" : "longitud"] = "Escriba la latitud y la longitud, o ninguna";
   }
 
-  // Espacios por tipo
-  const espaciosBody = (body.espacios ?? {}) as Record<string, unknown>;
-  const espacios: Record<number, number> = {};
-  for (const t of TIPOS) {
-    const n = Number(espaciosBody[t] ?? 0);
-    if (!Number.isInteger(n) || n < 0 || n > MAX_ESPACIOS_POR_TIPO) errores[`espacios.${t}`] = `Entre 0 y ${MAX_ESPACIOS_POR_TIPO}`;
-    else espacios[t] = n;
+  // Pisos y espacios por piso. Si no llega espaciosPorPiso, `espacios` se
+  // toma como los espacios de una sede de un solo piso.
+  const pisos = body.pisos === undefined || body.pisos === "" ? 1 : Number(body.pisos);
+  const pisosValido = Number.isInteger(pisos) && pisos >= 1 && pisos <= MAX_PISOS;
+  if (!pisosValido) errores.pisos = `Entre 1 y ${MAX_PISOS} pisos`;
+  const porPisoBody = Array.isArray(body.espaciosPorPiso)
+    ? (body.espaciosPorPiso as Record<string, unknown>[])
+    : [(body.espacios ?? {}) as Record<string, unknown>];
+  const nPisos = pisosValido ? pisos : 1;
+  const espaciosPorPiso: Record<number, number>[] = [];
+  const espacios: Record<number, number> = Object.fromEntries(TIPOS.map((t) => [t, 0]));
+  for (let i = 0; i < nPisos; i++) {
+    const piso = i + 1;
+    const fila = porPisoBody[i] ?? {};
+    const deEstePiso: Record<number, number> = {};
+    let conError = false;
+    for (const t of TIPOS) {
+      const n = Number(fila[t] ?? 0);
+      if (!Number.isInteger(n) || n < 0 || n > MAX_ESPACIOS_POR_TIPO) {
+        errores[`espacios.${piso}.${t}`] = `Entre 0 y ${MAX_ESPACIOS_POR_TIPO}`;
+        conError = true;
+      } else {
+        deEstePiso[t] = n;
+        espacios[t] += n;
+      }
+    }
+    if (!conError && TIPOS.every((t) => deEstePiso[t] === 0)) {
+      errores[nPisos === 1 ? "espacios" : `espacios.${piso}`] =
+        nPisos === 1 ? "La sede necesita al menos un espacio" : `El piso ${piso} necesita al menos un espacio`;
+    }
+    espaciosPorPiso.push(deEstePiso);
   }
-  if (!TIPOS.some((t) => errores[`espacios.${t}`]) && TIPOS.every((t) => espacios[t] === 0)) {
-    errores.espacios = "La sede necesita al menos un espacio";
+  for (const t of TIPOS) {
+    if (espacios[t] > MAX_ESPACIOS_POR_TIPO * MAX_PISOS) errores[`espacios.${t}`] = "Demasiados espacios";
   }
 
   // Tarifas: obligatorias para cada tipo que tenga espacios
@@ -128,6 +157,8 @@ export function validarParqueadero(body: Record<string, unknown>): Resultado {
       ciudad,
       latitud: latitud as number | null,
       longitud: longitud as number | null,
+      pisos,
+      espaciosPorPiso,
       espacios,
       tarifas,
       horarios,

@@ -74,7 +74,9 @@ CREATE TABLE parqueadero (
     ciudad            VARCHAR(60)  NOT NULL DEFAULT 'Bogotá',
     latitud           NUMERIC(9, 6) CHECK (latitud BETWEEN -90 AND 90),
     longitud          NUMERIC(9, 6) CHECK (longitud BETWEEN -180 AND 180),
-    capacidad_total   INT NOT NULL CHECK (capacidad_total > 0)
+    capacidad_total   INT NOT NULL CHECK (capacidad_total > 0),
+    -- Cantidad de pisos del edificio (1 = parqueadero a nivel).
+    pisos             SMALLINT NOT NULL DEFAULT 1 CHECK (pisos BETWEEN 1 AND 6)
 );
 
 -- =====================================================================
@@ -129,6 +131,9 @@ CREATE TABLE espacio (
     id_parqueadero  INT NOT NULL REFERENCES parqueadero (id_parqueadero) ON DELETE CASCADE,
     id_tipo         SMALLINT NOT NULL REFERENCES tipo_vehiculo (id_tipo),
     codigo          VARCHAR(10) NOT NULL,
+    -- Piso donde está el espacio. En los pisos 2 en adelante el código lleva
+    -- el número del piso: 2A-01 es el automóvil 01 del piso 2.
+    piso            SMALLINT NOT NULL DEFAULT 1 CHECK (piso BETWEEN 1 AND 6),
     estado          VARCHAR(18) NOT NULL DEFAULT 'LIBRE'
         CHECK (estado IN ('LIBRE', 'RESERVADO', 'OCUPADO', 'FUERA_DE_SERVICIO')),
     version         INT NOT NULL DEFAULT 0,
@@ -136,6 +141,7 @@ CREATE TABLE espacio (
 );
 
 CREATE INDEX idx_espacio_parqueadero_estado ON espacio (id_parqueadero, estado);
+CREATE INDEX idx_espacio_asignacion ON espacio (id_parqueadero, id_tipo, piso, codigo) WHERE estado = 'LIBRE';
 
 -- =====================================================================
 -- Tabla: tarifa

@@ -57,3 +57,22 @@ test("una sede necesita espacios y al menos un día de atención", () => {
     assert.ok(r.errores.horarios);
   }
 });
+
+test("una sede de varios pisos valida cada piso", () => {
+  const r = validarParqueadero({
+    ...base,
+    pisos: 2,
+    espaciosPorPiso: [{ 1: 15, 2: 6, 3: 0 }, { 1: 15, 2: 0, 3: 0 }],
+  });
+  assert.equal(r.valido, true);
+  if (r.valido) {
+    assert.equal(r.datos.pisos, 2);
+    assert.equal(r.datos.espacios[1], 30);
+    assert.deepEqual(r.datos.espaciosPorPiso[1], { 1: 15, 2: 0, 3: 0 });
+  }
+  const vacio = validarParqueadero({ ...base, pisos: 2, espaciosPorPiso: [{ 1: 15, 2: 6, 3: 0 }, { 1: 0, 2: 0, 3: 0 }] });
+  assert.equal(vacio.valido, false);
+  if (!vacio.valido) assert.ok(vacio.errores["espacios.2"]);
+  const muchos = validarParqueadero({ ...base, pisos: 9 });
+  assert.equal(muchos.valido, false);
+});

@@ -39,9 +39,9 @@ INSERT INTO tipo_vehiculo (nombre) VALUES
 -- ---------------------------------------------------------------------
 -- Parqueaderos (sedes)
 -- ---------------------------------------------------------------------
-INSERT INTO parqueadero (nombre, direccion, ciudad, latitud, longitud, capacidad_total) VALUES
-    ('Sede Chapinero', 'Calle 60 # 10-20', 'Bogotá', 4.646300, -74.063900, 46),
-    ('Sede Zona T',    'Carrera 13 # 85-30', 'Bogotá', 4.667600, -74.052900, 25);
+INSERT INTO parqueadero (nombre, direccion, ciudad, latitud, longitud, capacidad_total, pisos) VALUES
+    ('Sede Chapinero', 'Calle 60 # 10-20', 'Bogotá', 4.646300, -74.063900, 46, 2),
+    ('Sede Zona T',    'Carrera 13 # 85-30', 'Bogotá', 4.667600, -74.052900, 25, 1);
 
 -- ---------------------------------------------------------------------
 -- Horarios (1 = lunes ... 7 = domingo)
@@ -83,27 +83,31 @@ INSERT INTO vehiculo (placa, id_tipo, id_cliente, marca, color) VALUES
 -- ---------------------------------------------------------------------
 -- Espacios
 -- Se generan según la capacidad de cada sede:
---   Sede Chapinero (46): A-01..A-30 automóviles, M-01..M-10 motos, B-01..B-06 bicicletas
---   Sede Zona T    (25): A-01..A-18 automóviles, M-01..M-04 motos, B-01..B-03 bicicletas
+--   Sede Chapinero (46, dos pisos):
+--     piso 1: A-01..A-15 automóviles, M-01..M-10 motos, B-01..B-06 bicicletas
+--     piso 2: 2A-01..2A-15 automóviles
+--   Sede Zona T (25, un piso): A-01..A-18, M-01..M-04, B-01..B-03
 -- ---------------------------------------------------------------------
-INSERT INTO espacio (id_parqueadero, id_tipo, codigo, estado)
-SELECT p.id_parqueadero, t.id_tipo, d.prefijo || '-' || lpad(n::text, 2, '0'), 'LIBRE'
+INSERT INTO espacio (id_parqueadero, id_tipo, piso, codigo, estado)
+SELECT p.id_parqueadero, t.id_tipo, d.piso,
+       CASE WHEN d.piso > 1 THEN d.piso::text ELSE '' END || d.prefijo || '-' || lpad(n::text, 2, '0'), 'LIBRE'
 FROM (
     VALUES
-        ('Sede Chapinero', 'AUTOMOVIL',   'A', 30),
-        ('Sede Chapinero', 'MOTOCICLETA', 'M', 10),
-        ('Sede Chapinero', 'BICICLETA',   'B', 6),
-        ('Sede Zona T',    'AUTOMOVIL',   'A', 18),
-        ('Sede Zona T',    'MOTOCICLETA', 'M', 4),
-        ('Sede Zona T',    'BICICLETA',   'B', 3)
-) AS d (nombre_sede, nombre_tipo, prefijo, cantidad)
+        ('Sede Chapinero', 'AUTOMOVIL',   1, 'A', 15),
+        ('Sede Chapinero', 'MOTOCICLETA', 1, 'M', 10),
+        ('Sede Chapinero', 'BICICLETA',   1, 'B', 6),
+        ('Sede Chapinero', 'AUTOMOVIL',   2, 'A', 15),
+        ('Sede Zona T',    'AUTOMOVIL',   1, 'A', 18),
+        ('Sede Zona T',    'MOTOCICLETA', 1, 'M', 4),
+        ('Sede Zona T',    'BICICLETA',   1, 'B', 3)
+) AS d (nombre_sede, nombre_tipo, piso, prefijo, cantidad)
 JOIN parqueadero p ON p.nombre = d.nombre_sede
 JOIN tipo_vehiculo t ON t.nombre = d.nombre_tipo
 CROSS JOIN LATERAL generate_series(1, d.cantidad) AS n;
 
 -- Un espacio en mantenimiento para mostrar el estado FUERA_DE_SERVICIO
 UPDATE espacio SET estado = 'FUERA_DE_SERVICIO'
-WHERE codigo = 'A-30'
+WHERE codigo = '2A-15'
   AND id_parqueadero = (SELECT id_parqueadero FROM parqueadero WHERE nombre = 'Sede Chapinero');
 
 -- ---------------------------------------------------------------------
