@@ -29,7 +29,7 @@ en pocos segundos.
 | Rol | Funciones |
 | --- | --- |
 | Visitante | Ver los cupos libres por sede, el recorrido de cómo funciona y calcular el cobro. |
-| Cliente | Crear su cuenta, registrar sus vehículos (las bicicletas reciben un código BICI), reservar un espacio por 30 minutos dentro del horario de la sede, ver su vehículo dentro con el valor acumulado, configurar avisos de tiempo y dinero y consultar su historial. |
+| Cliente | Crear su cuenta, registrar sus vehículos (las bicicletas reciben un código BICI) y ver en qué sede y espacio está cada uno, reservar un espacio por 30 minutos dentro del horario de la sede, ver su vehículo dentro con el valor acumulado, configurar avisos de tiempo y dinero y consultar su historial. |
 | Operador | Registrar ingresos y salidas en las sedes que tiene asignadas. Al digitar una placa conocida, el formulario trae la marca y el color guardados. Ve las reservas en camino, los vehículos dentro, el plano 3D y 2D y el historial con filtros. |
 | Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores) y la bitácora de transacciones. |
 
@@ -150,6 +150,12 @@ un código único (BICI001, BICI002...) que le dice al operador al llegar. En el
 ingreso, el operador busca el código; si la bicicleta llega sin registro, el
 sistema genera uno nuevo.
 
+**Límites de una sede.** Pensados para los parqueaderos de Bogotá: por piso,
+hasta 150 automóviles, 80 motocicletas y 60 bicicletas; en toda la sede,
+hasta 600, 300 y 200, y como máximo 800 espacios. El formulario recomienda
+cupos de bicicleta equivalentes al 10 % de los de automóvil (mínimo 12 si hay
+menos de 120), como pide la Ley 1811 de 2016 a los edificios públicos.
+
 **Pisos.** Una sede puede tener de 1 a 6 pisos, unidos por una rampa en
 espiral. El ingreso asigna primero los espacios del piso 1 y luego los de los
 pisos de arriba. En los pisos 2 en adelante el código del espacio lleva el
@@ -189,7 +195,7 @@ la reserva se cancela.
 
 ```bash
 cd backend
-npm test                                   # 28 pruebas unitarias: tarifas, placas, cuentas, vehículos, horarios y sedes
+npm test                                   # 30 pruebas unitarias: tarifas, placas, cuentas, vehículos, horarios y sedes
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -259,7 +265,7 @@ Parkway/
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra una salida |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
 | GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
-| GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar y registrar vehículos propios |
+| GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar (con la sede y el espacio donde está cada uno) y registrar vehículos propios |
 | DELETE | `/api/cliente/vehiculos/:placa` | Cliente | Quitar un vehículo de la cuenta |
 | GET, POST | `/api/cliente/reservas` | Cliente | Consultar y crear reservas |
 | POST | `/api/cliente/reservas/:idReserva/cancelar` | Cliente | Cancelar una reserva activa |

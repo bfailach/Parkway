@@ -6,6 +6,7 @@ import { crearControl, soportaWebGL } from "../../three/control";
 import { useApariencia } from "../../lib/apariencia";
 import { MapaEspacios } from "../../components/MapaEspacios";
 import { FiltroPisos } from "../../components/FiltroPisos";
+import { bicicletasRecomendadas, LIMITE_POR_PISO, LIMITE_POR_SEDE, LIMITE_TOTAL_SEDE, MAX_PISOS } from "../../lib/limitesSede";
 
 const Escena = lazy(() => import("../../three/Escena"));
 
@@ -185,6 +186,24 @@ function aDatos(f: Form): DatosSede {
   };
 }
 
+const PLURAL: Record<number, string> = { 1: "automóviles", 2: "motocicletas", 3: "bicicletas" };
+
+/** Errores de cantidad de espacios, con las mismas claves que el backend. */
+function erroresDeLimites(f: Form): Record<string, string> {
+  const e: Record<string, string> = {};
+  f.pisos.forEach((p, i) =>
+    [1, 2, 3].forEach((t) => {
+      if (Number(p[t] || 0) > LIMITE_POR_PISO[t]) e[`espacios.${i + 1}.${t}`] = `Máximo ${LIMITE_POR_PISO[t]} ${PLURAL[t]} por piso`;
+    })
+  );
+  const tot = totalesPorTipo(f);
+  [1, 2, 3].forEach((t) => {
+    if (tot[t] > LIMITE_POR_SEDE[t]) e[`espacios.total.${t}`] = `Máximo ${LIMITE_POR_SEDE[t]} ${PLURAL[t]} en la sede`;
+  });
+  if (tot[1] + tot[2] + tot[3] > LIMITE_TOTAL_SEDE) e["espacios.total"] = `Máximo ${LIMITE_TOTAL_SEDE} espacios en la sede`;
+  return e;
+}
+
 /** Total de espacios por tipo sumando todos los pisos. */
 function totalesPorTipo(f: Form): Record<number, number> {
   const r: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
@@ -255,9 +274,14 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
   const f = form;
   const set = (c: Partial<Form>) => setForm({ ...f, ...c });
   const err = (k: string) => errores[k];
+  const limites = erroresDeLimites(f);
 
   async function guardar(e: FormEvent) {
     e.preventDefault();
+    if (Object.keys(limites).length) {
+      setMensaje({ tipo: "error", texto: "Revise la cantidad de espacios: supera los límites de una sede." });
+      return;
+    }
     setGuardando(true);
     setErrores({});
     setMensaje(null);
@@ -301,7 +325,7 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
     set({ pisos: f.pisos.map((p, k) => (k === i ? { ...p, [t]: v.replace(/\D/g, "").slice(0, 3) } : p)) });
   const cambiarPisos = (n: number) => {
     const actual = f.pisos.length;
-    if (n < 1 || n > 6 || n === actual) return;
+    if (n < 1 || n > MAX_PISOS || n === actual) return;
     set({ pisos: n > actual ? [...f.pisos, ...Array.from({ length: n - actual }, () => ({ 1: "20", 2: "0", 3: "0" }))] : f.pisos.slice(0, n) });
   };
   const listaEspacios: EspacioMapa[] = (sede?.lista_espacios ?? []).map((e) => ({ ...e, id_registro: null, placa: null, fecha_ingreso: null }));
@@ -370,7 +394,7 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
               <div className="contador" role="group" aria-labelledby="r-pisos">
                 <button type="button" className="boton boton-secundario" aria-label="Quitar un piso" disabled={f.pisos.length <= 1} onClick={() => cambiarPisos(f.pisos.length - 1)}>−</button>
                 <output aria-live="polite">{f.pisos.length}</output>
-                <button type="button" className="boton boton-secundario" aria-label="Agregar un piso" disabled={f.pisos.length >= 6} onClick={() => cambiarPisos(f.pisos.length + 1)}>+</button>
+                <button type="button" className="boton boton-secundario" aria-label="Agregar un piso" disabled={f.pisos.length >= MAX_PISOS} onClick={() => cambiarPisos(f.pisos.length + 1)}>+</button>
               </div>
               <span className="campo-ayuda">
                 {f.pisos.length > 1 ? "Una rampa en espiral une los pisos. Los códigos del piso 2 en adelante llevan el número del piso: 2A-01." : "Parqueadero a nivel. Agregue pisos para un edificio."}
@@ -399,15 +423,17 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                           <input
                             type="number"
                             min={0}
-                            max={300}
+                            max={LIMITE_POR_PISO[t.id_tipo]}
                             aria-label={`Espacios de ${pluralTipo(t.nombre).toLowerCase()}${f.pisos.length > 1 ? ` en el piso ${i + 1}` : ""}`}
                             value={p[t.id_tipo]}
                             onChange={(e) => cambiarPiso(i, t.id_tipo, e.target.value)}
-                            aria-invalid={!!err(`espacios.${i + 1}.${t.id_tipo}`) || !!err(`espacios.${i + 1}`)}
+                            aria-invalid={!!err(`espacios.${i + 1}.${t.id_tipo}`) || !!err(`espacios.${i + 1}`) || !!limites[`espacios.${i + 1}.${t.id_tipo}`]}
                           />
                         </td>
                       ))}
-                      {f.pisos.length > 1 && <td className="tabla-total">{totales[t.id_tipo]}</td>}
+                      {f.pisos.length > 1 && (
+                        <td className={`tabla-total ${limites[`espacios.total.${t.id_tipo}`] ? "tabla-total-excede" : ""}`}>{totales[t.id_tipo]}</td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -453,24 +479,36 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                 </tbody>
               </table>
             </div>
-            {Object.entries(errores)
-              .filter(([k]) => k.startsWith("tarifas.") || k.startsWith("espacios."))
+            {Object.entries({ ...errores, ...limites })
+              .filter(([k]) => k.startsWith("tarifas.") || (k.startsWith("espacios.") && k !== "espacios"))
               .map(([k, v]) => {
                 const partes = k.split(".");
-                // espacios.2 (piso vacío), espacios.2.1 (piso y tipo) o tarifas.1.valor_hora
-                const tipo = k.startsWith("espacios.") ? (partes[2] ? Number(partes[2]) : null) : Number(partes[1]);
-                const piso = k.startsWith("espacios.") && partes.length >= 2 && f.pisos.length > 1 ? `Piso ${partes[1]}` : "";
-                const nombre = tipo ? nombreTipo(tipos.find((t) => t.id_tipo === tipo)?.nombre ?? "") : "";
-                const etiqueta = [piso, nombre].filter(Boolean).join(", ");
+                // tarifas.1.valor_hora: el mensaje no dice el tipo, se antepone.
+                // espacios.2.1 (piso y tipo): se antepone el piso si hay varios.
+                // espacios.2 y espacios.total…: el mensaje ya lo dice todo.
+                let etiqueta = "";
+                if (k.startsWith("tarifas.")) etiqueta = nombreTipo(tipos.find((t) => t.id_tipo === Number(partes[1]))?.nombre ?? "");
+                else if (partes[1] !== "total" && partes[2] && f.pisos.length > 1) etiqueta = `Piso ${partes[1]}`;
                 return (
-                  <p key={k} className="campo-error">
+                  <p key={k} className="campo-error" role="alert">
                     {etiqueta ? `${etiqueta}: ` : ""}{v}
                   </p>
                 );
               })}
             <p className="campo-ayuda">
-              {total} espacios en total. Al reducir la cantidad se quitan los espacios libres de número más alto que nunca se
-              usaron; los que tienen historial se conservan.
+              {total} espacios en total. Límites para una sede en Bogotá: por piso, hasta {LIMITE_POR_PISO[1]} automóviles,{" "}
+              {LIMITE_POR_PISO[2]} motocicletas y {LIMITE_POR_PISO[3]} bicicletas; en toda la sede, hasta {LIMITE_POR_SEDE[1]},{" "}
+              {LIMITE_POR_SEDE[2]} y {LIMITE_POR_SEDE[3]}, y {LIMITE_TOTAL_SEDE} espacios en total.
+            </p>
+            {totales[1] > 0 && totales[3] < bicicletasRecomendadas(totales[1]) && (
+              <p className="aviso-suave">
+                Recomendamos al menos {bicicletasRecomendadas(totales[1])} cupos de bicicleta: el 10 % de los de automóvil, y mínimo 12
+                si hay menos de 120. Es lo que la Ley 1811 de 2016 exige a los edificios públicos.
+              </p>
+            )}
+            <p className="campo-ayuda">
+              Al reducir la cantidad se quitan los espacios libres de número más alto que nunca se usaron; los que tienen
+              historial se conservan.
             </p>
           </section>
 

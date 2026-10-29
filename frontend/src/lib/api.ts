@@ -207,6 +207,12 @@ export interface VehiculoCliente {
   color: string | null;
   dentro: boolean;
   con_reserva: boolean;
+  /** Dónde está: sede, espacio y piso del ingreso abierto o de la reserva. */
+  sede: string | null;
+  espacio: string | null;
+  piso: number | null;
+  fecha_ingreso: string | null;
+  reserva_vence: string | null;
 }
 
 export interface Reserva {

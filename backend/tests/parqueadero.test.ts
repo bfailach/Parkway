@@ -76,3 +76,23 @@ test("una sede de varios pisos valida cada piso", () => {
   const muchos = validarParqueadero({ ...base, pisos: 9 });
   assert.equal(muchos.valido, false);
 });
+
+test("limita los espacios a cifras realistas", () => {
+  const porPiso = validarParqueadero({ ...base, espacios: { 1: 151, 2: 81, 3: 61 } });
+  assert.equal(porPiso.valido, false);
+  if (!porPiso.valido) {
+    assert.ok(porPiso.errores["espacios.1.1"]);
+    assert.ok(porPiso.errores["espacios.1.2"]);
+    assert.ok(porPiso.errores["espacios.1.3"]);
+  }
+  const sede = validarParqueadero({
+    ...base,
+    pisos: 5,
+    espaciosPorPiso: Array.from({ length: 5 }, () => ({ 1: 140, 2: 20, 3: 10 })),
+  });
+  assert.equal(sede.valido, false);
+  if (!sede.valido) {
+    assert.ok(sede.errores["espacios.total.1"]); // 700 automóviles
+    assert.ok(sede.errores["espacios.total"]); // 850 espacios
+  }
+});

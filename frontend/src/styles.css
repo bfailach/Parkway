@@ -1004,3 +1004,8 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .contador output { min-width: 2ch; text-align: center; font-family: var(--display); font-weight: 800; font-size: 2rem; }
 .tabla-tarifas { margin-top: 12px; }
 .tabla-total { font-family: var(--display); font-weight: 800; font-size: 1.25rem; }
+.tabla-total-excede { color: var(--ocupado); }
+.aviso-suave { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--acento); background: var(--superficie-2); border-radius: 3px; font-size: 0.9375rem; color: var(--tinta-2); }
+.vehiculo-ubicacion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9375rem; color: var(--tinta-2); margin-top: 2px; }
+.vehiculo-ubicacion svg { flex: none; margin-top: 2px; color: var(--acento); }
+.vehiculo-ubicacion strong { color: var(--tinta); }

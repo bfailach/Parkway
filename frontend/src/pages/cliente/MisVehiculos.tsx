@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { api, ApiError, TipoVehiculo, VehiculoCliente } from "../../lib/api";
 import { useConsulta } from "../../lib/useConsulta";
-import { FORMATO_PLACA, nombreTipo, normalizarPlaca } from "../../lib/formato";
+import { FORMATO_PLACA, horaCorta, nombreTipo, normalizarPlaca } from "../../lib/formato";
 import { IconoBici, Placa } from "../../components/Placa";
 import { CampoOpciones, COLORES, MARCAS } from "../../components/CampoOpciones";
 
@@ -59,6 +59,17 @@ function FilaVehiculo({ v, onCambio }: { v: VehiculoCliente; onCambio: () => voi
         <span className={`chip ${v.dentro ? "chip-dentro" : v.con_reserva ? "chip-reserva" : "chip-libre"}`}>
           {v.dentro ? "Dentro del parqueadero" : v.con_reserva ? "Con reserva activa" : "Disponible"}
         </span>
+        {(v.dentro || v.con_reserva) && v.sede && (
+          <span className="vehiculo-ubicacion">
+            <IconoUbicacion />
+            <span>
+              <strong>{v.sede}</strong>, espacio {v.espacio}
+              {v.piso != null && v.piso > 1 ? `, piso ${v.piso}` : ""}
+              {v.dentro && v.fecha_ingreso ? `. Entró a las ${horaCorta(v.fecha_ingreso)}` : ""}
+              {!v.dentro && v.reserva_vence ? `. Reservado hasta las ${horaCorta(v.reserva_vence)}` : ""}
+            </span>
+          </span>
+        )}
         {error && <span className="campo-error">{error}</span>}
       </div>
       <div className="vehiculo-acciones">
@@ -79,6 +90,15 @@ function FilaVehiculo({ v, onCambio }: { v: VehiculoCliente; onCambio: () => voi
         )}
       </div>
     </li>
+  );
+}
+
+function IconoUbicacion() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11Z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </svg>
   );
 }
 

@@ -47,9 +47,22 @@ export async function desasociarCliente(client: PoolClient, placa: string) {
 export async function listarDelCliente(idCliente: number) {
   const { rows } = await pool.query(
     `SELECT v.placa, v.id_tipo, t.nombre AS tipo, v.marca, v.color,
-            EXISTS (SELECT 1 FROM registro_estacionamiento r WHERE r.placa = v.placa AND r.estado = 'ABIERTO') AS dentro,
-            EXISTS (SELECT 1 FROM reserva r WHERE r.placa = v.placa AND r.estado = 'ACTIVA') AS con_reserva
-       FROM vehiculo v JOIN tipo_vehiculo t ON t.id_tipo = v.id_tipo
+            (r.id_registro IS NOT NULL) AS dentro,
+            (rs.id_reserva IS NOT NULL) AS con_reserva,
+            -- Dónde está: la sede, el espacio y el piso del ingreso abierto o de la reserva activa.
+            COALESCE(pr.nombre, prs.nombre) AS sede,
+            COALESCE(er.codigo, ers.codigo) AS espacio,
+            COALESCE(er.piso, ers.piso) AS piso,
+            r.fecha_ingreso,
+            rs.fecha_fin AS reserva_vence
+       FROM vehiculo v
+       JOIN tipo_vehiculo t ON t.id_tipo = v.id_tipo
+       LEFT JOIN registro_estacionamiento r ON r.placa = v.placa AND r.estado = 'ABIERTO'
+       LEFT JOIN espacio er ON er.id_espacio = r.id_espacio
+       LEFT JOIN parqueadero pr ON pr.id_parqueadero = er.id_parqueadero
+       LEFT JOIN reserva rs ON rs.placa = v.placa AND rs.estado = 'ACTIVA'
+       LEFT JOIN espacio ers ON ers.id_espacio = rs.id_espacio
+       LEFT JOIN parqueadero prs ON prs.id_parqueadero = ers.id_parqueadero
       WHERE v.id_cliente = $1
       ORDER BY v.placa`,
     [idCliente]

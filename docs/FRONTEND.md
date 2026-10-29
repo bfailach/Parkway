@@ -72,7 +72,9 @@ Notificaciones.
   se eligen de una lista con la opción "Otro" al final; las marcas cambian
   según sea carro o moto. Las bicicletas no tienen placa ni marca: al
   agregarlas, el sistema les da un código único (BICI001, BICI002...) que el
-  cliente le dice al operador al llegar.
+  cliente le dice al operador al llegar. Si un vehículo está dentro o
+  reservado, la tarjeta dice en qué sede y espacio está (y en qué piso, si la
+  sede tiene varios), a qué hora entró o hasta qué hora vale la reserva.
 - **Cupos por sede.** El plano 3D de cada sede, sin placas de otros clientes.
 - **Mi historial.** Visitas con su valor y reservas con su estado.
 - **Notificaciones.** El cliente elige cada cuánto ver el tiempo y el valor
@@ -85,9 +87,9 @@ Notificaciones.
 | --- | --- | --- |
 | ![Reserva](capturas/10_cliente_reserva.jpg) | ![Vehículos](capturas/11_cliente_vehiculos.jpg) | ![Cupos](capturas/12_cliente_cupos.jpg) |
 
-| Bicicleta con su código | Notificaciones |
-| --- | --- |
-| ![Bicicleta](capturas/29_cliente_bicicleta.jpg) | ![Notificaciones](capturas/30_notificaciones.jpg) |
+| Bicicleta con su código | Dónde está cada vehículo | Notificaciones |
+| --- | --- | --- |
+| ![Bicicleta](capturas/29_cliente_bicicleta.jpg) | ![Ubicación](capturas/40_vehiculo_ubicacion.jpg) | ![Notificaciones](capturas/30_notificaciones.jpg) |
 
 ## Pantallas del operador
 
@@ -172,6 +174,13 @@ Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes** y
   piso; en los pisos 2 en adelante los códigos llevan el número del piso
   (2A-01 es el automóvil 01 del piso 2);
 - tarifa (hora, fracción de 15 minutos y día) por tipo de vehículo;
+- límites realistas para una sede en Bogotá: por piso, hasta 150
+  automóviles, 80 motocicletas y 60 bicicletas; en toda la sede, hasta 600,
+  300 y 200, y 800 espacios en total. El formulario marca el campo que se
+  pasa y no deja guardar; el backend aplica los mismos límites. Si hay pocos
+  cupos de bicicleta, recomienda el 10 % de los de automóvil (mínimo 12 si
+  hay menos de 120), lo que la Ley 1811 de 2016 exige a los edificios
+  públicos;
 - horario de atención por día de la semana, con atajos para 24 horas o lunes
   a sábado;
 - los operadores que tienen acceso a la sede.
@@ -185,7 +194,9 @@ servicio o lo habilita de nuevo.
 | --- | --- | --- |
 | ![Sedes](capturas/31_sedes.jpg) | ![Editar](capturas/32_editar_sede.jpg) | ![Horario](capturas/33_horario_operadores.jpg) |
 
-![Nueva sede de tres pisos](capturas/39_editor_pisos.jpg)
+| Nueva sede de tres pisos | Límites de espacios |
+| --- | --- |
+| ![Nueva sede de tres pisos](capturas/39_editor_pisos.jpg) | ![Límites](capturas/41_limites_sede.jpg) |
 
 **Bitácora:** todas las
 operaciones del sistema con su usuario, resultado y detalle, filtrables por

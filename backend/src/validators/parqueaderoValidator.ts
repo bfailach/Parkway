@@ -32,8 +32,18 @@ export interface DatosParqueadero {
 
 type Resultado = { valido: true; datos: DatosParqueadero } | { valido: false; errores: Record<string, string> };
 
-export const MAX_ESPACIOS_POR_TIPO = 300;
+/**
+ * Límites de una sede, pensados para los parqueaderos de Bogotá: la mayoría
+ * son lotes o edificios pequeños y medianos, y un piso de un edificio de
+ * parqueaderos recibe entre 50 y 150 carros. Por piso: 150 automóviles,
+ * 80 motocicletas y 60 bicicletas. Por sede: 600, 300 y 200, y como máximo
+ * 800 espacios en total.
+ */
+export const LIMITE_POR_PISO: Record<number, number> = { 1: 150, 2: 80, 3: 60 };
+export const LIMITE_POR_SEDE: Record<number, number> = { 1: 600, 2: 300, 3: 200 };
+export const LIMITE_TOTAL_SEDE = 800;
 export const MAX_PISOS = 6;
+const NOMBRE_PLURAL: Record<number, string> = { 1: "automóviles", 2: "motocicletas", 3: "bicicletas" };
 const TIPOS = Object.values(TIPOS_VEHICULO) as number[];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -85,8 +95,8 @@ export function validarParqueadero(body: Record<string, unknown>): Resultado {
     let conError = false;
     for (const t of TIPOS) {
       const n = Number(fila[t] ?? 0);
-      if (!Number.isInteger(n) || n < 0 || n > MAX_ESPACIOS_POR_TIPO) {
-        errores[`espacios.${piso}.${t}`] = `Entre 0 y ${MAX_ESPACIOS_POR_TIPO}`;
+      if (!Number.isInteger(n) || n < 0 || n > LIMITE_POR_PISO[t]) {
+        errores[`espacios.${piso}.${t}`] = `Entre 0 y ${LIMITE_POR_PISO[t]} ${NOMBRE_PLURAL[t]} por piso`;
         conError = true;
       } else {
         deEstePiso[t] = n;
@@ -100,8 +110,10 @@ export function validarParqueadero(body: Record<string, unknown>): Resultado {
     espaciosPorPiso.push(deEstePiso);
   }
   for (const t of TIPOS) {
-    if (espacios[t] > MAX_ESPACIOS_POR_TIPO * MAX_PISOS) errores[`espacios.${t}`] = "Demasiados espacios";
+    if (espacios[t] > LIMITE_POR_SEDE[t]) errores[`espacios.total.${t}`] = `Máximo ${LIMITE_POR_SEDE[t]} ${NOMBRE_PLURAL[t]} en la sede`;
   }
+  const totalSede = TIPOS.reduce((s, t) => s + espacios[t], 0);
+  if (totalSede > LIMITE_TOTAL_SEDE) errores["espacios.total"] = `Máximo ${LIMITE_TOTAL_SEDE} espacios en la sede`;
 
   // Tarifas: obligatorias para cada tipo que tenga espacios
   const tarifasBody = Array.isArray(body.tarifas) ? (body.tarifas as Record<string, unknown>[]) : [];
