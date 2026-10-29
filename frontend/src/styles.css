@@ -480,7 +480,8 @@ a { color: inherit; }
 .actualizado { color: var(--tinta-2); font-size: 0.875rem; }
 
 .bloque { margin-top: 40px; }
-.bloque-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
+.bloque-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.bloque-controles { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .bloque-titulo { font-size: 1.875rem; font-weight: 800; text-transform: uppercase; }
 .conmutador { display: inline-flex; background: var(--superficie-2); border-radius: var(--radio); padding: 3px; }
 .conmutador button { border: 0; background: none; color: var(--tinta-2); padding: 7px 16px; border-radius: 3px; font-weight: 700; cursor: pointer; }
@@ -525,6 +526,7 @@ a { color: inherit; }
 /* Plano 2D */
 .mapa { background: var(--superficie); color: var(--tinta-2); border-radius: var(--radio); padding: 20px 22px 16px; }
 .mapa-zona + .mapa-zona { margin-top: 22px; }
+.mapa-zona-piso { font-size: 0.8125rem; font-family: var(--texto); font-weight: 700; letter-spacing: 0.04em; background: var(--acento); color: #fff; padding: 2px 8px; border-radius: 3px; align-self: center; }
 .mapa-zona-titulo { font-size: 1.375rem; color: var(--tinta); display: flex; gap: 12px; align-items: baseline; margin-bottom: 10px; text-transform: uppercase; }
 .mapa-zona-cuenta { font-family: var(--texto); font-size: 0.875rem; font-weight: 500; color: var(--tinta-2); text-transform: none; }
 .plazas {
@@ -872,6 +874,7 @@ button.plaza-boton:hover { background-color: var(--fantasma); }
 .ficha-flotante { position: absolute; top: 14px; right: 14px; box-shadow: 0 18px 40px var(--sombra); z-index: 5; }
 .ficha-cabeza { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
 .ficha-cabeza > div { display: grid; gap: 6px; justify-items: start; }
+.ficha-piso { display: inline-block; margin-left: 8px; font-weight: 700; font-size: 0.875rem; color: var(--tinta-2); }
 .ficha-codigo { font-family: var(--display); font-weight: 900; font-size: 3.5rem; line-height: 0.85; }
 .chip-estado-libre { background: var(--ok-fondo); color: var(--ok-texto); }
 .chip-estado-ocupado { background: var(--error-fondo); color: var(--error-alerta); }
@@ -993,3 +996,11 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
   animation: none !important; transition: none !important; scroll-behavior: auto !important;
 }
 [data-movimiento="reducido"] .entrada { opacity: 1; transform: none; }
+
+/* Cantidad de pisos en el editor de sedes */
+.campo-pisos { margin-bottom: 16px; }
+.contador { display: inline-flex; align-items: center; gap: 10px; }
+.contador .boton { width: 44px; height: 44px; padding: 0; font-size: 1.25rem; }
+.contador output { min-width: 2ch; text-align: center; font-family: var(--display); font-weight: 800; font-size: 2rem; }
+.tabla-tarifas { margin-top: 12px; }
+.tabla-total { font-family: var(--display); font-weight: 800; font-size: 1.25rem; }

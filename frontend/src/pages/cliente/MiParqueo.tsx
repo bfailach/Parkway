@@ -7,6 +7,7 @@ import { useApariencia } from "../../lib/apariencia";
 import { MapaEspacios } from "../../components/MapaEspacios";
 import { Placa } from "../../components/Placa";
 import { crearControl, soportaWebGL } from "../../three/control";
+import { contarPisos } from "../../components/FiltroPisos";
 import { Selector } from "../../components/Selector";
 
 const Escena = lazy(() => import("../../three/Escena"));
@@ -177,7 +178,13 @@ function ReservaActiva({ reserva, ahora, minutos, onCambio }: { reserva: Reserva
           <MapaEspacios espacios={plano.datos} resaltado={reserva.id_espacio} />
         ) : webgl && plano.datos ? (
           <Suspense fallback={<div className="visor-cargando">Cargando plano 3D...</div>}>
-            <Escena className="visor-3d-lienzo" espacios={plano.datos} control={control} resaltarId={reserva.id_espacio} />
+            <Escena
+              className="visor-3d-lienzo"
+              espacios={plano.datos}
+              control={control}
+              resaltarId={reserva.id_espacio}
+              pisoVisible={contarPisos(plano.datos) > 1 ? plano.datos.find((e) => e.id_espacio === reserva.id_espacio)?.piso ?? null : null}
+            />
           </Suspense>
         ) : (
           <div className="visor-cargando">Tu espacio es el {reserva.codigo_espacio}</div>

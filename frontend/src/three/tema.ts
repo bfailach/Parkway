@@ -1,24 +1,31 @@
 import { createContext, useContext } from "react";
 
 /**
- * Paleta de la escena 3D. Imita una maqueta de presentación: superficies
- * mate de un solo tono, luz suave y sombras difusas. Hay una versión
- * oscura (estudio en penumbra) y una clara (estudio blanco).
+ * Paleta de la escena 3D. La sede se ve como una maqueta flotante sobre un
+ * fondo liso, sin entorno: concreto claro, asfalto gris, líneas amarillas y
+ * luz suave con sombras difusas. Hay una versión clara (por defecto en el
+ * tema claro) y una oscura (maqueta de noche).
  */
 export interface PaletaEscena {
   claro: boolean;
   fondo: string;
-  niebla: [number, number];
-  suelo: string;
-  lote: string;
+  /** Color del degradado del fondo, arriba y abajo. */
+  fondoArriba: string;
+  fondoAbajo: string;
+  baseArriba: string;
+  baseLado: string;
+  anden: string;
+  asfalto: string;
+  asfaltoRampa: string;
+  concreto: string;
+  concretoOscuro: string;
   linea: string;
-  lineaBrillo: number;
-  muro: string;
-  edificio: string;
-  edificioAcento: string;
-  cerro: string;
-  arbol: string;
-  tronco: string;
+  flecha: string;
+  peligroNegro: string;
+  peligroAmarillo: string;
+  nucleo: string;
+  vidrioNucleo: string;
+  pasto: string;
   vidrio: string;
   llanta: string;
   rin: string;
@@ -30,23 +37,63 @@ export interface PaletaEscena {
   luzAmbiente: number;
   luzSol: number;
   colorSol: string;
+  intensidadSombra: number;
   entorno: number;
 }
 
+export const PALETA_CLARA: PaletaEscena = {
+  claro: true,
+  fondo: "#ebe7df",
+  fondoArriba: "#f4f1eb",
+  fondoAbajo: "#dcd6cb",
+  baseArriba: "#cfc8ba",
+  baseLado: "#b7b0a2",
+  anden: "#cfc9bd",
+  asfalto: "#5b6068",
+  asfaltoRampa: "#62676f",
+  concreto: "#cdcac4",
+  concretoOscuro: "#aeaaa3",
+  linea: "#f2c230",
+  flecha: "#f7f7f5",
+  peligroNegro: "#24262a",
+  peligroAmarillo: "#f2c230",
+  nucleo: "#f5f3ef",
+  vidrioNucleo: "#3a4350",
+  pasto: "#a3bf88",
+  vidrio: "#26303c",
+  llanta: "#1d2024",
+  rin: "#d4d9df",
+  interior: "#2a2e33",
+  sombra: 0.32,
+  testigoBrillo: 0.9,
+  cieloArriba: "#ffffff",
+  cieloAbajo: "#b9b1a2",
+  luzAmbiente: 1.05,
+  luzSol: 2.3,
+  colorSol: "#fff3e0",
+  intensidadSombra: 0.55,
+  entorno: 0.9,
+};
+
 export const PALETA_OSCURA: PaletaEscena = {
   claro: false,
-  fondo: "#090b0f",
-  niebla: [70, 300],
-  suelo: "#0f1216",
-  lote: "#15181d",
-  linea: "#cfd5dd",
-  lineaBrillo: 0.18,
-  muro: "#1c2027",
-  edificio: "#171b21",
-  edificioAcento: "#20252d",
-  cerro: "#0d1219",
-  arbol: "#1c3328",
-  tronco: "#2a2f36",
+  fondo: "#0c0f14",
+  fondoArriba: "#151a22",
+  fondoAbajo: "#07090c",
+  baseArriba: "#2b3038",
+  baseLado: "#1a1d23",
+  anden: "#33383f",
+  asfalto: "#1f2329",
+  asfaltoRampa: "#23272e",
+  concreto: "#555a62",
+  concretoOscuro: "#41454c",
+  linea: "#d9ad2b",
+  flecha: "#c9ced6",
+  peligroNegro: "#141518",
+  peligroAmarillo: "#d9ad2b",
+  nucleo: "#8d939c",
+  vidrioNucleo: "#ffd58a",
+  pasto: "#2e5a35",
   vidrio: "#0f151d",
   llanta: "#16181b",
   rin: "#b9c0c9",
@@ -55,39 +102,12 @@ export const PALETA_OSCURA: PaletaEscena = {
   testigoBrillo: 1.6,
   cieloArriba: "#8094bb",
   cieloAbajo: "#0b0c10",
-  luzAmbiente: 0.55,
-  luzSol: 1.1,
+  luzAmbiente: 0.7,
+  luzSol: 1.3,
   colorSol: "#dfe8ff",
-  entorno: 0.7,
+  intensidadSombra: 0.7,
+  entorno: 0.6,
 };
 
-export const PALETA_CLARA: PaletaEscena = {
-  claro: true,
-  fondo: "#e9edf2",
-  niebla: [80, 320],
-  suelo: "#e3e7ec",
-  lote: "#d9dee5",
-  linea: "#ffffff",
-  lineaBrillo: 0.25,
-  muro: "#c9d0d9",
-  edificio: "#f4f6f8",
-  edificioAcento: "#ffffff",
-  cerro: "#cfd6df",
-  arbol: "#9fc4a8",
-  tronco: "#a0a7b0",
-  vidrio: "#26303c",
-  llanta: "#1d2024",
-  rin: "#d4d9df",
-  interior: "#2a2e33",
-  sombra: 0.32,
-  testigoBrillo: 0.9,
-  cieloArriba: "#ffffff",
-  cieloAbajo: "#b8c1cd",
-  luzAmbiente: 0.95,
-  luzSol: 2.1,
-  colorSol: "#ffffff",
-  entorno: 0.9,
-};
-
-export const TemaEscena = createContext<PaletaEscena>(PALETA_OSCURA);
+export const TemaEscena = createContext<PaletaEscena>(PALETA_CLARA);
 export const usePaleta = () => useContext(TemaEscena);

@@ -31,16 +31,23 @@ interface Props {
 }
 
 export function MapaEspacios({ espacios, onSeleccionar, seleccionado, resaltado }: Props) {
-  const grupos = espacios.reduce<Record<string, EspacioMapa[]>>((acc, e) => {
-    (acc[e.tipo] ||= []).push(e);
-    return acc;
-  }, {});
+  // Con varios pisos, cada grupo es un tipo de vehículo dentro de su piso.
+  const variosPisos = new Set(espacios.map((e) => e.piso ?? 1)).size > 1 || espacios.some((e) => (e.piso ?? 1) > 1);
+  const grupos = new Map<string, { piso: number; tipo: string; lista: EspacioMapa[] }>();
+  [...espacios]
+    .sort((a, b) => (a.piso ?? 1) - (b.piso ?? 1))
+    .forEach((e) => {
+      const clave = `${e.piso ?? 1}|${e.tipo}`;
+      if (!grupos.has(clave)) grupos.set(clave, { piso: e.piso ?? 1, tipo: e.tipo, lista: [] });
+      grupos.get(clave)!.lista.push(e);
+    });
 
   return (
     <div className="mapa">
-      {Object.entries(grupos).map(([tipo, lista]) => (
-        <section key={tipo} className="mapa-zona" aria-label={pluralTipo(tipo)}>
+      {[...grupos.entries()].map(([clave, { piso, tipo, lista }]) => (
+        <section key={clave} className="mapa-zona" aria-label={variosPisos ? `Piso ${piso}, ${pluralTipo(tipo)}` : pluralTipo(tipo)}>
           <h3 className="mapa-zona-titulo">
+            {variosPisos && <span className="mapa-zona-piso">Piso {piso}</span>}
             {pluralTipo(tipo)}
             <span className="mapa-zona-cuenta">
               {lista.filter((e) => e.estado === "LIBRE").length} de {lista.length} libres

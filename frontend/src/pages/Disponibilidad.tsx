@@ -7,6 +7,7 @@ import { Placa } from "../components/Placa";
 import { MapaEspacios } from "../components/MapaEspacios";
 import { Odometro } from "../components/Odometro";
 import { SalidaDialogo } from "../components/SalidaDialogo";
+import { contarPisos, FiltroPisos } from "../components/FiltroPisos";
 import { crearControl, soportaWebGL } from "../three/control";
 import { Plaza } from "../three/layout";
 
@@ -25,6 +26,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
   const [tipo, setTipo] = useState<number | null>(null);
   const [registro, setRegistro] = useState<Registro | null>(null);
   const [idSeleccion, setIdSeleccion] = useState<number | null>(null);
+  const [piso, setPiso] = useState<number | null>(null);
   const control = useRef(crearControl("panel"));
 
   const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero], 5000);
@@ -39,7 +41,12 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
     15000
   );
 
-  useEffect(() => setIdSeleccion(null), [sede.id_parqueadero]);
+  useEffect(() => {
+    setIdSeleccion(null);
+    setPiso(null);
+  }, [sede.id_parqueadero]);
+  const pisos = contarPisos(mapa.datos);
+  const espaciosDelPiso = piso == null ? mapa.datos ?? [] : (mapa.datos ?? []).filter((e) => (e.piso ?? 1) === piso);
   const seleccion = (mapa.datos ?? []).find((e) => e.id_espacio === idSeleccion) ?? null;
   const seleccionar = (id: number) => setIdSeleccion((actual) => (actual === id ? null : id));
 
@@ -98,12 +105,15 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
       <section className="bloque" aria-labelledby="titulo-mapa">
         <div className="bloque-cabeza">
           <h2 className="bloque-titulo" id="titulo-mapa">Plano de la sede</h2>
+          <div className="bloque-controles">
+          <FiltroPisos pisos={pisos} valor={piso} onChange={(p) => setPiso(p)} />
           {webgl && (
             <div className="conmutador" role="tablist" aria-label="Tipo de vista">
               <button role="tab" aria-selected={vista === "3d"} onClick={() => setVista("3d")}>3D</button>
               <button role="tab" aria-selected={vista === "plano"} onClick={() => setVista("plano")}>Plano</button>
             </div>
           )}
+          </div>
         </div>
 
         {vista === "3d" && mapa.datos && (
@@ -116,6 +126,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
                 control={control}
                 resaltarTipo={tipo}
                 resaltarId={idSeleccion}
+                pisoVisible={piso}
                 onSeleccionar={(p: Plaza) => seleccionar(p.id_espacio)}
               />
             </Suspense>
@@ -131,7 +142,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
         )}
         {vista === "plano" && mapa.datos && mapa.datos.length > 0 && (
           <div className="plano-con-detalle">
-            <MapaEspacios espacios={mapa.datos} onSeleccionar={(e) => seleccionar(e.id_espacio)} seleccionado={idSeleccion} />
+            <MapaEspacios espacios={espaciosDelPiso} onSeleccionar={(e) => seleccionar(e.id_espacio)} seleccionado={idSeleccion} />
             {seleccion && (
               <DetalleEspacio espacio={seleccion} sede={sede} esPersonal={esPersonal} onCerrar={() => setIdSeleccion(null)} onSalida={setRegistro} />
             )}
@@ -205,6 +216,7 @@ function DetalleEspacio({
       <header className="ficha-cabeza">
         <div>
           <span className="ficha-codigo">{e.codigo}</span>
+          {e.piso != null && e.piso > 1 && <span className="ficha-piso">Piso {e.piso}</span>}
           <span className={`chip chip-estado-${e.estado.toLowerCase()}`}>{ESTADO[e.estado]}</span>
         </div>
         <button type="button" className="aviso-cerrar" aria-label="Cerrar detalle" onClick={onCerrar}>×</button>

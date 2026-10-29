@@ -5,6 +5,7 @@ import { NOMBRE_DIA, nombreTipo, pesos, pluralTipo, resumenHorario } from "../..
 import { crearControl, soportaWebGL } from "../../three/control";
 import { useApariencia } from "../../lib/apariencia";
 import { MapaEspacios } from "../../components/MapaEspacios";
+import { FiltroPisos } from "../../components/FiltroPisos";
 
 const Escena = lazy(() => import("../../three/Escena"));
 
@@ -69,6 +70,7 @@ export function Sedes({ tipos, onCambio }: { tipos: TipoVehiculo[]; onCambio: ()
                   </div>
                 ) : null
               )}
+              {s.pisos > 1 && <div><dt>Pisos</dt><dd>{s.pisos}</dd></div>}
               <div><dt>Fuera de servicio</dt><dd>{s.fuera_de_servicio}</dd></div>
             </dl>
             <p className="sede-linea"><span className="tenue">Horario:</span> {resumenHorario(s.horarios)}</p>
@@ -103,7 +105,8 @@ interface Form {
   ciudad: string;
   latitud: string;
   longitud: string;
-  espacios: Record<number, string>;
+  /** Espacios por tipo en cada piso; la cantidad de pisos es el largo. */
+  pisos: Record<number, string>[];
   tarifas: Record<number, { valor_hora: string; valor_fraccion: string; valor_dia: string }>;
   dias: Record<number, DiaForm>;
   operadores: number[];
@@ -123,7 +126,7 @@ function formVacio(): Form {
     ciudad: "Bogotá",
     latitud: "",
     longitud: "",
-    espacios: { 1: "20", 2: "6", 3: "4" },
+    pisos: [{ 1: "20", 2: "6", 3: "4" }],
     tarifas: { ...TARIFA_SUGERIDA },
     dias: Object.fromEntries(DIAS.map((d) => [d, { abierto: d <= 6, abre: "06:00", cierra: "22:00", medianoche: false }])),
     operadores: [],
@@ -137,7 +140,11 @@ function formDe(s: SedeAdmin): Form {
   f.ciudad = s.ciudad ?? "Bogotá";
   f.latitud = s.latitud != null ? String(s.latitud) : "";
   f.longitud = s.longitud != null ? String(s.longitud) : "";
-  f.espacios = { 1: String(s.espacios[1] ?? 0), 2: String(s.espacios[2] ?? 0), 3: String(s.espacios[3] ?? 0) };
+  const porPiso = s.espacios_por_piso?.length ? s.espacios_por_piso : [s.espacios];
+  f.pisos = Array.from({ length: Math.max(s.pisos ?? 1, porPiso.length) }, (_, i) => {
+    const e = porPiso[i] ?? {};
+    return { 1: String(e[1] ?? 0), 2: String(e[2] ?? 0), 3: String(e[3] ?? 0) };
+  });
   s.tarifas.forEach((t) => (f.tarifas[t.id_tipo] = { valor_hora: String(t.valor_hora), valor_fraccion: String(t.valor_fraccion), valor_dia: String(t.valor_dia) }));
   DIAS.forEach((d) => {
     const h = s.horarios.find((x) => x.dia === d);
@@ -151,14 +158,16 @@ function formDe(s: SedeAdmin): Form {
 
 function aDatos(f: Form): DatosSede {
   const n = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
-  const espacios = { 1: Number(f.espacios[1] || 0), 2: Number(f.espacios[2] || 0), 3: Number(f.espacios[3] || 0) };
+  const espaciosPorPiso = f.pisos.map((p) => ({ 1: Number(p[1] || 0), 2: Number(p[2] || 0), 3: Number(p[3] || 0) }));
+  const espacios = totalesPorTipo(f);
   return {
     nombre: f.nombre,
     direccion: f.direccion,
     ciudad: f.ciudad,
     latitud: n(f.latitud),
     longitud: n(f.longitud),
-    espacios,
+    pisos: f.pisos.length,
+    espaciosPorPiso,
     tarifas: [1, 2, 3]
       .filter((t) => espacios[t as 1] > 0)
       .map((t) => ({
@@ -176,27 +185,38 @@ function aDatos(f: Form): DatosSede {
   };
 }
 
+/** Total de espacios por tipo sumando todos los pisos. */
+function totalesPorTipo(f: Form): Record<number, number> {
+  const r: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+  f.pisos.forEach((p) => [1, 2, 3].forEach((t) => (r[t] += Number(p[t] || 0))));
+  return r;
+}
+
 /** Plazas de vista previa a partir de las cantidades del formulario. */
 function plazasDePrueba(f: Form, existentes: SedeAdmin["lista_espacios"]): EspacioMapa[] {
   const nombres: Record<number, string> = { 1: "AUTOMOVIL", 2: "MOTOCICLETA", 3: "BICICLETA" };
   const prefijo: Record<number, string> = { 1: "A", 2: "M", 3: "B" };
   const lista: EspacioMapa[] = [];
-  [1, 2, 3].forEach((t) => {
-    const n = Math.min(300, Math.max(0, Number(f.espacios[t] || 0)));
-    const reales = (existentes ?? []).filter((e) => e.id_tipo === t);
-    for (let i = 0; i < n; i++) {
-      const real = reales[i];
-      lista.push({
-        id_espacio: real?.id_espacio ?? -(t * 1000 + i + 1),
-        codigo: real?.codigo ?? `${prefijo[t]}-${String(i + 1).padStart(n > 99 ? 3 : 2, "0")}`,
-        estado: real?.estado ?? "LIBRE",
-        id_tipo: t,
-        tipo: nombres[t],
-        id_registro: null,
-        placa: null,
-        fecha_ingreso: null,
-      });
-    }
+  f.pisos.forEach((cantidades, i) => {
+    const piso = i + 1;
+    [1, 2, 3].forEach((t) => {
+      const n = Math.min(300, Math.max(0, Number(cantidades[t] || 0)));
+      const reales = (existentes ?? []).filter((e) => e.id_tipo === t && (e.piso ?? 1) === piso);
+      for (let k = 0; k < n; k++) {
+        const real = reales[k];
+        lista.push({
+          id_espacio: real?.id_espacio ?? -(piso * 100000 + t * 1000 + k + 1),
+          codigo: real?.codigo ?? `${piso > 1 ? piso : ""}${prefijo[t]}-${String(k + 1).padStart(n > 99 ? 3 : 2, "0")}`,
+          piso,
+          estado: real?.estado ?? "LIBRE",
+          id_tipo: t,
+          tipo: nombres[t],
+          id_registro: null,
+          placa: null,
+          fecha_ingreso: null,
+        });
+      }
+    });
   });
   return lista;
 }
@@ -224,11 +244,12 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
 
   // La vista previa se actualiza un momento después de dejar de escribir.
   const [previa, setPrevia] = useState<EspacioMapa[]>([]);
+  const [pisoPrevia, setPisoPrevia] = useState<number | null>(null);
   useEffect(() => {
     if (!form) return;
     const t = window.setTimeout(() => setPrevia(plazasDePrueba(form, sede?.lista_espacios)), 300);
     return () => window.clearTimeout(t);
-  }, [form?.espacios, sede]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form?.pisos, sede]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!form) return <div className="pagina">{mensaje ? <p className="alerta alerta-error">{mensaje.texto}</p> : <p className="tenue">Cargando sede...</p>}</div>;
   const f = form;
@@ -274,7 +295,15 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
     }
   }
 
-  const total = [1, 2, 3].reduce((s, t) => s + Number(f.espacios[t] || 0), 0);
+  const totales = totalesPorTipo(f);
+  const total = totales[1] + totales[2] + totales[3];
+  const cambiarPiso = (i: number, t: number, v: string) =>
+    set({ pisos: f.pisos.map((p, k) => (k === i ? { ...p, [t]: v.replace(/\D/g, "").slice(0, 3) } : p)) });
+  const cambiarPisos = (n: number) => {
+    const actual = f.pisos.length;
+    if (n < 1 || n > 6 || n === actual) return;
+    set({ pisos: n > actual ? [...f.pisos, ...Array.from({ length: n - actual }, () => ({ 1: "20", 2: "0", 3: "0" }))] : f.pisos.slice(0, n) });
+  };
   const listaEspacios: EspacioMapa[] = (sede?.lista_espacios ?? []).map((e) => ({ ...e, id_registro: null, placa: null, fecha_ingreso: null }));
 
   return (
@@ -335,14 +364,61 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
           </section>
 
           <section className="panel-form" aria-labelledby="t-espacios">
-            <h2 className="bloque-titulo" id="t-espacios">Espacios y tarifas</h2>
+            <h2 className="bloque-titulo" id="t-espacios">Pisos, espacios y tarifas</h2>
+            <div className="campo campo-pisos">
+              <span className="campo-rotulo" id="r-pisos">Pisos</span>
+              <div className="contador" role="group" aria-labelledby="r-pisos">
+                <button type="button" className="boton boton-secundario" aria-label="Quitar un piso" disabled={f.pisos.length <= 1} onClick={() => cambiarPisos(f.pisos.length - 1)}>−</button>
+                <output aria-live="polite">{f.pisos.length}</output>
+                <button type="button" className="boton boton-secundario" aria-label="Agregar un piso" disabled={f.pisos.length >= 6} onClick={() => cambiarPisos(f.pisos.length + 1)}>+</button>
+              </div>
+              <span className="campo-ayuda">
+                {f.pisos.length > 1 ? "Una rampa en espiral une los pisos. Los códigos del piso 2 en adelante llevan el número del piso: 2A-01." : "Parqueadero a nivel. Agregue pisos para un edificio."}
+              </span>
+            </div>
+            {err("pisos") && <p className="campo-error">{err("pisos")}</p>}
             {err("espacios") && <p className="campo-error">{err("espacios")}</p>}
             <div className="tabla-contenedor">
               <table className="tabla tabla-editor">
+                <caption className="visualmente-oculto">Espacios por piso</caption>
                 <thead>
                   <tr>
                     <th scope="col">Vehículo</th>
-                    <th scope="col">Espacios</th>
+                    {f.pisos.map((_, i) => (
+                      <th key={i} scope="col">{f.pisos.length > 1 ? `Piso ${i + 1}` : "Espacios"}</th>
+                    ))}
+                    {f.pisos.length > 1 && <th scope="col">Total</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tipos.map((t) => (
+                    <tr key={t.id_tipo}>
+                      <th scope="row">{pluralTipo(t.nombre)}</th>
+                      {f.pisos.map((p, i) => (
+                        <td key={i}>
+                          <input
+                            type="number"
+                            min={0}
+                            max={300}
+                            aria-label={`Espacios de ${pluralTipo(t.nombre).toLowerCase()}${f.pisos.length > 1 ? ` en el piso ${i + 1}` : ""}`}
+                            value={p[t.id_tipo]}
+                            onChange={(e) => cambiarPiso(i, t.id_tipo, e.target.value)}
+                            aria-invalid={!!err(`espacios.${i + 1}.${t.id_tipo}`) || !!err(`espacios.${i + 1}`)}
+                          />
+                        </td>
+                      ))}
+                      {f.pisos.length > 1 && <td className="tabla-total">{totales[t.id_tipo]}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="tabla-contenedor tabla-tarifas">
+              <table className="tabla tabla-editor">
+                <caption className="visualmente-oculto">Tarifas de la sede</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Tarifa</th>
                     <th scope="col">Hora</th>
                     <th scope="col">15 min</th>
                     <th scope="col">Día</th>
@@ -350,7 +426,7 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                 </thead>
                 <tbody>
                   {tipos.map((t) => {
-                    const n = Number(f.espacios[t.id_tipo] || 0);
+                    const n = totales[t.id_tipo];
                     const tar = f.tarifas[t.id_tipo] ?? TARIFA_SUGERIDA[t.id_tipo];
                     const campoTarifa = (k: "valor_hora" | "valor_fraccion" | "valor_dia", etiqueta: string) => (
                       <td>
@@ -368,17 +444,6 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                     return (
                       <tr key={t.id_tipo}>
                         <th scope="row">{pluralTipo(t.nombre)}</th>
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            max={300}
-                            aria-label={`Espacios de ${pluralTipo(t.nombre).toLowerCase()}`}
-                            value={f.espacios[t.id_tipo]}
-                            onChange={(e) => set({ espacios: { ...f.espacios, [t.id_tipo]: e.target.value.replace(/\D/g, "").slice(0, 3) } })}
-                            aria-invalid={!!err(`espacios.${t.id_tipo}`)}
-                          />
-                        </td>
                         {campoTarifa("valor_hora", "Valor de la hora")}
                         {campoTarifa("valor_fraccion", "Valor de 15 minutos")}
                         {campoTarifa("valor_dia", "Valor del día")}
@@ -390,11 +455,19 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
             </div>
             {Object.entries(errores)
               .filter(([k]) => k.startsWith("tarifas.") || k.startsWith("espacios."))
-              .map(([k, v]) => (
-                <p key={k} className="campo-error">
-                  {nombreTipo(tipos.find((t) => t.id_tipo === Number(k.split(".")[1]))?.nombre ?? "")}: {v}
-                </p>
-              ))}
+              .map(([k, v]) => {
+                const partes = k.split(".");
+                // espacios.2 (piso vacío), espacios.2.1 (piso y tipo) o tarifas.1.valor_hora
+                const tipo = k.startsWith("espacios.") ? (partes[2] ? Number(partes[2]) : null) : Number(partes[1]);
+                const piso = k.startsWith("espacios.") && partes.length >= 2 && f.pisos.length > 1 ? `Piso ${partes[1]}` : "";
+                const nombre = tipo ? nombreTipo(tipos.find((t) => t.id_tipo === tipo)?.nombre ?? "") : "";
+                const etiqueta = [piso, nombre].filter(Boolean).join(", ");
+                return (
+                  <p key={k} className="campo-error">
+                    {etiqueta ? `${etiqueta}: ` : ""}{v}
+                  </p>
+                );
+              })}
             <p className="campo-ayuda">
               {total} espacios en total. Al reducir la cantidad se quitan los espacios libres de número más alto que nunca se
               usaron; los que tienen historial se conservan.
@@ -473,12 +546,15 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
         </div>
 
         <aside className="editor-previa">
-          <h2 className="bloque-titulo">Vista previa</h2>
+          <div className="bloque-cabeza">
+            <h2 className="bloque-titulo">Vista previa</h2>
+            <FiltroPisos pisos={f.pisos.length} valor={pisoPrevia != null && pisoPrevia <= f.pisos.length ? pisoPrevia : null} onChange={setPisoPrevia} />
+          </div>
           <p className="campo-ayuda">El plano 3D se arma con los espacios del formulario.</p>
           <div className="visor-3d visor-previa">
             {webgl && !plano2d && previa.length > 0 ? (
               <Suspense fallback={<div className="visor-cargando">Cargando vista previa...</div>}>
-                <Escena className="visor-3d-lienzo" espacios={previa} control={control} />
+                <Escena className="visor-3d-lienzo" espacios={previa} control={control} pisoVisible={pisoPrevia != null && pisoPrevia <= f.pisos.length ? pisoPrevia : null} />
               </Suspense>
             ) : previa.length > 0 ? (
               <MapaEspacios espacios={previa} />

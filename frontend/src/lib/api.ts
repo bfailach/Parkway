@@ -107,13 +107,16 @@ export interface Operador {
 }
 
 export interface SedeAdmin extends Parqueadero {
+  pisos: number;
   espacios: Record<string, number>;
+  /** Espacios por tipo en cada piso: [0] es el piso 1. */
+  espacios_por_piso: Record<string, number>[];
   fuera_de_servicio: number;
   ocupados: number;
   horarios: Horario[];
   tarifas: TarifaSede[];
   operadores: number[];
-  lista_espacios?: { id_espacio: number; codigo: string; estado: EspacioMapa["estado"]; id_tipo: number; tipo: string }[];
+  lista_espacios?: { id_espacio: number; codigo: string; piso?: number; estado: EspacioMapa["estado"]; id_tipo: number; tipo: string }[];
 }
 
 export interface DatosSede {
@@ -122,7 +125,8 @@ export interface DatosSede {
   ciudad: string;
   latitud: number | null;
   longitud: number | null;
-  espacios: Record<number, number>;
+  pisos: number;
+  espaciosPorPiso: Record<number, number>[];
   tarifas: { idTipo: number; valor_hora: number; valor_fraccion: number; valor_dia: number }[];
   horarios: Horario[];
   operadores: number[];
@@ -156,6 +160,8 @@ export interface Resumen {
 export interface EspacioMapa {
   id_espacio: number;
   codigo: string;
+  /** Piso del espacio (1 en las sedes de un solo piso). */
+  piso?: number;
   estado: "LIBRE" | "RESERVADO" | "OCUPADO" | "FUERA_DE_SERVICIO";
   id_tipo: number;
   tipo: string;

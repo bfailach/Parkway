@@ -1,8 +1,9 @@
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { texturaPlaca, texturaSombra } from "./texturas";
 import { ModeloCarro, modeloCarro, ModeloMoto, modeloMoto } from "./modelos";
 import { PaletaEscena, usePaleta } from "./tema";
+import { materialFantasmaVehiculo } from "./materiales";
 
 /**
  * Vehículos de la escena, con formas suaves al estilo de los íconos de
@@ -19,6 +20,8 @@ interface Props {
   marca?: string | null;
   placa?: string | null;
   luces?: boolean;
+  /** Vehículo de un piso atenuado por el filtro de pisos: casi transparente. */
+  fantasma?: boolean;
   position?: [number, number, number];
   rotation?: [number, number, number];
 }
@@ -36,8 +39,9 @@ function material(clave: string, crear: () => THREE.Material) {
   return m;
 }
 
+// Pintura de juguete: plástico satinado, como las piezas de una maqueta.
 const pintura = (color: string) =>
-  material(`pintura-${color}`, () => new THREE.MeshPhysicalMaterial({ color, roughness: 0.38, metalness: 0.15, clearcoat: 0.7, clearcoatRoughness: 0.25 }));
+  material(`pintura-${color}`, () => new THREE.MeshPhysicalMaterial({ color, roughness: 0.42, metalness: 0.05, clearcoat: 0.45, clearcoatRoughness: 0.35 }));
 
 function materiales(p: PaletaEscena) {
   const k = p.claro ? "c" : "o";
@@ -423,11 +427,27 @@ function Bicicleta({ color }: { color: string }) {
 }
 
 export const Vehiculo = forwardRef<THREE.Group, Props>(function Vehiculo(
-  { tipo, color, marca, placa, luces = false, position, rotation },
+  { tipo, color, marca, placa, luces = false, fantasma = false, position, rotation },
   ref
 ) {
+  const grupo = useRef<THREE.Group>(null);
+  useImperativeHandle(ref, () => grupo.current as THREE.Group);
+  const p = usePaleta();
+  // En los pisos atenuados todas las piezas usan un material translúcido y
+  // las placas se ocultan. Quien lo usa cambia la `key` al cambiar `fantasma`.
+  useLayoutEffect(() => {
+    if (!fantasma || !grupo.current) return;
+    const m = materialFantasmaVehiculo(p);
+    grupo.current.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const actual = mesh.material as THREE.MeshStandardMaterial;
+      if (actual?.map) mesh.visible = false;
+      else mesh.material = m;
+    });
+  }, [fantasma, p, tipo, marca, placa]);
   return (
-    <group ref={ref} position={position} rotation={rotation}>
+    <group ref={grupo} position={position} rotation={rotation}>
       {tipo === "MOTOCICLETA" ? (
         <Motocicleta color={color} marca={marca} placa={placa} luces={luces} />
       ) : tipo === "BICICLETA" ? (
