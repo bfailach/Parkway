@@ -344,6 +344,48 @@ const qs = (params: Record<string, string | number | undefined>) => {
   return p.toString();
 };
 
+export interface EntradasRed {
+  hora: number;
+  dia: number;
+  festivo: boolean;
+  ocupacionActual: number;
+  ocupacionSemanaAnterior: number;
+  reservas: number;
+}
+
+export interface Prediccion {
+  idParqueadero: number;
+  idTipo: number | null;
+  capacidad: number;
+  ocupacionActual: number;
+  ocupacionEstimada: number;
+  nivel: "NORMAL" | "ALTA" | "CRITICA";
+  alerta: boolean;
+  horaObjetivo: string;
+  entradas: EntradasRed & { vector: number[]; sinHistorico: boolean };
+  modelo: { nombre: string; maeValidacion: number };
+  alternativa?: { idParqueadero: number; nombre: string; ocupacionEstimada: number } | null;
+}
+
+export interface RedNeuronal {
+  modelo: string;
+  W1: number[][];
+  b1: number[];
+  w2: number[];
+  b2: number;
+  umbralAlerta: number;
+  datos: string;
+  entrenado: string;
+  metricas: {
+    mae_pp: number;
+    mae_ingenuo_pp: number;
+    mae_persistencia_pp: number;
+    parametros: number;
+    filas_entrenamiento: number;
+    filas_validacion: number;
+  };
+}
+
 export const api = {
   login: (correo: string, contrasena: string) =>
     request<{ token: string; usuario: Usuario }>("POST", "/auth/login", { correo, contrasena }),
@@ -373,6 +415,9 @@ export const api = {
   parqueaderos: () => request<Parqueadero[]>("GET", "/catalogos/parqueaderos"),
   misSedes: () => request<Parqueadero[]>("GET", "/estacionamiento/mis-sedes"),
   horario: (id: number) => request<EstadoHorario>("GET", `/catalogos/parqueaderos/${id}/horario`),
+  prediccion: (id: number, idTipo?: number) =>
+    request<Prediccion>("GET", `/catalogos/parqueaderos/${id}/prediccion?${qs({ idTipo })}`),
+  redNeuronal: () => request<RedNeuronal>("GET", "/catalogos/red-neuronal"),
   tiposVehiculo: (idParqueadero?: number) => request<TipoVehiculo[]>("GET", `/catalogos/tipos-vehiculo?${qs({ idParqueadero })}`),
   buscarVehiculos: (q: string, idTipo?: number) => request<VehiculoRegistrado[]>("GET", `/estacionamiento/vehiculos?${qs({ q, idTipo })}`),
   vehiculo: (placa: string) => request<VehiculoRegistrado>("GET", `/estacionamiento/vehiculos/${encodeURIComponent(placa)}`),

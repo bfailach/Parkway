@@ -1,5 +1,6 @@
 import { FormEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, Parqueadero, Reserva, VehiculoCliente } from "../../lib/api";
+import { PrediccionOcupacion } from "../../components/PrediccionOcupacion";
 import { useConsulta } from "../../lib/useConsulta";
 import { calcularCobro } from "../../lib/tarifa";
 import { duracion, horaCorta, nombreTipo, pesos, resumenHorario } from "../../lib/formato";
@@ -298,6 +299,10 @@ function FormReserva({
                 : `${cupos.libres} ${cupos.libres === 1 ? "cupo libre" : "cupos libres"} para ${nombreTipo(cupos.tipo).toLowerCase()} ahora.`
               : "Consultando cupos..."}
         </p>
+
+        {vehiculo && !tipoSinEspacios && (
+          <PrediccionOcupacion idSede={idSede} idTipo={vehiculo.id_tipo} onCambiarSede={setIdSede} />
+        )}
 
         {error && <p className="alerta alerta-error" role="alert">{error}</p>}
         <button className="boton boton-primario boton-ancho" disabled={enviando || !vehiculo || sinCupo || tipoSinEspacios || sinHorario}>

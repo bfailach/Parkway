@@ -1009,3 +1009,48 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .vehiculo-ubicacion { display: flex; gap: 6px; align-items: flex-start; font-size: 0.9375rem; color: var(--tinta-2); margin-top: 2px; }
 .vehiculo-ubicacion svg { flex: none; margin-top: 2px; color: var(--acento); }
 .vehiculo-ubicacion strong { color: var(--tinta); }
+
+/* Predicción de ocupación (red neuronal) */
+.prediccion { margin: 14px 0; padding: 12px 14px; border-radius: var(--radio); background: var(--superficie-2); display: grid; gap: 6px; }
+.form-reserva .prediccion { margin: 0 0 14px; }
+.prediccion-fila { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.prediccion-rotulo { display: grid; font-weight: 600; }
+.prediccion-rotulo small { font-weight: 400; color: var(--tinta-3); font-size: 0.75rem; }
+.prediccion-valor { font-family: var(--display); font-size: 2rem; line-height: 1; font-weight: 800; color: var(--libre); }
+.prediccion-alta .prediccion-valor { color: var(--alerta); }
+.prediccion-critica { background: var(--error-fondo); }
+.prediccion-critica .prediccion-valor { color: var(--ocupado); }
+.prediccion-barra { position: relative; height: 6px; border-radius: 3px; background: var(--superficie-4); }
+.prediccion-actual { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--tinta-3); }
+.prediccion-estimada { position: absolute; top: -4px; width: 3px; height: 14px; margin-left: -1px; background: var(--tinta); border-radius: 2px; }
+.prediccion-nota { font-size: 0.8125rem; }
+.prediccion-aviso { margin: 4px 0 0; color: var(--error-alerta); font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.prediccion-aviso .boton { padding: 0; }
+
+/* Página Red neuronal */
+.red-metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; margin-bottom: 24px; }
+.red-metrica { background: var(--superficie); border-radius: var(--radio); padding: 16px 18px; display: grid; gap: 4px; }
+.red-metrica strong { font-family: var(--display); font-size: 2rem; line-height: 1; font-weight: 800; }
+.red-metrica span { color: var(--tinta-2); font-size: 0.875rem; }
+.red-metrica-destacada strong { color: var(--libre); }
+.red-cuerpo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr); gap: 6px; align-items: start; }
+.red-diagrama, .red-simulador { background: var(--superficie); border-radius: var(--radio); padding: 18px 20px; }
+.red-svg { width: 100%; height: auto; display: block; }
+.red-t { font-family: var(--texto); font-size: 12px; fill: var(--tinta); }
+.red-t-tenue { fill: var(--tinta-3); font-size: 11px; }
+.red-t-n { font-size: 10px; font-weight: 700; }
+.red-t-y { font-family: var(--display); font-size: 17px; font-weight: 800; }
+.red-t-capa { font-weight: 700; fill: var(--tinta-2); }
+.red-formula { text-align: center; font-size: 1.05rem; margin: 10px 0 4px; }
+.red-leyenda, .red-origen, .red-vector { font-size: 0.8125rem; margin: 6px 0; }
+.red-resultado { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.red-resultado .tenue { flex-basis: 100%; }
+.red-y { font-family: var(--display); font-size: 4rem; line-height: 1; font-weight: 800; color: var(--libre); }
+.red-y-alerta { color: var(--ocupado); }
+.red-deslizador { display: grid; gap: 6px; margin: 12px 0; }
+.red-deslizador .campo-rotulo { display: flex; justify-content: space-between; }
+.red-deslizador input[type="range"] { width: 100%; accent-color: var(--acento); }
+.red-festivo { margin: 6px 0; }
+.red-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+@media (max-width: 900px) { .red-cuerpo { grid-template-columns: 1fr; } }
+.red-t-n, .red-t-y { stroke: var(--superficie); stroke-width: 3px; paint-order: stroke; }

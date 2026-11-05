@@ -191,11 +191,43 @@ la reserva se cancela.
 - Cada operación queda en la tabla `transaccion` con el usuario, el resultado
   y, si falló, el motivo.
 
+## Red neuronal de ocupación
+
+Un perceptrón multicapa 6-8-1 estima qué porcentaje de la sede estará ocupado
+dentro de una hora (sección 14 del documento maestro). Sus entradas salen de
+datos que el sistema ya registra: hora, día, festivo, ocupación actual,
+ocupación de hace siete días y reservas en camino.
+
+```bash
+pip install -r ia/requirements.txt
+python ia/entrenar_red.py --grafica   # entrena, muestra el error y guarda los pesos
+```
+
+El script escribe `backend/src/ia/pesos_red.json`. La API hace el cálculo en
+Node.js con esos pesos, así que Python solo hace falta para reentrenar.
+Resultado actual con 12 semanas de datos simulados: error medio de 2,67
+puntos porcentuales, frente a 9,75 del modelo ingenuo (repetir la ocupación de
+hace una semana).
+
+Dónde se ve:
+
+- **Administrador, pestaña Red neuronal:** las tres capas con la señal que pasa
+  por cada neurona, las métricas y un simulador para mover cada entrada.
+- **Cliente, al reservar:** la ocupación esperada. Si pasa del 90 % sugiere la
+  sede con menos ocupación esperada. Nunca bloquea la reserva.
+- **Disponibilidad:** la ocupación esperada de la sede o del tipo de vehículo elegido.
+
+Cada predicción queda en la tabla `prediccion_ocupacion`. En una base creada
+antes de esta versión, agréguela sin borrar datos con
+`psql -U postgres -d parkway -f database/migracion_prediccion.sql`.
+
+![Red neuronal](docs/capturas/red-neuronal.png)
+
 ## Pruebas
 
 ```bash
 cd backend
-npm test                                   # 30 pruebas unitarias: tarifas, placas, cuentas, vehículos, horarios y sedes
+npm test                                   # 36 pruebas unitarias: tarifas, placas, cuentas, vehículos, horarios, sedes y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -210,7 +242,10 @@ Parkway/
 ├── database/
 │   ├── schema.sql          # Tablas, claves, restricciones e índices
 │   ├── seed.sql            # Usuarios, dos sedes (una de dos pisos), 71 espacios y tarifas
-│   └── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
+│   ├── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
+│   └── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
+├── ia/
+│   └── entrenar_red.py     # Entrena la red neuronal 6-8-1 y exporta los pesos
 ├── backend/
 │   ├── src/
 │   │   ├── routes/         # Rutas Express por módulo (auth, catálogos, estacionamiento, cliente, admin)
@@ -220,6 +255,7 @@ Parkway/
 │   │   ├── repositories/   # Acceso a datos con SQL parametrizado
 │   │   ├── transactions/   # Gestor de transacciones (BEGIN/COMMIT/ROLLBACK y bitácora)
 │   │   ├── middlewares/    # JWT, roles y manejo de errores
+│   │   ├── ia/             # Red neuronal: pesos entrenados y cálculo hacia adelante
 │   │   └── index.ts        # Arranque y expiración periódica de reservas
 │   ├── tests/              # Pruebas unitarias
 │   └── scripts/            # Prueba de concurrencia
@@ -232,7 +268,7 @@ Parkway/
 ├── render.yaml             # Despliegue en Render
 ├── package.json            # Compila y arranca todo desde la raíz
 └── docs/
-    ├── Proyecto_S8_Parkway.pdf     # Documento maestro
+    ├── Proyecto_S9_Parkway.pdf     # Documento maestro (incluye red neuronal, estado del arte, presupuesto y cronograma)
     ├── FRONTEND.md                 # Pantallas, 3D y diseño
     ├── INSTALACION_WINDOWS.md      # Instalación paso a paso en Windows
     ├── DESPLIEGUE.md               # Publicación en Render
@@ -250,6 +286,8 @@ Parkway/
 | GET | `/api/catalogos/parqueaderos` | Público | Sedes |
 | GET | `/api/catalogos/tipos-vehiculo?idParqueadero=1` | Público | Tipos de vehículo con la tarifa vigente de la sede |
 | GET | `/api/catalogos/parqueaderos/:id/horario` | Público | Horario de la sede y si está abierta ahora |
+| GET | `/api/catalogos/parqueaderos/:id/prediccion?idTipo=1` | Público | Ocupación esperada en una hora (red neuronal) y sede alternativa si pasa del 90 % |
+| GET | `/api/catalogos/red-neuronal` | Público | Pesos y métricas de la red, para el simulador |
 | GET | `/api/estacionamiento/resumen?idParqueadero=1` | Público | Cupos por tipo de vehículo |
 | GET | `/api/estacionamiento/disponibilidad?idParqueadero=1&idTipo=1` | Público | Espacios libres |
 | GET | `/api/estacionamiento/plano?idParqueadero=1` | Público | Estado de cada espacio, sin placas |

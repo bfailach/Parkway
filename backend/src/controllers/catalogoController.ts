@@ -3,6 +3,8 @@ import * as catalogoRepository from "../repositories/catalogoRepository";
 import * as horarioRepository from "../repositories/horarioRepository";
 import * as horarioService from "../services/horarioService";
 import { notFound } from "../errors/AppError";
+import * as prediccionService from "../services/prediccionService";
+import pesosRed from "../ia/pesos_red.json";
 
 /** Sedes con su horario, si están abiertas ahora y sus tarifas vigentes. */
 export const getParqueaderos = asyncHandler(async (_req, res) => {
@@ -37,4 +39,23 @@ export const getHorario = asyncHandler(async (req, res) => {
 export const getTiposVehiculo = asyncHandler(async (req, res) => {
   const id = Number(req.query.idParqueadero);
   res.json(await catalogoRepository.listarTiposVehiculo(Number.isInteger(id) && id > 0 ? id : undefined));
+});
+
+/**
+ * Ocupación esperada de la sede dentro de una hora, calculada por la red
+ * neuronal (sección 14). ?idTipo=1 la limita a un tipo de vehículo.
+ * Si la sede va a estar casi llena, incluye una sede alternativa.
+ */
+export const getPrediccion = asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!(await catalogoRepository.existeParqueadero(id))) throw notFound("La sede no existe");
+  const tipo = Number(req.query.idTipo);
+  const p = await prediccionService.predecirConAlternativa(id, Number.isInteger(tipo) && tipo > 0 ? tipo : null);
+  if (!p) throw notFound("La sede no tiene espacios para ese tipo de vehículo");
+  res.json(p);
+});
+
+/** Pesos y métricas de la red, para el simulador de la página "Red neuronal". */
+export const getRed = asyncHandler(async (_req, res) => {
+  res.json({ ...pesosRed, umbralAlerta: prediccionService.UMBRAL_ALERTA });
 });
