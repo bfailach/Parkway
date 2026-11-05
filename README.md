@@ -71,6 +71,27 @@ El detalle de cada pantalla, con capturas, está en
 | Seguridad | JWT, contraseñas con bcrypt |
 | Arquitectura | Tres capas (presentación, negocio, datos) con Gestor de transacciones |
 
+
+## 🏗️ Arquitectura del sistema
+
+Parkway utiliza una arquitectura de tres capas que permite separar las responsabilidades del sistema, facilitando su mantenimiento, organización y evolución.
+
+### Capas de la arquitectura
+
+- **Capa de presentación:** desarrollada con React, TypeScript y Vite. Permite la interacción de los clientes, operadores y administradores con las funcionalidades del sistema.
+
+- **Capa de negocio:** implementada con Node.js, TypeScript y Express. Gestiona las reglas de negocio, autenticación, reservas, ingresos, salidas y cálculos de tarifas.
+
+- **Capa de datos:** utiliza PostgreSQL para almacenar y administrar la información de usuarios, vehículos, sedes, espacios, reservas y transacciones.
+
+### Comunicación entre capas
+
+El frontend realiza solicitudes HTTP a la API REST del backend. El backend procesa las solicitudes, ejecuta las validaciones correspondientes y utiliza los repositorios para consultar o modificar la información en PostgreSQL.
+
+Para las operaciones críticas se utiliza un gestor de transacciones que permite confirmar los cambios mediante `COMMIT` o revertirlos mediante `ROLLBACK` cuando ocurre algún error.
+
+Esta separación permite mantener una estructura organizada, reducir el acoplamiento entre componentes y facilitar futuras ampliaciones del sistema.
+
 ## Cómo ejecutarlo
 
 Requisitos: Node.js 18 o superior y PostgreSQL 14 o superior. En Windows,
