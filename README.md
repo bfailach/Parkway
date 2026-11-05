@@ -72,7 +72,7 @@ El detalle de cada pantalla, con capturas, está en
 | Arquitectura | Tres capas (presentación, negocio, datos) con Gestor de transacciones |
 
 
-## 🏗️ Arquitectura del sistema
+## Arquitectura del sistema
 
 Parkway utiliza una arquitectura de tres capas que permite separar las responsabilidades del sistema, facilitando su mantenimiento, organización y evolución.
 
