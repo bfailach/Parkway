@@ -335,3 +335,6 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 - Predicción de ocupación por hora con Prophet, a partir del historial de
   ingresos (RF15). El diseño está en la sección 13 del documento maestro;
   necesita al menos ocho semanas de datos reales para ser confiable.
+- Servicio de IA
+- Pruebas de testing 
+  
