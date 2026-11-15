@@ -1255,9 +1255,14 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 }
 
 /* Portada en celular: el texto de la primera pantalla queda sobre la
-   escena 3D; un velo más fuerte asegura que se lea en ambos temas. */
+   escena 3D; un velo más fuerte asegura que se lea en ambos temas. El velo
+   se extiende por debajo de la primera pantalla y se desvanece ahí, para
+   que no quede un corte recto al pasar a "Cómo funciona". */
 @media (max-width: 900px) {
-  .heroe::before { background: linear-gradient(180deg, rgba(var(--velo), 0.25) 0%, rgba(var(--velo), 0.72) 32%, rgba(var(--velo), 0.9) 100%); }
+  .heroe::before {
+    bottom: -35svh;
+    background: linear-gradient(180deg, rgba(var(--velo), 0.25) 0%, rgba(var(--velo), 0.72) 24%, rgba(var(--velo), 0.9) 66%, rgba(var(--velo), 0.9) 74%, rgba(var(--velo), 0) 100%);
+  }
 }
 
 /* Filtros en celular: los campos ocupan el ancho disponible, de a dos por

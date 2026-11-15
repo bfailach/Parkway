@@ -9,8 +9,8 @@
  * - La API (/api) y el WebSocket nunca se guardan en caché: los cupos, los
  *   pagos y los datos de los usuarios siempre vienen del servidor.
  */
-const VERSION = "parkway-v2";
-const PRECARGA = ["/", "/manifest.webmanifest", "/favicon.svg", "/iconos/icono-192.png", "/iconos/icono-512.png"];
+const VERSION = "parkway-v3";
+const PRECARGA = ["/", "/manifest.webmanifest", "/favicon.svg?v=3", "/iconos/icono-192.png?v=3", "/iconos/icono-512.png?v=3"];
 
 // Al instalarse guarda la página y los archivos que esta carga (con su
 // huella en el nombre), para que la app abra aunque no haya conexión.
