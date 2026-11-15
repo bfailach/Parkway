@@ -31,9 +31,9 @@ export interface Capacidades3D {
   /** three.js necesita WebGL2: sin él no se dibuja la escena. */
   webgl2: boolean;
   /**
-   * Texturas de punto flotante para los efectos (sombreado suave y brillo).
-   * Firefox en muchos celulares Android ofrece WebGL2 sin ellas: ahí la
-   * escena se dibuja sin efectos en lugar de quedar en negro.
+   * Efectos de sombreado suave y brillo. Necesitan texturas de punto
+   * flotante, que Firefox en muchos Android no ofrece; además se apagan en
+   * celulares y en Firefox, donde fallan con más frecuencia.
    */
   efectos: boolean;
 }
@@ -53,7 +53,11 @@ export function capacidades3D(): Capacidades3D {
     const gl = c.getContext("webgl2") as WebGL2RenderingContext | null;
     if (gl) {
       const flotante = !!(gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float"));
-      capacidades = { webgl2: true, efectos: flotante };
+      // En celulares y en Firefox los efectos son lo que más falla y lo que
+      // más gasta batería: la maqueta se dibuja sin ellos.
+      const movil = window.matchMedia?.("(pointer: coarse)").matches || /android|iphone|ipad/i.test(navigator.userAgent);
+      const firefox = /firefox/i.test(navigator.userAgent);
+      capacidades = { webgl2: true, efectos: flotante && !movil && !firefox };
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     }
   } catch {

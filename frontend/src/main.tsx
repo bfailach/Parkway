@@ -2,6 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AvisoConexion } from "./components/Instalar";
+import { PanelDiagnostico } from "./components/Diagnostico";
+import "./lib/diagnostico";
 import { registrarServiceWorker } from "./lib/pwa";
 import "@fontsource/big-shoulders-display/700.css";
 import "@fontsource/big-shoulders-display/800.css";
@@ -19,5 +21,6 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AvisoConexion />
     <App />
+    <PanelDiagnostico />
   </StrictMode>
 );

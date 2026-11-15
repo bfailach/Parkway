@@ -12,6 +12,7 @@ import { ControlEscena, PLACA_HISTORIA, plazaAsignada, capacidades3D } from "./c
 import { PALETA_CLARA, PALETA_OSCURA, PaletaEscena, TemaEscena, usePaleta } from "./tema";
 import { rutaEntrada, TraficoContexto, ubicar, useTrafico } from "./rutas";
 import { movimientoReducido, useApariencia } from "../lib/apariencia";
+import { anotarError } from "../lib/diagnostico";
 
 /**
  * Escena 3D del parqueadero: una maqueta flotante, sin entorno, con los
@@ -334,6 +335,7 @@ class RespaldoEscena extends Component<{ className?: string; children: ReactNode
   }
   componentDidCatch(error: unknown) {
     console.warn("Parkway: la escena 3D no se pudo dibujar en este navegador.", error);
+    anotarError("escena 3D", error);
   }
   render() {
     return this.state.fallo ? <div className={`${this.props.className ?? ""} escena-sin-3d`} /> : this.props.children;
@@ -375,6 +377,7 @@ export default function Escena({ espacios, control, resaltarTipo, resaltarId, pi
             "webglcontextlost",
             (e) => {
               e.preventDefault();
+              anotarError("escena 3D", `el navegador apagó el contexto WebGL (intento ${intento + 1})`);
               if (intento < 3) setTimeout(() => setIntento((i) => i + 1), 400);
             },
             { once: true }
