@@ -31,7 +31,7 @@ en pocos segundos.
 | Visitante | Ver los cupos libres por sede, el recorrido de cómo funciona y calcular el cobro. |
 | Cliente | Crear su cuenta, registrar sus vehículos (las bicicletas reciben un código BICI) y ver en qué sede y espacio está cada uno, reservar un espacio por 30 minutos dentro del horario de la sede, ver su vehículo dentro con el valor acumulado, configurar avisos de tiempo y dinero y consultar su historial. |
 | Operador | Registrar ingresos y salidas en las sedes que tiene asignadas. Al digitar una placa conocida, el formulario trae la marca y el color guardados. Ve las reservas en camino, los vehículos dentro, el plano 3D y 2D y el historial con filtros. |
-| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores) y la bitácora de transacciones. |
+| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores), la gestión de usuarios (crear, editar, asignar turno y sedes, inactivar) y la bitácora de transacciones. |
 
 Todos los usuarios pueden cambiar entre modo oscuro y claro y ajustar la
 accesibilidad: tamaño del texto, alto contraste, movimiento reducido, letra de
@@ -57,8 +57,9 @@ El detalle de cada pantalla, con capturas, está en
 | Gestión de sedes: pisos, espacios por piso, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
 | Horario de atención: no se aceptan reservas fuera del horario | RF10 | Implementado |
 | Notificaciones configurables de tiempo, valor y vencimiento de la reserva | RF03 | Implementado |
-| Pagos y comprobantes, anulación, gestión de usuarios | RF02, RF08, RF09 | Siguiente fase |
-| Predicción de ocupación con IA | RF15 | Diseñado en el documento maestro (sección 13) |
+| Gestión de usuarios: crear, consultar, editar e inactivar clientes, operadores y administradores, con turno y sedes | RF02 | Implementado |
+| Pagos y comprobantes, anulación | RF08, RF09 | Siguiente fase |
+| Predicción de ocupación con IA | RF15 | Red neuronal 6-8-1 para la próxima hora (sección 14). Falta el horizonte de varias horas con rango de confianza |
 
 ## Tecnologías
 
@@ -161,6 +162,17 @@ espiral. El ingreso asigna primero los espacios del piso 1 y luego los de los
 pisos de arriba. En los pisos 2 en adelante el código del espacio lleva el
 número del piso: 2A-01 es el automóvil 01 del piso 2.
 
+**Usuarios (RF02).** El administrador crea las cuentas de clientes,
+operadores y administradores. El documento y el correo son únicos. El
+personal lleva turno (día o noche) y cada operador, las sedes donde trabaja.
+Los usuarios no se borran: se inactivan o se bloquean, y así conservan su
+historial. Cada petición confirma en la base de datos que el usuario sigue
+activo y toma su rol actual, de modo que inactivar una cuenta o cambiarle el
+rol surte efecto de inmediato y no cuando vence el token. Al inactivar a un
+cliente se cancela su reserva activa y se libera el espacio. El
+administrador no puede cambiar su propio rol ni desactivarse, y siempre
+queda al menos un administrador activo.
+
 **Sedes y operadores.** Cada sede tiene sus propias tarifas y su horario por
 día de la semana. Un operador solo puede registrar ingresos y salidas en las
 sedes que el administrador le asignó. Al reducir los espacios de una sede se
@@ -227,7 +239,7 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 36 pruebas unitarias: tarifas, placas, cuentas, vehículos, horarios, sedes y red neuronal
+npm test                                   # 43 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -250,7 +262,7 @@ Parkway/
 │   ├── src/
 │   │   ├── routes/         # Rutas Express por módulo (auth, catálogos, estacionamiento, cliente, admin)
 │   │   ├── controllers/    # Reciben la petición y responden
-│   │   ├── services/       # Reglas de negocio: ingreso, salida, reservas, horarios, sedes, acceso, tarifas
+│   │   ├── services/       # Reglas de negocio: ingreso, salida, reservas, horarios, sedes, usuarios, acceso, tarifas
 │   │   ├── validators/     # Validación de datos de entrada
 │   │   ├── repositories/   # Acceso a datos con SQL parametrizado
 │   │   ├── transactions/   # Gestor de transacciones (BEGIN/COMMIT/ROLLBACK y bitácora)
@@ -312,6 +324,9 @@ Parkway/
 | GET, PUT | `/api/admin/parqueaderos/:id` | Administrador | Consultar y editar una sede |
 | PATCH | `/api/admin/espacios/:id` | Administrador | Marcar un espacio fuera de servicio o habilitarlo |
 | GET | `/api/admin/operadores` | Administrador | Operadores disponibles para asignar |
+| GET, POST | `/api/admin/usuarios?q=…&rol=…&estado=…` | Administrador | Consultar usuarios con filtros y crear uno con rol, turno y sedes |
+| GET, PUT | `/api/admin/usuarios/:id` | Administrador | Consultar y editar un usuario (la contraseña cambia solo si se envía) |
+| PATCH | `/api/admin/usuarios/:id/estado` | Administrador | Activar, inactivar o bloquear un usuario |
 | GET | `/api/admin/bitacora?tipo=…&estado=…&desde=…&hasta=…` | Administrador | Bitácora de transacciones |
 
 Errores: 400 si un campo no es válido (con el detalle por campo), 401 sin
@@ -329,12 +344,10 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 ## Siguientes pasos
 
 - Pagos con pasarela, comprobantes y anulación (RF08, RF09).
-- Gestión de usuarios desde el panel del administrador (RF02).
 - Actualización en tiempo real con WebSocket en lugar de consultas cada 5
   segundos (RF12).
-- Predicción de ocupación por hora con Prophet, a partir del historial de
-  ingresos (RF15). El diseño está en la sección 13 del documento maestro;
-  necesita al menos ocho semanas de datos reales para ser confiable.
-- Servicio de IA
-- Pruebas de testing 
-  
+- Reportes de ocupación por franja, rotación por espacio e ingresos por
+  periodo, exportables a CSV (RF13).
+- Predicción para las próximas horas con rango de confianza (RF15).
+- Medición de cobertura de pruebas (RNF07), prueba de carga con 100 usuarios
+  (RNF02) y prueba de concurrencia con 50 ingresos sobre 10 espacios (RNF03).

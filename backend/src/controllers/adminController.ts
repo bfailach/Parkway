@@ -3,6 +3,7 @@ import * as bitacoraRepository from "../repositories/bitacoraRepository";
 import { badRequest } from "../errors/AppError";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import * as parqueaderoService from "../services/parqueaderoService";
+import * as usuarioService from "../services/usuarioService";
 
 type Req = AuthenticatedRequest;
 
@@ -46,4 +47,25 @@ export const patchEspacio = asyncHandler<Req>(async (req, res) => {
 
 export const getOperadores = asyncHandler(async (_req, res) => {
   res.json(await parqueaderoService.operadores());
+});
+
+// Usuarios (RF02)
+export const getUsuarios = asyncHandler(async (req, res) => {
+  res.json(await usuarioService.listar(req.query));
+});
+
+export const getUsuario = asyncHandler(async (req, res) => {
+  res.json(await usuarioService.obtener(Number(req.params.id)));
+});
+
+export const postUsuario = asyncHandler<Req>(async (req, res) => {
+  res.status(201).json(await usuarioService.crear(req.body ?? {}, req.usuario!.id_usuario));
+});
+
+export const putUsuario = asyncHandler<Req>(async (req, res) => {
+  res.json(await usuarioService.actualizar(Number(req.params.id), req.body ?? {}, req.usuario!.id_usuario));
+});
+
+export const patchEstadoUsuario = asyncHandler<Req>(async (req, res) => {
+  res.json(await usuarioService.cambiarEstado(Number(req.params.id), req.body?.estado, req.usuario!.id_usuario));
 });

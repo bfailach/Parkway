@@ -106,6 +106,36 @@ export interface Operador {
   sedes: number[];
 }
 
+export type EstadoUsuario = "ACTIVO" | "INACTIVO" | "BLOQUEADO";
+
+/** Usuario tal como lo ve el administrador (RF02). */
+export interface UsuarioAdmin {
+  id_usuario: number;
+  nombre: string;
+  documento: string | null;
+  correo: string;
+  telefono: string | null;
+  rol: Rol;
+  turno: "DIA" | "NOCHE" | null;
+  estado: EstadoUsuario;
+  fecha_creacion: string;
+  /** Sedes asignadas (solo operadores). */
+  sedes: number[];
+}
+
+export interface DatosUsuario {
+  nombre: string;
+  documento: string;
+  correo: string;
+  telefono?: string;
+  rol: Rol;
+  turno?: string;
+  estado: EstadoUsuario;
+  /** Obligatoria al crear; al editar solo si se cambia. */
+  contrasena?: string;
+  sedes?: number[];
+}
+
 export interface SedeAdmin extends Parqueadero {
   pisos: number;
   espacios: Record<string, number>;
@@ -411,6 +441,10 @@ export const api = {
     editarSede: (id: number, d: DatosSede) => request<SedeAdmin>("PUT", `/admin/parqueaderos/${id}`, d),
     estadoEspacio: (id: number, estado: "LIBRE" | "FUERA_DE_SERVICIO") => request<void>("PATCH", `/admin/espacios/${id}`, { estado }),
     operadores: () => request<Operador[]>("GET", "/admin/operadores"),
+    usuarios: (f: { q?: string; rol?: string; estado?: string }) => request<UsuarioAdmin[]>("GET", `/admin/usuarios?${qs(f)}`),
+    crearUsuario: (d: DatosUsuario) => request<UsuarioAdmin>("POST", "/admin/usuarios", d),
+    editarUsuario: (id: number, d: DatosUsuario) => request<UsuarioAdmin>("PUT", `/admin/usuarios/${id}`, d),
+    estadoUsuario: (id: number, estado: EstadoUsuario) => request<UsuarioAdmin>("PATCH", `/admin/usuarios/${id}/estado`, { estado }),
   },
   parqueaderos: () => request<Parqueadero[]>("GET", "/catalogos/parqueaderos"),
   misSedes: () => request<Parqueadero[]>("GET", "/estacionamiento/mis-sedes"),

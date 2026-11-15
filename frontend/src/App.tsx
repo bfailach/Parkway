@@ -16,6 +16,7 @@ import { Selector } from "./components/Selector";
 import { BotonAccesibilidad, BotonTema } from "./components/Apariencia";
 import { Sedes } from "./pages/admin/Sedes";
 import { RedNeuronal } from "./pages/admin/RedNeuronal";
+import { Usuarios } from "./pages/admin/Usuarios";
 import { Notificaciones } from "./pages/cliente/Notificaciones";
 import { Notificador } from "./components/Notificador";
 
@@ -27,6 +28,7 @@ type Vista =
   | "historial"
   | "bitacora"
   | "sedes"
+  | "usuarios"
   | "red"
   | "notificaciones"
   | "mi-parqueo"
@@ -44,6 +46,7 @@ const VISTAS_PERSONAL: { id: Vista; nombre: string }[] = [
 const VISTAS_ADMIN: { id: Vista; nombre: string }[] = [
   ...VISTAS_PERSONAL,
   { id: "sedes", nombre: "Sedes" },
+  { id: "usuarios", nombre: "Usuarios" },
   { id: "bitacora", nombre: "Bitácora" },
   { id: "red", nombre: "Red neuronal" },
 ];
@@ -189,6 +192,9 @@ export default function App() {
         {sede && usuario.rol === "ADMINISTRADOR" && vistaActual === "red" && <RedNeuronal sede={sede} />}
         {usuario.rol === "ADMINISTRADOR" && vistaActual === "sedes" && (
           <Sedes tipos={tipos} onCambio={() => setVersionSedes((n) => n + 1)} />
+        )}
+        {usuario.rol === "ADMINISTRADOR" && vistaActual === "usuarios" && (
+          <Usuarios idActual={usuario.id_usuario} onCambio={() => setVersionSedes((n) => n + 1)} />
         )}
         {sede && esPersonal && vistaActual === "activos" && <Activos sede={sede} />}
         {sede && esPersonal && vistaActual === "historial" && <Historial sede={sede} tipos={tipos} />}

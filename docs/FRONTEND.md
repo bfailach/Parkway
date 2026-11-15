@@ -164,8 +164,8 @@ vehículo.
 
 ## Pantallas del administrador
 
-Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes** y
-**Bitácora**.
+Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes**,
+**Usuarios**, **Bitácora** y **Red neuronal**.
 
 **Sedes.** El administrador crea o edita cada sede con:
 
@@ -197,6 +197,27 @@ servicio o lo habilita de nuevo.
 | Nueva sede de tres pisos | Límites de espacios |
 | --- | --- |
 | ![Nueva sede de tres pisos](capturas/39_editor_pisos.jpg) | ![Límites](capturas/41_limites_sede.jpg) |
+
+**Usuarios (RF02).** Lista de todas las cuentas con su documento, rol,
+turno, sedes y estado, con búsqueda por nombre, correo o documento y
+filtros por rol y estado. Desde aquí el administrador:
+
+- crea clientes, operadores y administradores con su contraseña inicial;
+- asigna el turno (día o noche) al personal y las sedes donde trabaja cada
+  operador, las mismas que se ven en el editor de la sede;
+- edita los datos, cambia el rol o pone una contraseña nueva;
+- inactiva o bloquea una cuenta. No se borra nada: la persona deja de
+  entrar, su sesión abierta se cierra en la siguiente petición y su
+  historial se conserva. Si es un cliente con una reserva activa, la reserva
+  se cancela y el espacio queda libre.
+
+El administrador no puede cambiar su propio rol ni desactivarse, y el
+sistema no deja inactivar al último administrador activo. Cada cambio queda
+en la bitácora.
+
+| Lista de usuarios | Editar un operador |
+| --- | --- |
+| ![Usuarios](capturas/42_usuarios.jpg) | ![Editar usuario](capturas/43_editar_usuario.jpg) |
 
 **Bitácora:** todas las
 operaciones del sistema con su usuario, resultado y detalle, filtrables por
@@ -305,7 +326,7 @@ frontend/src/
 │   ├── Reservas.tsx        # Reservas de la sede (personal)
 │   ├── Historial.tsx       # Salidas registradas
 │   ├── Bitacora.tsx        # Bitácora (administrador)
-│   ├── admin/              # Sedes: crear y editar
+│   ├── admin/              # Sedes, Usuarios y Red neuronal
 │   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial, Notificaciones
 ├── components/             # Placa, Tiquete, Selector, CampoOpciones, FiltroPisos, Apariencia, Notificador, diálogos
 ├── three/                  # Escena 3D

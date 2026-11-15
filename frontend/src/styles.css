@@ -942,6 +942,19 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 /* =====================================================================
    RESPONSIVO
    ===================================================================== */
+/* Usuarios (RF02) */
+.boton-sm { padding: 7px 14px; font-size: 0.875rem; }
+.campo-buscar-usuario { flex: 1 1 260px; max-width: 360px; }
+.tabla-usuarios td { vertical-align: middle; }
+.celda-secundaria { display: block; font-size: 0.875rem; margin-top: 2px; }
+.celda-acciones { text-align: right; }
+.celda-acciones .boton + .boton { margin-left: 4px; }
+.dialogo:has(.form-usuario) { width: min(580px, 100% - 32px); max-height: calc(100vh - 32px); }
+.form-usuario fieldset.campo { margin-bottom: 20px; }
+.form-usuario legend.campo-rotulo { margin-bottom: 7px; padding: 0; }
+.form-usuario .lista-operadores { margin-top: 0; }
+.aviso-propio { margin: -8px 0 18px; }
+
 @media (max-width: 900px) {
   .portada-nav { display: none; }
   .portada-barra .controles { margin-left: auto; }

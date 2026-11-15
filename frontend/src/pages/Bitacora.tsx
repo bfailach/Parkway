@@ -20,6 +20,9 @@ const OPERACION: Record<string, string> = {
   CREAR_PARQUEADERO: "Sede creada",
   EDITAR_PARQUEADERO: "Sede editada",
   ESTADO_ESPACIO: "Estado de espacio",
+  CREAR_USUARIO: "Usuario creado",
+  EDITAR_USUARIO: "Usuario editado",
+  ESTADO_USUARIO: "Estado de usuario",
 };
 const nombreOperacion = (t: string) => OPERACION[t] ?? t;
 
@@ -36,6 +39,13 @@ function detalle(d: Record<string, unknown> | null) {
   if (typeof d.nombre === "string") partes.push(d.nombre);
   if (d.estado === "FUERA_DE_SERVICIO") partes.push("fuera de servicio");
   if (d.estado === "LIBRE") partes.push("habilitado");
+  const ROL: Record<string, string> = { CLIENTE: "cliente", OPERADOR: "operador", ADMINISTRADOR: "administrador" };
+  if (typeof d.rol === "string") partes.push(d.rolAnterior ? `de ${ROL[String(d.rolAnterior)]} a ${ROL[d.rol]}` : ROL[d.rol] ?? d.rol);
+  if (d.estado === "ACTIVO" && d.rol === undefined) partes.push("activado");
+  if (d.estado === "INACTIVO") partes.push("inactivado");
+  if (d.estado === "BLOQUEADO") partes.push("bloqueado");
+  if (d.contrasena) partes.push("contraseña cambiada");
+  if (d.reservasCanceladas) partes.push(Number(d.reservasCanceladas) === 1 ? "reserva cancelada" : `${d.reservasCanceladas} reservas canceladas`);
   return partes.join(", ");
 }
 
