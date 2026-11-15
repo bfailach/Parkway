@@ -1,0 +1,89 @@
+# Carga o reinicia la base de datos de producción desde GitHub, sin instalar
+# psql. Usa el mismo secreto DATABASE_URL del pronóstico (External Database
+# URL de Render). Se ejecuta a mano: Actions > Base de datos > Run workflow.
+#
+# - "demo": vuelve a cargar demo.sql (12 semanas de historia, vehículos
+#   dentro, reservas que vencen a los 18 minutos). Borra los movimientos y
+#   conserva usuarios y sedes. Es lo que se hace antes de la sustentación.
+# - "completa": borra TODO y crea la base desde cero con schema.sql,
+#   seed.sql y demo.sql. Pide escribir BORRAR para confirmar.
+# Al terminar recalcula el pronóstico de Prophet.
+name: Base de datos
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "demo (recargar datos de demostración) o completa (borra todo y crea la base desde cero)"
+        type: choice
+        options: [demo, completa]
+        default: demo
+      confirmacion:
+        description: "Solo para el modo completa: escriba BORRAR"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: base-de-datos
+  cancel-in-progress: false
+
+jobs:
+  cargar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      PGSSLMODE: require
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Revisar el secreto y la confirmación
+        env:
+          MODO: ${{ inputs.modo }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Falta el secreto DATABASE_URL (Settings > Secrets and variables > Actions). Ver docs/DESPLIEGUE.md."
+            exit 1
+          fi
+          if [ "$MODO" = "completa" ] && [ "$CONFIRMACION" != "BORRAR" ]; then
+            echo "::error::El modo completa borra toda la base. Escriba BORRAR en la confirmación para continuar."
+            exit 1
+          fi
+
+      - name: Instalar el cliente de PostgreSQL
+        run: sudo apt-get install -y -qq postgresql-client > /dev/null
+
+      - name: Crear la base desde cero (schema.sql y seed.sql)
+        if: inputs.modo == 'completa'
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f database/schema.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f database/seed.sql
+
+      - name: Cargar los datos de demostración (demo.sql)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f database/demo.sql
+
+      - name: Resumen
+        run: |
+          psql "$DATABASE_URL" -At -c "
+            SELECT 'Sedes: ' || (SELECT count(*) FROM parqueadero)
+              || ' | Usuarios: ' || (SELECT count(*) FROM usuario)
+              || ' | Registros: ' || (SELECT count(*) FROM registro_estacionamiento)
+              || ' | Pagos: ' || (SELECT count(*) FROM pago)
+              || ' | Reservas activas: ' || (SELECT count(*) FROM reserva WHERE estado = 'ACTIVA')"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ia/requirements.txt
+
+      - name: Recalcular el pronóstico
+        env:
+          DB_SSL: "true"
+        run: |
+          pip install -q -r ia/requirements.txt
+          python ia/pronostico_prophet.py

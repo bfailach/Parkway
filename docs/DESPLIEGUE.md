@@ -17,13 +17,28 @@ La primera compilación tarda unos 5 minutos. Render configura solo
 
 ## 2. Cargar las tablas y los datos
 
-La base se crea vacía, así que hay que ejecutar los scripts una vez desde tu
-computador.
+La base se crea vacía, así que hay que cargarla una vez. La forma más simple
+es desde GitHub, sin instalar nada:
 
 1. En Render, abre `parkway-db` y en **Connections** copia la
-   **External Database URL**.
-2. En PowerShell, desde la carpeta principal `Parkway` y con PostgreSQL en el
-   PATH (ver [INSTALACION_WINDOWS.md](INSTALACION_WINDOWS.md)):
+   **External Database URL** (no la Internal).
+2. En GitHub, abre el repositorio y ve a **Settings > Secrets and variables >
+   Actions > New repository secret**. Nombre: `DATABASE_URL`. Valor: la URL.
+   Es el mismo secreto que usa el pronóstico de cada noche.
+3. En la pestaña **Actions**, abre **Base de datos** y pulsa **Run workflow**.
+   Elige el modo **completa**, escribe `BORRAR` en la confirmación y pulsa el
+   botón verde. En unos dos minutos crea las tablas, carga `seed.sql` y
+   `demo.sql` y calcula el pronóstico. El paso **Resumen** muestra cuántas
+   sedes, usuarios, registros y pagos quedaron.
+
+Antes de la sustentación, el mismo flujo en modo **demo** vuelve a cargar los
+datos de demostración (las reservas de ejemplo vencen a los 18 minutos)
+sin tocar las tablas.
+
+**Con psql desde tu computador.** También sirve, si tienes PostgreSQL en el
+PATH (ver [INSTALACION_WINDOWS.md](INSTALACION_WINDOWS.md)). Primero trae la
+última versión del repositorio con `git pull`; luego, en PowerShell, desde la
+carpeta `Parkway`:
 
 ```powershell
 $env:DB = "pega-aquí-la-External-Database-URL"
@@ -32,8 +47,6 @@ psql $env:DB -f database/seed.sql
 psql $env:DB -f database/demo.sql
 ```
 
-La URL ya incluye la contraseña, así que estos comandos no la piden.
-
 Si la base ya existía, no hace falta recrearla. Ejecuta las migraciones de
 lo que se agregó después:
 
@@ -41,6 +54,7 @@ lo que se agregó después:
 psql $env:DB -f database/migracion_tiempo_real.sql   # tiempo real (RF12)
 psql $env:DB -f database/migracion_pagos.sql         # pagos y anulaciones (RF08, RF09)
 ```
+
 Render admite WebSocket sin configuración adicional; el aviso llega por
 `wss://` al mismo dominio del servicio.
 
@@ -49,10 +63,10 @@ Render admite WebSocket sin configuración adicional; el aviso llega por
 El pronóstico de las próximas 24 horas lo calcula Prophet en GitHub Actions,
 porque el servicio de Render solo corre Node.js. Se configura una vez:
 
-1. En Render, copia la **External Database URL** de `parkway-db`.
-2. En GitHub, abre el repositorio y ve a **Settings > Secrets and variables >
-   Actions > New repository secret**. Nombre: `DATABASE_URL`. Valor: la URL.
-3. En la pestaña **Actions**, abre **Pronóstico de ocupación** y pulsa
+1. Configura el secreto `DATABASE_URL` como en el paso 2 (si ya cargaste la
+   base con el flujo **Base de datos**, ya está y el pronóstico ya se calculó).
+2. Para recalcularlo a mano, en la pestaña **Actions**, abre **Pronóstico de
+   ocupación** y pulsa
    **Run workflow** para calcularlo la primera vez. Si cargaste `demo.sql`, el pronóstico
    usa sus 12 semanas de historia. Debe terminar en verde y
    mostrar el MAPE de cada sede.
@@ -94,8 +108,8 @@ Cada `git push` a `main` vuelve a desplegar la aplicación automáticamente.
   visita después tarda cerca de un minuto en responder. Abre la página unos
   minutos antes de la presentación.
 - **Las reservas de ejemplo** vencen 18 minutos después de cargar `demo.sql`.
-  Vuelve a ejecutar `psql $env:DB -f database/demo.sql` justo antes de
-  presentar.
+  Justo antes de presentar, corre el flujo **Base de datos** en modo **demo**
+  desde la pestaña Actions de GitHub.
 - **La base gratuita de Render vence a los 30 días.** Después hay 14 días para
   pasarla a un plan pago; si no, Render la borra. Para un proyecto más largo
   puedes usar una base gratuita de Neon (<https://neon.tech>): crea el
