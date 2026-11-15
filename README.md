@@ -53,7 +53,7 @@ El detalle de cada pantalla, con capturas, está en
 | Reservas: reservar, cancelar, expirar a los 30 minutos, vista del operador | RF10 | Implementado |
 | Actualización de la disponibilidad en tiempo real por WebSocket, sin recargar la página | RF12 | Implementado |
 | Historial de salidas y totales del día | RF13 | Implementado |
-| Bitácora de transacciones con consulta para el administrador | RF14, RNF08 | Implementado |
+| Bitácora de transacciones con filtros por usuario, operación, entidad, resultado y fecha | RF14, RNF08 | Implementado |
 | Gestión de sedes: pisos, espacios por piso, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
 | Horario de atención: no se aceptan reservas fuera del horario | RF10 | Implementado |
 | Notificaciones configurables de tiempo, valor y vencimiento de la reserva | RF03 | Implementado |
@@ -315,7 +315,7 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 50 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, tiempo real, pronóstico y red neuronal
+npm test                                   # 53 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, bitácora, tiempo real, pronóstico y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -410,7 +410,7 @@ Parkway/
 | GET, POST | `/api/admin/usuarios?q=…&rol=…&estado=…` | Administrador | Consultar usuarios con filtros y crear uno con rol, turno y sedes |
 | GET, PUT | `/api/admin/usuarios/:id` | Administrador | Consultar y editar un usuario (la contraseña cambia solo si se envía) |
 | PATCH | `/api/admin/usuarios/:id/estado` | Administrador | Activar, inactivar o bloquear un usuario |
-| GET | `/api/admin/bitacora?tipo=…&estado=…&desde=…&hasta=…` | Administrador | Bitácora de transacciones |
+| GET | `/api/admin/bitacora?idUsuario=…&tipo=…&entidad=…&idEntidad=…&estado=…&desde=…&hasta=…` | Administrador | Bitácora de transacciones con sus filtros, y los usuarios, operaciones y entidades que aparecen en ella |
 
 Errores: 400 si un campo no es válido (con el detalle por campo), 401 sin
 sesión, 403 sin permiso, 404 si la sede o el registro no existen y 409 si una

@@ -231,12 +231,19 @@ en la bitácora.
 | --- | --- |
 | ![Usuarios](capturas/42_usuarios.jpg) | ![Editar usuario](capturas/43_editar_usuario.jpg) |
 
-**Bitácora:** todas las
-operaciones del sistema con su usuario, resultado y detalle, filtrables por
-operación, resultado y fechas. Las operaciones revertidas muestran el motivo
-del error.
+**Bitácora (RF14):** todas las operaciones del sistema con su usuario,
+entidad, resultado y detalle. Se filtran por usuario, operación, entidad
+(registro, reserva, vehículo, sede, espacio o usuario), resultado y fechas.
+Las operaciones revertidas muestran el motivo del error.
 
-![Bitácora](capturas/23_bitacora.jpg)
+Un clic en el usuario de una fila muestra solo sus operaciones. Un clic en la
+entidad, por ejemplo "Registro 55", muestra su historia completa sin importar
+la fecha: quién registró el ingreso, quién la salida y cuánto se cobró. Los
+filtros activos aparecen como etiquetas que se quitan con la ×.
+
+| Bitácora del día | Historia de un registro |
+| --- | --- |
+| ![Bitácora](capturas/23_bitacora.jpg) | ![Historia de un registro](capturas/45_bitacora_historia.jpg) |
 
 ## Modo claro y accesibilidad
 

@@ -1000,6 +1000,16 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
   .pg-eje { font-size: 22px; }
 }
 
+/* Bitácora (RF14) */
+.filtros-bitacora .campo { min-width: 150px; flex: 1 1 150px; max-width: 240px; }
+.filtros-activos { display: flex; flex-wrap: wrap; gap: 8px; margin: -6px 0 14px; }
+.filtros-activos .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; font-size: 0.875rem; }
+.chip-quitar { border: 0; background: transparent; color: inherit; font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 999px; }
+.chip-quitar:hover { background: var(--fantasma-hover); }
+.enlace-celda { border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--tinta-3); text-underline-offset: 3px; }
+.enlace-celda:hover { color: var(--acento-texto); text-decoration-color: currentColor; }
+.celda-rol { font-size: 0.8125rem; }
+
 @media (max-width: 900px) {
   .portada-nav { display: none; }
   .portada-barra .controles { margin-left: auto; }

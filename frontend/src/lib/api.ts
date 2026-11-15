@@ -290,6 +290,7 @@ export interface FilaBitacora {
   fecha_inicio: string;
   fecha_fin: string | null;
   detalle: Record<string, unknown> | null;
+  id_usuario: number;
   usuario: string;
   rol: Rol;
 }
@@ -503,8 +504,11 @@ export const api = {
   historialPorVehiculo: (f: FiltrosHistorial) =>
     request<HistorialVehiculo[]>("GET", `/estacionamiento/historial?${qs({ ...(f as unknown as Record<string, string | number | undefined>), agrupar: "vehiculo" })}`),
   reservasSede: (idParqueadero: number) => request<ReservaSede[]>("GET", `/estacionamiento/reservas?${qs({ idParqueadero })}`),
-  bitacora: (f: { tipo?: string; estado?: string; desde?: string; hasta?: string }) =>
-    request<{ filas: FilaBitacora[]; tipos: string[] }>("GET", `/admin/bitacora?${qs(f)}`),
+  bitacora: (f: { idUsuario?: string; tipo?: string; entidad?: string; idEntidad?: string; estado?: string; desde?: string; hasta?: string }) =>
+    request<{ filas: FilaBitacora[]; tipos: string[]; entidades: string[]; usuarios: { id_usuario: number; nombre: string; rol: Rol }[] }>(
+      "GET",
+      `/admin/bitacora?${qs(f)}`
+    ),
   ingreso: (datos: { placa?: string; idTipo: number; idParqueadero: number; idEspacio?: number; marca?: string; color?: string; generarCodigo?: boolean }) =>
     request<Registro>("POST", "/estacionamiento/ingreso", datos),
   salida: (idRegistro: number) => request<Registro>("POST", `/estacionamiento/salida/${idRegistro}`),

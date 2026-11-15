@@ -26,6 +26,28 @@ const OPERACION: Record<string, string> = {
 };
 const nombreOperacion = (t: string) => OPERACION[t] ?? t;
 
+const ENTIDAD: Record<string, string> = {
+  registro_estacionamiento: "Registro",
+  reserva: "Reserva",
+  vehiculo: "Vehículo",
+  parqueadero: "Sede",
+  espacio: "Espacio",
+  usuario: "Usuario",
+  pago: "Pago",
+};
+const nombreEntidad = (e: string) => ENTIDAD[e] ?? e;
+const NOMBRE_ROL: Record<string, string> = { ADMINISTRADOR: "administrador", OPERADOR: "operador", CLIENTE: "cliente" };
+
+interface Filtros {
+  idUsuario: string;
+  tipo: string;
+  entidad: string;
+  idEntidad: string;
+  estado: string;
+  desde: string;
+  hasta: string;
+}
+
 /** Detalle legible de una operación a partir del JSON de la bitácora. */
 function detalle(d: Record<string, unknown> | null) {
   if (!d) return "";
@@ -52,18 +74,32 @@ function detalle(d: Record<string, unknown> | null) {
 /**
  * Bitácora de transacciones (RF14, RNF08). Solo para el administrador.
  * Cada operación queda con el usuario, el resultado y el detalle; las
- * revertidas incluyen el motivo del error.
+ * revertidas incluyen el motivo del error. Se filtra por usuario, tipo de
+ * operación, entidad, resultado y fechas. Un clic en el usuario o en la
+ * entidad de una fila filtra por ese valor, para seguir la historia de una
+ * persona o de un registro.
  */
 export function Bitacora() {
-  const [form, setForm] = useState({ tipo: "", estado: "", desde: hoy(), hasta: hoy() });
-  const [filtros, setFiltros] = useState(form);
+  const inicial: Filtros = { idUsuario: "", tipo: "", entidad: "", idEntidad: "", estado: "", desde: hoy(), hasta: hoy() };
+  const [form, setForm] = useState<Filtros>(inicial);
+  const [filtros, setFiltros] = useState<Filtros>(inicial);
   const bitacora = useConsulta(() => api.bitacora(filtros), [filtros], 15000);
   const filas = bitacora.datos?.filas ?? [];
   const revertidas = filas.filter((f) => f.estado === "REVERTIDA").length;
+  const usuarios = bitacora.datos?.usuarios ?? [];
+  const nombreUsuario = (id: string) => usuarios.find((u) => String(u.id_usuario) === id)?.nombre ?? `Usuario ${id}`;
+  const hayFiltros = JSON.stringify(filtros) !== JSON.stringify(inicial);
 
   function aplicar(e: FormEvent) {
     e.preventDefault();
     setFiltros(form);
+  }
+
+  /** Filtra al instante sin pasar por el botón (clic en una fila). */
+  function filtrar(cambio: Partial<Filtros>) {
+    const nuevo = { ...form, ...cambio };
+    setForm(nuevo);
+    setFiltros(nuevo);
   }
 
   return (
@@ -75,7 +111,19 @@ export function Bitacora() {
         </div>
       </header>
 
-      <form className="filtros" onSubmit={aplicar}>
+      <form className="filtros filtros-bitacora" onSubmit={aplicar}>
+        <div className="campo">
+          <span className="campo-rotulo">Usuario</span>
+          <Selector
+            etiqueta="Usuario"
+            valor={form.idUsuario}
+            opciones={[
+              { valor: "", texto: "Todos" },
+              ...usuarios.map((u) => ({ valor: String(u.id_usuario), texto: `${u.nombre} (${NOMBRE_ROL[u.rol] ?? u.rol})` })),
+            ]}
+            onChange={(v) => setForm({ ...form, idUsuario: v })}
+          />
+        </div>
         <div className="campo">
           <span className="campo-rotulo">Operación</span>
           <Selector
@@ -86,6 +134,18 @@ export function Bitacora() {
               ...(bitacora.datos?.tipos ?? []).map((t) => ({ valor: t, texto: nombreOperacion(t) })),
             ]}
             onChange={(v) => setForm({ ...form, tipo: v })}
+          />
+        </div>
+        <div className="campo">
+          <span className="campo-rotulo">Entidad</span>
+          <Selector
+            etiqueta="Entidad"
+            valor={form.entidad}
+            opciones={[
+              { valor: "", texto: "Todas" },
+              ...(bitacora.datos?.entidades ?? []).map((e) => ({ valor: e, texto: nombreEntidad(e) })),
+            ]}
+            onChange={(v) => setForm({ ...form, entidad: v, idEntidad: "" })}
           />
         </div>
         <div className="campo">
@@ -103,20 +163,40 @@ export function Bitacora() {
         </div>
         <label className="campo">
           <span className="campo-rotulo">Desde</span>
-          <input type="date" value={form.desde} onChange={(e) => setForm({ ...form, desde: e.target.value })} />
+          <input type="date" value={form.desde} max={form.hasta || undefined} onChange={(e) => setForm({ ...form, desde: e.target.value })} />
         </label>
         <label className="campo">
           <span className="campo-rotulo">Hasta</span>
-          <input type="date" value={form.hasta} onChange={(e) => setForm({ ...form, hasta: e.target.value })} />
+          <input type="date" value={form.hasta} min={form.desde || undefined} onChange={(e) => setForm({ ...form, hasta: e.target.value })} />
         </label>
         <button className="boton boton-secundario">Filtrar</button>
+        {hayFiltros && (
+          <button type="button" className="boton boton-texto" onClick={() => filtrar(inicial)}>Quitar filtros</button>
+        )}
       </form>
+
+      {(filtros.idEntidad || filtros.idUsuario) && (
+        <p className="filtros-activos">
+          {filtros.idUsuario && (
+            <span className="chip chip-activa">
+              Operaciones de {nombreUsuario(filtros.idUsuario)}
+              <button type="button" className="chip-quitar" aria-label="Quitar el filtro de usuario" onClick={() => filtrar({ idUsuario: "" })}>×</button>
+            </span>
+          )}
+          {filtros.idEntidad && (
+            <span className="chip chip-activa">
+              Historia de {nombreEntidad(filtros.entidad).toLowerCase()} {filtros.idEntidad}
+              <button type="button" className="chip-quitar" aria-label="Quitar el filtro de entidad" onClick={() => filtrar({ idEntidad: "" })}>×</button>
+            </span>
+          )}
+        </p>
+      )}
 
       {bitacora.error && <p className="alerta alerta-error" role="alert">{bitacora.error}</p>}
       {bitacora.datos && (
         <p className="tenue resumen-bitacora">
           {filas.length} {filas.length === 1 ? "operación" : "operaciones"}, {revertidas} {revertidas === 1 ? "revertida" : "revertidas"}.
-          {filas.length === 300 && " Se muestran las 300 más recientes; acote las fechas para ver más."}
+          {filas.length === 300 && " Se muestran las 300 más recientes; acote los filtros para ver más."}
         </p>
       )}
 
@@ -130,6 +210,7 @@ export function Bitacora() {
                 <th scope="col">N.º</th>
                 <th scope="col">Fecha</th>
                 <th scope="col">Operación</th>
+                <th scope="col">Entidad</th>
                 <th scope="col">Usuario</th>
                 <th scope="col">Resultado</th>
                 <th scope="col">Detalle</th>
@@ -141,7 +222,31 @@ export function Bitacora() {
                   <td className="tenue">{f.id_transaccion}</td>
                   <td>{fechaCorta(f.fecha_inicio)}</td>
                   <td>{nombreOperacion(f.tipo_operacion)}</td>
-                  <td>{f.usuario}</td>
+                  <td>
+                    {f.id_entidad ? (
+                      <button
+                        type="button"
+                        className="enlace-celda"
+                        title={`Ver todas las operaciones de ${nombreEntidad(f.entidad).toLowerCase()} ${f.id_entidad}`}
+                        onClick={() => filtrar({ entidad: f.entidad, idEntidad: f.id_entidad!, desde: "", hasta: "" })}
+                      >
+                        {nombreEntidad(f.entidad)} {f.id_entidad}
+                      </button>
+                    ) : (
+                      nombreEntidad(f.entidad)
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="enlace-celda"
+                      title={`Ver solo las operaciones de ${f.usuario}`}
+                      onClick={() => filtrar({ idUsuario: String(f.id_usuario) })}
+                    >
+                      {f.usuario}
+                    </button>
+                    <span className="tenue celda-rol"> {NOMBRE_ROL[f.rol] ?? f.rol}</span>
+                  </td>
                   <td>
                     <span className={`chip ${f.estado === "CONFIRMADA" ? "chip-cumplida" : "chip-revertida"}`}>
                       {f.estado === "CONFIRMADA" ? "Confirmada" : "Revertida"}
