@@ -1,0 +1,49 @@
+# Pruebas del backend en cada push y pull request (RNF07).
+# Corre las pruebas unitarias, las de integración contra PostgreSQL y la
+# medición de cobertura de la capa de servicios, que falla si baja de 60 %.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      TZ: America/Bogota
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Compilar
+        run: npm run build
+      - name: Pruebas unitarias
+        run: npm test
+      - name: Pruebas de integración y cobertura (mínimo 60 % en servicios)
+        run: npm run cobertura

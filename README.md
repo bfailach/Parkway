@@ -382,13 +382,24 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 66 pruebas unitarias: tarifas, placas, pagos, cuentas, usuarios, vehículos, horarios, sedes, reportes, bitácora, tiempo real, pronóstico y red neuronal
-npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
+npm test                       # 66 pruebas unitarias, sin base de datos
+npm run test:integracion       # 39 pruebas de los servicios contra la base parkway_test
+npm run cobertura              # las 105 con la cobertura de src/services (mínimo 60 %)
+npm run prueba:concurrencia    # RNF03, con el backend corriendo
+npm run prueba:carga           # RNF02, con el backend compilado corriendo
 ```
 
-La prueba de concurrencia, con la base recién cargada con `seed.sql`, envía
-20 ingresos simultáneos de bicicleta a la Sede Zona T, que tiene 3 espacios. Resultado: 3 aceptados, 17 rechazados con
-código 409 y ningún espacio duplicado (RNF03).
+| Requerimiento | Criterio | Resultado |
+| --- | --- | --- |
+| RNF03 Concurrencia | 50 ingresos simultáneos sobre 10 espacios: 10 aceptados, 40 rechazados, sin duplicados | Cumple: 10 aceptados, 40 rechazados, bitácora con 10 confirmados y 40 revertidos. 20 cobros simultáneos de una salida dejan un solo pago |
+| RNF02 Rendimiento | Con 100 usuarios, p95 de consultas < 2 s y de ingresos < 3 s | Cumple: p95 de 11 ms en consultas y 37 ms en ingresos, sin errores en 26.600 solicitudes |
+| RNF07 Mantenibilidad | Cobertura de al menos 60 % en servicios | Cumple: 95,6 % de líneas, 84,4 % de ramas |
+
+Las pruebas de integración reconstruyen `parkway_test` desde `schema.sql` y
+`seed.sql`, y se niegan a correr sobre una base cuyo nombre no termine en
+`_test`. El flujo `.github/workflows/pruebas.yml` las corre con la cobertura
+en cada push a `main`. El detalle de cada prueba, sus resultados y sus
+limitaciones está en [docs/PRUEBAS.md](docs/PRUEBAS.md).
 
 ## Estructura del repositorio
 
@@ -417,8 +428,8 @@ Parkway/
 │   │   ├── ia/             # Red neuronal: pesos entrenados y cálculo hacia adelante
 │   │   ├── tiempoReal/     # WebSocket y escucha de los avisos de PostgreSQL (RF12)
 │   │   └── index.ts        # Arranque y expiración periódica de reservas
-│   ├── tests/              # Pruebas unitarias
-│   └── scripts/            # Prueba de concurrencia
+│   ├── tests/              # Pruebas unitarias; integracion/ con las de los servicios contra PostgreSQL
+│   └── scripts/            # Pruebas de concurrencia (RNF03) y de carga (RNF02)
 ├── frontend/
 │   └── src/
 │       ├── pages/          # Una pantalla por función (cliente/ y admin/ por rol)
@@ -502,5 +513,4 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
   hoy los pagos electrónicos se simulan).
 - Pronóstico por tipo de vehículo y con registros reales cuando se junten
   ocho semanas de operación (RF15).
-- Medición de cobertura de pruebas (RNF07), prueba de carga con 100 usuarios
-  (RNF02) y prueba de concurrencia con 50 ingresos sobre 10 espacios (RNF03).
+- Pruebas con usuarios (RNF05) y en Firefox y Edge (RNF06).

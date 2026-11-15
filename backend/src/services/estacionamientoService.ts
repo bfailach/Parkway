@@ -224,7 +224,7 @@ export async function registrarSalida(idRegistro: number, usuario: UsuarioToken,
     async (client) => {
       const r = await registroRepository.bloquearConTarifa(client, idRegistro);
       if (!r) throw notFound("El registro no existe");
-      await verificarAcceso(usuario, r.id_parqueadero);
+      await verificarAcceso(usuario, r.id_parqueadero, client);
       if (r.estado !== "ABIERTO") throw conflict(`El vehículo ${r.placa} ya registró su salida`);
       if (r.valor_hora == null) throw conflict("El registro no tiene tarifa asociada");
 

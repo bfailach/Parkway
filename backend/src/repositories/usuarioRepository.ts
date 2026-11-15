@@ -22,9 +22,13 @@ export async function crearCliente(u: { nombre: string; documento: string; corre
   return rows[0];
 }
 
-/** Sedes asignadas a un operador. */
-export async function sedesDelOperador(idUsuario: number): Promise<number[]> {
-  const { rows } = await pool.query(
+/**
+ * Sedes asignadas a un operador. Dentro de una transacción se pasa su
+ * conexión: pedir otra al pool mientras se retiene una puede agotarlo
+ * cuando hay muchas operaciones simultáneas.
+ */
+export async function sedesDelOperador(idUsuario: number, db: Pick<PoolClient, "query"> = pool): Promise<number[]> {
+  const { rows } = await db.query(
     `SELECT id_parqueadero FROM operador_parqueadero WHERE id_usuario = $1 ORDER BY id_parqueadero`,
     [idUsuario]
   );
