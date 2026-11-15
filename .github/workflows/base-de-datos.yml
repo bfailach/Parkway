@@ -57,6 +57,14 @@ jobs:
       - name: Instalar el cliente de PostgreSQL
         run: sudo apt-get install -y -qq postgresql-client > /dev/null
 
+      - name: Revisar que la base tenga tablas (modo demo)
+        if: inputs.modo == 'demo'
+        run: |
+          if [ "$(psql "$DATABASE_URL" -Atc "SELECT to_regclass('public.parqueadero') IS NOT NULL")" != "t" ]; then
+            echo "::error::La base está vacía. Ejecute este flujo en modo completa (escribiendo BORRAR) para crear las tablas."
+            exit 1
+          fi
+
       - name: Crear la base desde cero (schema.sql y seed.sql)
         if: inputs.modo == 'completa'
         run: |
