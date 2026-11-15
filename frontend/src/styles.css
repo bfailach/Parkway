@@ -153,14 +153,8 @@ a { color: inherit; }
 }
 
 /* ---------- Señal P (marca) ---------- */
-.senal-p {
-  display: inline-grid; place-items: center; flex: none;
-  width: 72px; height: 72px; border-radius: 10px;
-  background: var(--azul-senal); color: #fff;
-  font-family: "Big Shoulders Display", "Arial Narrow", sans-serif; font-weight: 900; font-size: 54px; line-height: 1;
-  box-shadow: inset 0 0 0 3px var(--azul-senal), inset 0 0 0 6px #fff;
-}
-.senal-p-sm { width: 30px; height: 30px; font-size: 22px; border-radius: 5px; box-shadow: inset 0 0 0 2px var(--azul-senal), inset 0 0 0 3.5px #fff; }
+.senal-p { display: block; flex: none; width: 72px; height: 72px; }
+.senal-p-sm { width: 30px; height: 30px; }
 
 .marca {
   display: inline-flex; align-items: center; gap: 10px; text-decoration: none;

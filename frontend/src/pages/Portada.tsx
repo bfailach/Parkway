@@ -10,6 +10,7 @@ import { crearControl, plazaAsignada, PLACA_HISTORIA, soportaWebGL } from "../th
 import { distribuir } from "../three/layout";
 import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
 import { BotonInstalar } from "../components/Instalar";
+import { SenalP } from "../components/SenalP";
 import { movimientoReducido } from "../lib/apariencia";
 
 const Escena = lazy(() => import("../three/Escena"));
@@ -131,7 +132,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
 
       <header className="portada-barra">
         <a href="#/" className="marca" aria-label="Parkway, inicio">
-          <span className="senal-p senal-p-sm" aria-hidden="true">P</span>
+          <SenalP pequena />
           Parkway
         </a>
         <nav className="portada-nav" aria-label="Secciones">

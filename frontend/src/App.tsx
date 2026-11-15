@@ -22,6 +22,7 @@ import { Reportes } from "./pages/admin/Reportes";
 import { Pagos } from "./pages/admin/Pagos";
 import { Notificaciones } from "./pages/cliente/Notificaciones";
 import { Notificador } from "./components/Notificador";
+import { SenalP } from "./components/SenalP";
 
 type Vista =
   | "disponibilidad"
@@ -145,7 +146,7 @@ export default function App() {
     <div className="app">
       <header className="barra">
         <a href="#/" className="marca" aria-label="Parkway, ir a la portada">
-          <span className="senal-p senal-p-sm" aria-hidden="true">P</span>Parkway
+          <SenalP pequena />Parkway
         </a>
         {sedes.length > 0 && (
           <Selector

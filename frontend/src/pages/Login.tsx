@@ -3,6 +3,7 @@ import { api, ApiError, Usuario, sesion } from "../lib/api";
 import { crearControl, soportaWebGL } from "../three/control";
 import type { EspacioMapa } from "../lib/api";
 import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
+import { SenalP } from "../components/SenalP";
 
 const Escena = lazy(() => import("../three/Escena"));
 
@@ -71,7 +72,7 @@ export function Login({ onIngresar, onVolver }: { onIngresar: (u: Usuario) => vo
           <CrearCuenta onCreada={onIngresar} onIngresar={() => setModo("ingresar")} />
         ) : (
         <form className="login-form" onSubmit={enviar} noValidate>
-          <span className="senal-p" aria-hidden="true">P</span>
+          <SenalP />
           <h1 className="display-2">Ingresar a Parkway</h1>
           <p className="login-sub">Para operadores, administradores y clientes registrados de Parkway.</p>
 
