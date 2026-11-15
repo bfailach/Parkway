@@ -164,7 +164,20 @@ confirmado (RF12).
 | ![Filtro de piso](capturas/37_filtro_piso.jpg) | ![Animación de ingreso](capturas/38_animacion_ingreso.jpg) |
 
 **En el parqueadero** lista los vehículos dentro con su tiempo y valor
-acumulado, y permite registrar la salida. **Historial** muestra las salidas
+acumulado, y permite registrar la salida.
+
+**Salida y pago (RF08).** El diálogo de salida muestra el total, que se
+actualiza mientras está abierto, y pide el medio de pago: en efectivo,
+botones con los billetes más probables y el cambio calculado; con tarjeta o
+transferencia, el número de aprobación o la referencia. Un solo botón,
+"Cobrar y dar salida", hace todo. El tiquete de salida es el comprobante: su
+número, el medio de pago, lo recibido y el cambio. El historial y "Mi
+historial" del cliente muestran el comprobante de cada visita.
+
+| Salida y pago | Comprobante |
+| --- | --- |
+| ![Salida y pago](capturas/49_salida_pago.jpg) | ![Comprobante](capturas/50_comprobante.jpg) |
+ **Historial** muestra las salidas
 con filtros por placa o código, tipo de vehículo, marca, color, fechas, horas
 de permanencia y valor pagado, y se puede ordenar por fecha, valor o tiempo.
 La vista "Por vehículo" suma las visitas, el tiempo y el dinero de cada
@@ -177,7 +190,7 @@ vehículo.
 ## Pantallas del administrador
 
 Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes**,
-**Usuarios**, **Reportes**, **Bitácora** y **Red neuronal**.
+**Pagos**, **Usuarios**, **Reportes**, **Bitácora** y **Red neuronal**.
 
 **Sedes.** El administrador crea o edita cada sede con:
 
@@ -230,6 +243,16 @@ en la bitácora.
 | Lista de usuarios | Editar un operador |
 | --- | --- |
 | ![Usuarios](capturas/42_usuarios.jpg) | ![Editar usuario](capturas/43_editar_usuario.jpg) |
+
+**Pagos (RF08 y RF09).** El cierre de caja por medio de pago y el total
+recaudado, sin contar los anulados, y la lista de pagos con su comprobante,
+filtrable por sede, medio, estado, fechas y placa o número. "Anular" pide el
+motivo; el pago queda tachado con el motivo y quién lo anuló. Un pago
+anulado ofrece "Cobrar de nuevo" para registrar el pago correcto.
+
+| Pagos y cierre de caja | Anular un pago |
+| --- | --- |
+| ![Pagos](capturas/51_pagos.jpg) | ![Anular](capturas/52_anular.jpg) |
 
 **Reportes (RF13).** Filtros de sede, tipo de vehículo y periodo, con atajos
 de fecha, y tres pestañas: ocupación por franja horaria (gráfica de barras
@@ -359,7 +382,7 @@ frontend/src/
 │   ├── Reservas.tsx        # Reservas de la sede (personal)
 │   ├── Historial.tsx       # Salidas registradas
 │   ├── Bitacora.tsx        # Bitácora (administrador)
-│   ├── admin/              # Sedes, Usuarios, Reportes y Red neuronal
+│   ├── admin/              # Sedes, Pagos, Usuarios, Reportes y Red neuronal
 │   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial, Notificaciones
 ├── components/             # PronosticoDia, Placa, Tiquete, Selector, CampoOpciones, FiltroPisos, Apariencia, Notificador, diálogos
 ├── three/                  # Escena 3D

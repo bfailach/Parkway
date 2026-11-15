@@ -950,7 +950,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
    ===================================================================== */
 /* Usuarios (RF02) */
 .boton-sm { padding: 7px 14px; font-size: 0.875rem; }
-.campo-buscar-usuario { flex: 1 1 260px; max-width: 360px; }
+.campo-buscar-usuario { flex: 1 1 220px; max-width: 360px; min-width: 200px; }
 .tabla-usuarios td { vertical-align: middle; }
 .celda-secundaria { display: block; font-size: 0.875rem; margin-top: 2px; }
 .celda-acciones { text-align: right; }
@@ -1030,6 +1030,29 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .fila-destacada td { background: var(--acento-suave); }
 .fila-tenue td { color: var(--tinta-3); }
 .reporte-sedes { margin: 0 0 18px; }
+/* Pagos (RF08 y RF09) */
+.cobro-total { width: 100%; display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; padding-top: 12px; border-top: 2px dashed var(--superficie-4); }
+.cobro-total strong { font-family: var(--display); font-weight: 900; font-size: 2.5rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.pago-metodos { margin: 18px 0 14px; }
+.pago-metodos legend { margin-bottom: 8px; }
+.billetes { display: flex; flex-wrap: wrap; gap: 6px; }
+.cambio { font-size: 1.0625rem; color: var(--ok-texto); }
+.cambio strong { font-size: 1.25rem; }
+.tiquete-pago { padding-top: 12px; border-top: 2px dashed #c9ccd0; }
+.tachado { text-decoration: line-through; }
+.dialogo:has(.pago-metodos) { width: min(500px, 100% - 32px); max-height: calc(100vh - 32px); }
+.chip-anulado { background: var(--error-fondo); color: var(--error-alerta); }
+.caja { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
+.caja > div { background: var(--superficie); border-radius: var(--radio); padding: 14px 16px; display: grid; gap: 2px; }
+.caja dt { color: var(--tinta-2); font-size: 0.875rem; }
+.caja dd { margin: 0; font-family: var(--display); font-weight: 900; font-size: 1.75rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.caja .tenue { font-size: 0.8125rem; }
+.caja .caja-total { background: var(--acento-suave); }
+.campo-motivo textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--superficie-3); border-radius: var(--radio); background: var(--superficie-2); color: var(--tinta); font: inherit; resize: vertical; }
+.campo-motivo { margin-top: 16px; }
+.motivo-anulacion { display: block; font-size: 0.8125rem; color: var(--tinta-3); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 900px) { .caja { grid-template-columns: 1fr 1fr; } }
+
 @media (max-width: 900px) { .indicadores { grid-template-columns: 1fr 1fr; } }
 
 @media (max-width: 900px) {

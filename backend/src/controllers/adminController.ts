@@ -5,6 +5,8 @@ import { leerFiltrosBitacora } from "../validators/bitacoraValidator";
 import { leerFiltrosReporte } from "../validators/reporteValidator";
 import * as reporteService from "../services/reporteService";
 import { aCsv } from "../utils/csv";
+import * as pagoService from "../services/pagoService";
+import { METODOS } from "../validators/pagoValidator";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import * as parqueaderoService from "../services/parqueaderoService";
 import * as usuarioService from "../services/usuarioService";
@@ -83,4 +85,25 @@ export const getReporte = asyncHandler(async (req, res) => {
     return res.send(aCsv(columnas, reporte.filas as unknown[]));
   }
   res.json({ tipo, filtros: v.filtros, ...reporte });
+});
+
+// Pagos (RF08) y anulación (RF09)
+export const getPagos = asyncHandler(async (req, res) => {
+  const q = req.query as Record<string, unknown>;
+  const v = leerFiltrosReporte({ desde: q.desde, hasta: q.hasta, idParqueadero: q.idParqueadero });
+  if (!v.valido) throw badRequest("Revise los filtros", v.errores);
+  const metodo = typeof q.metodo === "string" && q.metodo ? q.metodo.toUpperCase() : undefined;
+  const estado = typeof q.estado === "string" && q.estado ? q.estado.toUpperCase() : undefined;
+  if (metodo && !(METODOS as readonly string[]).includes(metodo)) throw badRequest("Medio de pago inválido");
+  if (estado && !["APROBADO", "ANULADO"].includes(estado)) throw badRequest("Estado inválido");
+  const texto = typeof q.q === "string" ? q.q.trim().slice(0, 40) : "";
+  res.json(await pagoService.listar({ ...v.filtros, metodo, estado, q: texto || undefined }));
+});
+
+export const postAnularPago = asyncHandler<Req>(async (req, res) => {
+  res.json(await pagoService.anular(Number(req.params.id), req.body ?? {}, req.usuario!.id_usuario));
+});
+
+export const postCobrarDeNuevo = asyncHandler<Req>(async (req, res) => {
+  res.status(201).json(await pagoService.cobrarDeNuevo(Number(req.params.id), req.body ?? {}, req.usuario!.id_usuario));
 });

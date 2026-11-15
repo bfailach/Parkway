@@ -3,6 +3,7 @@ import * as vehiculoRepository from "../repositories/vehiculoRepository";
 import * as registroRepository from "../repositories/registroRepository";
 import * as catalogoRepository from "../repositories/catalogoRepository";
 import * as reservaRepository from "../repositories/reservaRepository";
+import * as pagoService from "./pagoService";
 import { transactionManager } from "../transactions/transactionManager";
 import { DatosIngreso } from "../validators/ingresoValidator";
 import { calcularMinutos, calcularValor } from "./tarifaService";
@@ -210,9 +211,11 @@ export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToke
 // ---------------------------------------------------------------------
 // RF07 - Registrar salida
 // ---------------------------------------------------------------------
-export async function registrarSalida(idRegistro: number, usuario: UsuarioToken) {
+export async function registrarSalida(idRegistro: number, usuario: UsuarioToken, body: Record<string, unknown> = {}) {
   if (!Number.isInteger(idRegistro) || idRegistro <= 0) throw badRequest("Registro inválido");
   const idOperador = usuario.id_usuario;
+  // RF08: el pago se valida antes de abrir la transacción y se registra dentro de ella.
+  const pago = pagoService.leerPago(body);
 
   await transactionManager.ejecutar(
     idOperador,
@@ -231,11 +234,13 @@ export async function registrarSalida(idRegistro: number, usuario: UsuarioToken)
 
       const cerrado = await registroRepository.cerrar(client, { idRegistro, idOperador, fechaSalida, minutos, valor });
       await espacioRepository.actualizarEstado(client, r.id_espacio, "LIBRE");
-      return cerrado;
+      // Pago aprobado y comprobante en la misma transacción que la salida.
+      const cobro = valor > 0 ? await pagoService.cobrar(client, { idRegistro, idOperador, monto: valor, pago, placa: r.placa }) : null;
+      return { ...cerrado, comprobante: cobro?.comprobante ?? null };
     },
     {
       idEntidad: (r) => r.id_registro,
-      detalle: (r) => ({ placa: r.placa, minutos: r.minutos, valor: Number(r.valor_calculado) }),
+      detalle: (r) => ({ placa: r.placa, minutos: r.minutos, valor: Number(r.valor_calculado), metodo: pago.metodo, comprobante: r.comprobante }),
     }
   );
 

@@ -15,6 +15,11 @@ router.put("/parqueaderos/:id", c.putParqueadero);
 router.patch("/espacios/:id", c.patchEspacio); // fuera de servicio / habilitar
 router.get("/operadores", c.getOperadores);
 
+// RF08 y RF09: pagos, anulación y nuevo cobro
+router.get("/pagos", c.getPagos);
+router.post("/pagos/:id/anular", c.postAnularPago);
+router.post("/registros/:id/pago", c.postCobrarDeNuevo);
+
 // RF02: gestión de usuarios
 router.get("/usuarios", c.getUsuarios);
 router.get("/usuarios/:id", c.getUsuario);

@@ -105,7 +105,9 @@ export async function rotacionPorEspacio(f: FiltrosReporte): Promise<{ filas: Fi
             count(re.id_registro) FILTER (WHERE re.fecha_ingreso >= l.ini)::int AS usos,
             COALESCE(round(sum(EXTRACT(EPOCH FROM
                 LEAST(COALESCE(re.fecha_salida, now()), l.fin) - GREATEST(re.fecha_ingreso, l.ini)) / 60)), 0)::int AS minutos_ocupado,
-            COALESCE(sum(re.valor_calculado) FILTER (WHERE re.fecha_salida >= l.ini AND re.fecha_salida < l.fin), 0)::float AS ingresos,
+            COALESCE(sum((SELECT sum(pg.monto) FROM pago pg
+                           WHERE pg.id_registro = re.id_registro AND pg.estado = 'APROBADO'
+                             AND pg.fecha_pago >= l.ini AND pg.fecha_pago < l.fin)), 0)::float AS ingresos,
             round(EXTRACT(EPOCH FROM max(l.fin) - max(l.ini)) / 60)::int AS minutos_periodo
        FROM espacio e
        JOIN parqueadero p ON p.id_parqueadero = e.id_parqueadero
@@ -129,13 +131,18 @@ export interface FilaIngresos {
   id_parqueadero: number;
   sede: string;
   salidas: number;
+  /** Pagos aprobados en el periodo (RF08); los anulados no cuentan. */
   valor: number;
+  efectivo: number;
+  tarjeta: number;
+  transferencia: number;
   minutos_promedio: number | null;
 }
 
 /**
- * Salidas y valor cobrado por periodo (día, semana o mes) y sede. Incluye
- * los periodos sin movimiento, con cero, para que la serie no tenga huecos.
+ * Salidas por periodo (día, semana o mes) y sede, y lo recaudado según los
+ * pagos aprobados, por medio de pago. Incluye los periodos sin movimiento,
+ * con cero, para que la serie no tenga huecos.
  */
 export async function ingresosPorPeriodo(f: FiltrosReporte): Promise<FilaIngresos[]> {
   const unidad = { dia: "day", semana: "week", mes: "month" }[f.agrupacion];
@@ -148,18 +155,34 @@ export async function ingresosPorPeriodo(f: FiltrosReporte): Promise<FilaIngreso
      ),
      salidas AS (
         SELECT date_trunc($5, re.fecha_salida) AS inicio, e.id_parqueadero,
-               count(*)::int AS salidas, sum(re.valor_calculado)::float AS valor, avg(re.minutos)::float AS minutos_promedio
+               count(*)::int AS salidas, avg(re.minutos)::float AS minutos_promedio
           FROM registro_estacionamiento re
           JOIN espacio e ON e.id_espacio = re.id_espacio
          WHERE ${FILTRO_ESPACIO} AND re.estado = 'CERRADO'
            AND re.fecha_salida >= $1::date AND re.fecha_salida < $2::date + 1
          GROUP BY 1, 2
+     ),
+     cobros AS (
+        SELECT date_trunc($5, pg.fecha_pago) AS inicio, e.id_parqueadero,
+               sum(pg.monto)::float AS valor,
+               COALESCE(sum(pg.monto) FILTER (WHERE pg.metodo = 'EFECTIVO'), 0)::float AS efectivo,
+               COALESCE(sum(pg.monto) FILTER (WHERE pg.metodo = 'TARJETA'), 0)::float AS tarjeta,
+               COALESCE(sum(pg.monto) FILTER (WHERE pg.metodo = 'TRANSFERENCIA'), 0)::float AS transferencia
+          FROM pago pg
+          JOIN registro_estacionamiento re ON re.id_registro = pg.id_registro
+          JOIN espacio e ON e.id_espacio = re.id_espacio
+         WHERE ${FILTRO_ESPACIO} AND pg.estado = 'APROBADO'
+           AND pg.fecha_pago >= $1::date AND pg.fecha_pago < $2::date + 1
+         GROUP BY 1, 2
      )
      SELECT to_char(p.inicio, 'YYYY-MM-DD') AS periodo, s.id_parqueadero, s.nombre AS sede,
-            COALESCE(x.salidas, 0) AS salidas, COALESCE(x.valor, 0) AS valor, x.minutos_promedio
+            COALESCE(x.salidas, 0) AS salidas, COALESCE(c.valor, 0) AS valor,
+            COALESCE(c.efectivo, 0) AS efectivo, COALESCE(c.tarjeta, 0) AS tarjeta, COALESCE(c.transferencia, 0) AS transferencia,
+            x.minutos_promedio
        FROM periodos p
        CROSS JOIN sedes s
        LEFT JOIN salidas x ON x.inicio = p.inicio AND x.id_parqueadero = s.id_parqueadero
+       LEFT JOIN cobros c ON c.inicio = p.inicio AND c.id_parqueadero = s.id_parqueadero
       ORDER BY p.inicio, s.nombre`,
     [...params(f), unidad]
   );

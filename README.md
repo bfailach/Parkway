@@ -30,8 +30,8 @@ en pocos segundos.
 | --- | --- |
 | Visitante | Ver los cupos libres por sede, el recorrido de cómo funciona y calcular el cobro. |
 | Cliente | Crear su cuenta, registrar sus vehículos (las bicicletas reciben un código BICI) y ver en qué sede y espacio está cada uno, reservar un espacio por 30 minutos dentro del horario de la sede, ver su vehículo dentro con el valor acumulado, configurar avisos de tiempo y dinero y consultar su historial. |
-| Operador | Registrar ingresos y salidas en las sedes que tiene asignadas. Al digitar una placa conocida, el formulario trae la marca y el color guardados. Ve las reservas en camino, los vehículos dentro, el plano 3D y 2D y el historial con filtros. |
-| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores), la gestión de usuarios (crear, editar, asignar turno y sedes, inactivar), los reportes con exportación a CSV y la bitácora de transacciones. |
+| Operador | Registrar ingresos y salidas en las sedes que tiene asignadas, y cobrar la salida en efectivo, tarjeta o transferencia con su comprobante. Al digitar una placa conocida, el formulario trae la marca y el color guardados. Ve las reservas en camino, los vehículos dentro, el plano 3D y 2D y el historial con filtros. |
+| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores), el cierre de caja, la anulación de pagos con su motivo, la gestión de usuarios (crear, editar, asignar turno y sedes, inactivar), los reportes con exportación a CSV y la bitácora de transacciones. |
 
 Todos los usuarios pueden cambiar entre modo oscuro y claro y ajustar la
 accesibilidad: tamaño del texto, alto contraste, movimiento reducido, letra de
@@ -59,7 +59,8 @@ El detalle de cada pantalla, con capturas, está en
 | Horario de atención: no se aceptan reservas fuera del horario | RF10 | Implementado |
 | Notificaciones configurables de tiempo, valor y vencimiento de la reserva | RF03 | Implementado |
 | Gestión de usuarios: crear, consultar, editar e inactivar clientes, operadores y administradores, con turno y sedes | RF02 | Implementado |
-| Pagos y comprobantes, anulación | RF08, RF09 | Siguiente fase |
+| Pago en efectivo, tarjeta o transferencia con comprobante de número único, en la misma transacción de la salida | RF08 | Implementado |
+| Anulación de pagos con motivo, sin borrar el registro original, y nuevo cobro | RF09 | Implementado |
 | Predicción de ocupación con IA: próximas 24 horas con rango de confianza (Prophet) y la hora siguiente corregida por una red neuronal | RF15 | Implementado |
 
 ## Tecnologías
@@ -141,8 +142,36 @@ reservado o el primer espacio libre del tipo, abre el registro y marca el
 espacio como ocupado. Todo ocurre en una sola transacción: si un paso falla,
 nada queda a medias.
 
-**Salida (RF07).** El sistema calcula los minutos con la hora de la base de
-datos, aplica la tarifa vigente, cierra el registro y libera el espacio.
+**Salida y pago (RF07 y RF08).** El sistema calcula los minutos con la hora
+de la base de datos y aplica la tarifa vigente. El operador elige el medio
+de pago y confirma. En una sola transacción se cierra el registro, se libera
+el espacio, se registra el pago como APROBADO y se emite el comprobante con
+número consecutivo (`PKW-2026-000123`). Si algo falla, no queda una salida
+sin pago ni un pago sin salida.
+
+- **Efectivo:** el operador digita lo recibido (o lo deja vacío si es el
+  valor exacto) y el sistema calcula el cambio. Si el valor subió mientras
+  la pantalla estaba abierta y lo recibido no alcanza, la salida se rechaza
+  y dice cuánto falta.
+- **Tarjeta o transferencia:** el operador digita el número de aprobación
+  del datáfono o la referencia de la transferencia. Los pagos electrónicos
+  se simulan, como define el alcance del documento.
+- **Idempotencia:** la misma referencia no se puede registrar dos veces para
+  el mismo medio de pago (restricción `uq_pago_referencia`), y un registro
+  no puede tener dos pagos aprobados (índice único parcial
+  `ux_pago_aprobado_por_registro`). Diez cobros simultáneos de la misma
+  salida dejan un solo pago.
+
+**Anulación (RF09).** El administrador anula un pago con un motivo de al
+menos 10 caracteres. El pago no se borra: queda ANULADO con el motivo, quién
+lo anuló y cuándo, y el comprobante se ve tachado. Después puede cobrar de
+nuevo esa visita con otro pago y otro comprobante. Cada pago, anulación y
+nuevo cobro queda en la bitácora (RNF08). Los reportes, el cierre de caja y
+los totales del día cuentan solo los pagos aprobados.
+
+| Salida y pago | Comprobante | Pagos y cierre de caja | Anular un pago |
+| --- | --- | --- | --- |
+| ![Salida y pago](docs/capturas/49_salida_pago.jpg) | ![Comprobante](docs/capturas/50_comprobante.jpg) | ![Pagos](docs/capturas/51_pagos.jpg) | ![Anular](docs/capturas/52_anular.jpg) |
 
 **Cobro.** Horas completas por el valor de la hora, más cada fracción de 15
 minutos iniciada por el valor de la fracción. El cobro de un día nunca supera
@@ -259,8 +288,8 @@ anterior. Hay tres reportes:
   periodos sin movimiento para que la serie no tenga huecos.
 
 La ocupación de cada hora cuenta los vehículos dentro al inicio de la hora
-sobre los espacios en servicio. Los ingresos salen del valor calculado al
-registrar la salida; cuando existan los pagos (RF08) se podrán tomar de ahí.
+sobre los espacios en servicio. Los ingresos son los pagos aprobados, por
+medio de pago; un pago anulado deja de contar.
 
 **Descargar CSV** guarda el reporte que se está viendo. El archivo usa UTF-8,
 punto y coma y coma decimal para abrirse con doble clic en Excel en español.
@@ -353,7 +382,7 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 59 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, reportes, bitácora, tiempo real, pronóstico y red neuronal
+npm test                                   # 66 pruebas unitarias: tarifas, placas, pagos, cuentas, usuarios, vehículos, horarios, sedes, reportes, bitácora, tiempo real, pronóstico y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -371,7 +400,8 @@ Parkway/
 │   ├── demo.sql            # 12 semanas de historia, vehículos dentro, reservas y bitácora de ejemplo
 │   ├── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
 │   ├── migracion_tiempo_real.sql # Agrega el aviso de cambios (RF12) a una base existente
-│   └── migracion_pronostico.sql  # Agrega las tablas del pronóstico (RF15); el script la ejecuta solo
+│   ├── migracion_pronostico.sql  # Agrega las tablas del pronóstico (RF15); el script la ejecuta solo
+│   └── migracion_pagos.sql       # Agrega pagos, comprobantes y anulaciones (RF08, RF09) a una base existente
 ├── ia/
 │   ├── entrenar_red.py     # Entrena la red neuronal 6-8-1 y exporta los pesos
 │   └── pronostico_prophet.py # Pronóstico de 24 horas con Prophet, guardado en la base
@@ -433,7 +463,7 @@ Parkway/
 | GET | `/api/estacionamiento/totales-dia?idParqueadero=1` | Personal | Ingresos, salidas y valor del día |
 | GET | `/api/estacionamiento/reservas?idParqueadero=1` | Personal | Reservas activas y del día, con el cliente |
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
-| POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra una salida |
+| POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra la salida con su pago y comprobante. Cuerpo: `{"metodo":"EFECTIVO","recibido":10000}` o `{"metodo":"TARJETA","referencia":"482913"}` |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
 | GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
 | GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar (con la sede y el espacio donde está cada uno) y registrar vehículos propios |
@@ -445,6 +475,9 @@ Parkway/
 | GET, PUT | `/api/admin/parqueaderos/:id` | Administrador | Consultar y editar una sede |
 | PATCH | `/api/admin/espacios/:id` | Administrador | Marcar un espacio fuera de servicio o habilitarlo |
 | GET | `/api/admin/operadores` | Administrador | Operadores disponibles para asignar |
+| GET | `/api/admin/pagos?desde=…&hasta=…&idParqueadero=…&metodo=…&estado=…&q=…` | Administrador | Pagos con su comprobante y cierre de caja por medio de pago |
+| POST | `/api/admin/pagos/:id/anular` | Administrador | Anula un pago con `{"motivo":"…"}` (RF09) |
+| POST | `/api/admin/registros/:id/pago` | Administrador | Cobra de nuevo una visita cuyo pago se anuló |
 | GET, POST | `/api/admin/usuarios?q=…&rol=…&estado=…` | Administrador | Consultar usuarios con filtros y crear uno con rol, turno y sedes |
 | GET, PUT | `/api/admin/usuarios/:id` | Administrador | Consultar y editar un usuario (la contraseña cambia solo si se envía) |
 | PATCH | `/api/admin/usuarios/:id/estado` | Administrador | Activar, inactivar o bloquear un usuario |
@@ -465,7 +498,8 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 
 ## Siguientes pasos
 
-- Pagos con pasarela, comprobantes y anulación (RF08, RF09).
+- Conexión con una pasarela de pagos real (fuera del alcance del documento;
+  hoy los pagos electrónicos se simulan).
 - Pronóstico por tipo de vehículo y con registros reales cuando se junten
   ocho semanas de operación (RF15).
 - Medición de cobertura de pruebas (RNF07), prueba de carga con 100 usuarios

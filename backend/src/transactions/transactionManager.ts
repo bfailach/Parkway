@@ -1,5 +1,6 @@
 import { PoolClient } from "pg";
 import { pool } from "../db/pool";
+import { mensajeDeError } from "../middlewares/errorHandler";
 
 /**
  * GestorTransacciones (clase de control)
@@ -78,7 +79,7 @@ export class TransactionManager {
             idUsuario,
             tipoOperacion,
             entidad,
-            JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+            JSON.stringify({ error: mensajeDeError(error) }),
           ]
         );
       } catch (logError) {

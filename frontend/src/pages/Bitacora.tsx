@@ -23,6 +23,9 @@ const OPERACION: Record<string, string> = {
   CREAR_USUARIO: "Usuario creado",
   EDITAR_USUARIO: "Usuario editado",
   ESTADO_USUARIO: "Estado de usuario",
+  PAGO: "Pago",
+  ANULAR_PAGO: "Pago anulado",
+  COBRO_NUEVO: "Nuevo cobro",
 };
 const nombreOperacion = (t: string) => OPERACION[t] ?? t;
 
@@ -67,6 +70,10 @@ function detalle(d: Record<string, unknown> | null) {
   if (d.estado === "INACTIVO") partes.push("inactivado");
   if (d.estado === "BLOQUEADO") partes.push("bloqueado");
   if (d.contrasena) partes.push("contraseña cambiada");
+  const METODO: Record<string, string> = { EFECTIVO: "efectivo", TARJETA: "tarjeta", TRANSFERENCIA: "transferencia" };
+  if (typeof d.metodo === "string") partes.push(METODO[d.metodo] ?? d.metodo);
+  if (typeof d.comprobante === "string") partes.push(d.comprobante);
+  if (typeof d.motivo === "string") partes.push(`motivo: ${d.motivo}`);
   if (d.reservasCanceladas) partes.push(Number(d.reservasCanceladas) === 1 ? "reserva cancelada" : `${d.reservasCanceladas} reservas canceladas`);
   return partes.join(", ");
 }

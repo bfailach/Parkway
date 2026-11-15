@@ -227,6 +227,60 @@ export interface Registro {
   valor_estimado?: number | null;
   id_reserva?: number | null;
   sede?: string;
+  // RF08: pago vigente del registro (el aprobado o, si no hay, el último)
+  id_pago?: number | null;
+  comprobante?: string | null;
+  metodo_pago?: MetodoPago | null;
+  estado_pago?: EstadoPago | null;
+  recibido?: number | null;
+  cambio?: number | null;
+  referencia?: string | null;
+}
+
+export type MetodoPago = "EFECTIVO" | "TARJETA" | "TRANSFERENCIA";
+export type EstadoPago = "PENDIENTE" | "APROBADO" | "RECHAZADO" | "ANULADO";
+
+export interface DatosPago {
+  metodo: MetodoPago;
+  recibido?: number;
+  referencia?: string;
+}
+
+/** Pago con su comprobante, como lo ve el administrador (RF08 y RF09). */
+export interface Pago {
+  id_pago: number;
+  id_registro: number;
+  metodo: MetodoPago;
+  monto: number;
+  referencia: string | null;
+  recibido: number | null;
+  cambio: number | null;
+  estado: EstadoPago;
+  fecha_pago: string;
+  motivo_anulacion: string | null;
+  fecha_anulacion: string | null;
+  anulado_por: string | null;
+  comprobante: string | null;
+  placa: string;
+  fecha_ingreso: string;
+  fecha_salida: string | null;
+  minutos: number | null;
+  valor_calculado: number;
+  codigo_espacio: string;
+  id_parqueadero: number;
+  sede: string;
+  tipo: string;
+  operador: string;
+  /** true si el registro no tiene ningún pago aprobado (se puede cobrar de nuevo). */
+  sin_pago_vigente: boolean;
+}
+
+export interface TotalesPagos {
+  porMetodo: { metodo: MetodoPago; pagos: number; total: number; anulados: number; total_anulado: number }[];
+  total: number;
+  pagos: number;
+  anulados: number;
+  totalAnulado: number;
 }
 
 export interface VehiculoCliente {
@@ -526,6 +580,9 @@ export interface FilaIngresos {
   sede: string;
   salidas: number;
   valor: number;
+  efectivo: number;
+  tarjeta: number;
+  transferencia: number;
   minutos_promedio: number | null;
 }
 export interface ReporteIngresos {
@@ -537,6 +594,7 @@ export interface ReporteIngresos {
     permanenciaPromedio: number | null;
     mejorPeriodo: { nombre: string; valor: number } | null;
     porSede: { sede: string; salidas: number; valor: number }[];
+    porMetodo: { efectivo: number; tarjeta: number; transferencia: number };
     dias: number;
   };
 }
@@ -588,6 +646,10 @@ export const api = {
     usuarios: (f: { q?: string; rol?: string; estado?: string }) => request<UsuarioAdmin[]>("GET", `/admin/usuarios?${qs(f)}`),
     crearUsuario: (d: DatosUsuario) => request<UsuarioAdmin>("POST", "/admin/usuarios", d),
     editarUsuario: (id: number, d: DatosUsuario) => request<UsuarioAdmin>("PUT", `/admin/usuarios/${id}`, d),
+    pagos: (f: { desde: string; hasta: string; idParqueadero?: number; metodo?: string; estado?: string; q?: string }) =>
+      request<{ pagos: Pago[]; totales: TotalesPagos }>("GET", `/admin/pagos?${qs(f as Record<string, string | number | undefined>)}`),
+    anularPago: (id: number, motivo: string) => request<Pago>("POST", `/admin/pagos/${id}/anular`, { motivo }),
+    cobrarDeNuevo: (idRegistro: number, pago: DatosPago) => request<Pago>("POST", `/admin/registros/${idRegistro}/pago`, pago),
     reporte: <T,>(tipo: TipoReporte, f: FiltrosReporte) =>
       request<T>("GET", `/admin/reportes/${tipo}?${qs(f as unknown as Record<string, string | number | undefined>)}`),
     descargarReporte: (tipo: TipoReporte, f: FiltrosReporte) =>
@@ -622,5 +684,5 @@ export const api = {
     ),
   ingreso: (datos: { placa?: string; idTipo: number; idParqueadero: number; idEspacio?: number; marca?: string; color?: string; generarCodigo?: boolean }) =>
     request<Registro>("POST", "/estacionamiento/ingreso", datos),
-  salida: (idRegistro: number) => request<Registro>("POST", `/estacionamiento/salida/${idRegistro}`),
+  salida: (idRegistro: number, pago: DatosPago) => request<Registro>("POST", `/estacionamiento/salida/${idRegistro}`, pago),
 };

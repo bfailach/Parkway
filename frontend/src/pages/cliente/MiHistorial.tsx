@@ -2,6 +2,7 @@ import { api } from "../../lib/api";
 import { useConsulta } from "../../lib/useConsulta";
 import { duracion, fechaCorta, horaCorta, pesos } from "../../lib/formato";
 import { Placa } from "../../components/Placa";
+import { CeldaPago } from "../../components/CeldaPago";
 
 const ESTADO_RESERVA: Record<string, string> = {
   ACTIVA: "Activa",
@@ -43,6 +44,7 @@ export function MiHistorial() {
                   <th scope="col">Ingreso</th>
                   <th scope="col">Salida</th>
                   <th scope="col">Permanencia</th>
+                  <th scope="col">Pago</th>
                   <th scope="col" className="num">Valor</th>
                 </tr>
               </thead>
@@ -55,6 +57,7 @@ export function MiHistorial() {
                     <td>{fechaCorta(r.fecha_ingreso)}</td>
                     <td>{horaCorta(r.fecha_salida)}</td>
                     <td>{duracion(r.minutos)}</td>
+                    <td><CeldaPago r={r} /></td>
                     <td className="num">{pesos(r.valor_calculado)}</td>
                   </tr>
                 ))}
@@ -62,7 +65,7 @@ export function MiHistorial() {
               {lista.length > 0 && (
                 <tfoot>
                   <tr>
-                    <th scope="row" colSpan={6}>{lista.length} {lista.length === 1 ? "visita" : "visitas"}</th>
+                    <th scope="row" colSpan={7}>{lista.length} {lista.length === 1 ? "visita" : "visitas"}</th>
                     <td className="num">{pesos(total)}</td>
                   </tr>
                 </tfoot>

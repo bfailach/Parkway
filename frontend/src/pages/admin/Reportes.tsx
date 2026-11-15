@@ -328,20 +328,23 @@ function VistaIngresos({ r }: { r: ReporteIngresos }) {
     <>
       <Indicadores
         items={[
-          { rotulo: "Total cobrado", valor: pesos(s.valor), nota: `${s.dias} ${s.dias === 1 ? "día" : "días"}` },
+          { rotulo: "Total recaudado", valor: pesos(s.valor), nota: `pagos aprobados en ${s.dias} ${s.dias === 1 ? "día" : "días"}` },
           { rotulo: "Salidas", valor: num(s.salidas, 0) },
           { rotulo: "Valor promedio por salida", valor: s.ticketPromedio != null ? pesos(Math.round(s.ticketPromedio)) : "—", nota: s.permanenciaPromedio != null ? `${duracion(Math.round(s.permanenciaPromedio))} de permanencia` : undefined },
           { rotulo: "Mejor periodo", valor: s.mejorPeriodo ? pesos(s.mejorPeriodo.valor) : "—", nota: s.mejorPeriodo?.nombre },
         ]}
       />
       <section className="bloque">
-        <h2 className="bloque-titulo">Valor cobrado por periodo</h2>
+        <h2 className="bloque-titulo">Recaudo por periodo</h2>
         <Barras
-          titulo="Valor cobrado por periodo"
+          titulo="Recaudo por periodo"
           etiquetas={periodos.map(corta)}
-          series={[{ nombre: "Valor cobrado", valores: periodos.map(total), clase: "barra-a" }]}
+          series={[{ nombre: "Recaudado", valores: periodos.map(total), clase: "barra-a" }]}
           formato={(v) => pesos(v)}
         />
+        <p className="tenue reparto-metodos">
+          Efectivo {pesos(s.porMetodo.efectivo)} · Tarjeta {pesos(s.porMetodo.tarjeta)} · Transferencia {pesos(s.porMetodo.transferencia)}
+        </p>
       </section>
       {sedes.length > 1 && (
         <dl className="hoy reporte-sedes">
@@ -357,7 +360,10 @@ function VistaIngresos({ r }: { r: ReporteIngresos }) {
               <th scope="col">Periodo</th>
               {sedes.length > 1 && <th scope="col">Sede</th>}
               <th scope="col">Salidas</th>
-              <th scope="col">Cobrado</th>
+              <th scope="col">Recaudado</th>
+              <th scope="col">Efectivo</th>
+              <th scope="col">Tarjeta</th>
+              <th scope="col">Transferencia</th>
               <th scope="col">Promedio por salida</th>
               <th scope="col">Permanencia promedio</th>
             </tr>
@@ -369,6 +375,9 @@ function VistaIngresos({ r }: { r: ReporteIngresos }) {
                 {sedes.length > 1 && <td>{f.sede}</td>}
                 <td>{f.salidas}</td>
                 <td>{pesos(f.valor)}</td>
+                <td>{pesos(f.efectivo)}</td>
+                <td>{pesos(f.tarjeta)}</td>
+                <td>{pesos(f.transferencia)}</td>
                 <td>{f.salidas ? pesos(Math.round(f.valor / f.salidas)) : "—"}</td>
                 <td>{f.minutos_promedio != null ? duracion(Math.round(f.minutos_promedio)) : "—"}</td>
               </tr>

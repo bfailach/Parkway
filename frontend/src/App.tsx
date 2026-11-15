@@ -18,6 +18,7 @@ import { Sedes } from "./pages/admin/Sedes";
 import { RedNeuronal } from "./pages/admin/RedNeuronal";
 import { Usuarios } from "./pages/admin/Usuarios";
 import { Reportes } from "./pages/admin/Reportes";
+import { Pagos } from "./pages/admin/Pagos";
 import { Notificaciones } from "./pages/cliente/Notificaciones";
 import { Notificador } from "./components/Notificador";
 
@@ -31,6 +32,7 @@ type Vista =
   | "sedes"
   | "usuarios"
   | "reportes"
+  | "pagos"
   | "red"
   | "notificaciones"
   | "mi-parqueo"
@@ -48,6 +50,7 @@ const VISTAS_PERSONAL: { id: Vista; nombre: string }[] = [
 const VISTAS_ADMIN: { id: Vista; nombre: string }[] = [
   ...VISTAS_PERSONAL,
   { id: "sedes", nombre: "Sedes" },
+  { id: "pagos", nombre: "Pagos" },
   { id: "usuarios", nombre: "Usuarios" },
   { id: "reportes", nombre: "Reportes" },
   { id: "bitacora", nombre: "Bitácora" },
@@ -196,6 +199,7 @@ export default function App() {
         {usuario.rol === "ADMINISTRADOR" && vistaActual === "sedes" && (
           <Sedes tipos={tipos} onCambio={() => setVersionSedes((n) => n + 1)} />
         )}
+        {usuario.rol === "ADMINISTRADOR" && vistaActual === "pagos" && <Pagos sedes={sedes} />}
         {usuario.rol === "ADMINISTRADOR" && vistaActual === "reportes" && <Reportes sedes={sedes} tipos={tipos} />}
         {usuario.rol === "ADMINISTRADOR" && vistaActual === "usuarios" && (
           <Usuarios idActual={usuario.id_usuario} onCambio={() => setVersionSedes((n) => n + 1)} />

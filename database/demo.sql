@@ -14,6 +14,8 @@ SET TIME ZONE 'America/Bogota';
 --   últimas 4 horas y registra salidas cerradas durante el día.
 -- - Simula 12 semanas de operación hasta ayer, con el patrón de cada sede,
 --   para los reportes, el historial y el pronóstico de Prophet.
+-- - Registra el pago y el comprobante de cada visita, con tres pagos
+--   anulados (dos ya cobrados de nuevo).
 -- - Crea dos reservas activas que vencen a los 18 minutos.
 -- Se puede ejecutar varias veces: primero limpia los movimientos. Tarda
 -- unos segundos.
@@ -23,6 +25,7 @@ BEGIN;
 
 DELETE FROM comprobante;
 DELETE FROM pago;
+SELECT setval('seq_comprobante', 1, false);
 DELETE FROM registro_estacionamiento;
 DELETE FROM reserva;
 DELETE FROM transaccion;
@@ -340,6 +343,75 @@ SELECT u.id_usuario, e.id_espacio, 'XYZ78D', now() - interval '2 hours', now() -
    AND now() - interval '2 hours' >= CURRENT_DATE;
 
 
+-- ---------------------------------------------------------------------
+-- Pagos y comprobantes (RF08) de todas las visitas cerradas
+-- Mezcla de medios: Chapinero, de oficinas, paga más con tarjeta; Zona T
+-- más en efectivo y transferencia. En efectivo, el cliente entrega el
+-- valor exacto o un billete mayor y recibe el cambio. Los comprobantes se
+-- numeran en orden de fecha.
+-- ---------------------------------------------------------------------
+CREATE TEMP TABLE demo_pago AS
+SELECT r.id_registro, r.id_operador_salida AS id_operador, r.valor_calculado AS monto, r.fecha_salida AS fecha_pago,
+       CASE WHEN x.u < CASE WHEN e.id_parqueadero = 1 THEN 0.40 ELSE 0.55 END THEN 'EFECTIVO'
+            WHEN x.u < CASE WHEN e.id_parqueadero = 1 THEN 0.85 ELSE 0.80 END THEN 'TARJETA'
+            ELSE 'TRANSFERENCIA' END AS metodo,
+       x.b
+  FROM registro_estacionamiento r
+  JOIN espacio e USING (id_espacio)
+  CROSS JOIN LATERAL (SELECT (abs(hashtext('m' || r.id_registro)) % 1000) / 1000.0 AS u,
+                             abs(hashtext('b' || r.id_registro)) % 5 AS b) x
+ WHERE r.estado = 'CERRADO' AND r.valor_calculado > 0;
+
+INSERT INTO pago (id_registro, id_operador, monto, metodo, referencia_externa, recibido, cambio, estado, fecha_pago)
+SELECT d.id_registro, d.id_operador, d.monto, d.metodo,
+       CASE d.metodo
+           WHEN 'TARJETA' THEN lpad(((d.id_registro * 7919) % 1000000)::text, 6, '0')
+           WHEN 'TRANSFERENCIA' THEN 'NQ-' || to_char(d.fecha_pago, 'YYMMDD') || '-' || lpad(d.id_registro::text, 5, '0')
+       END,
+       CASE WHEN d.metodo = 'EFECTIVO' THEN rec END,
+       CASE WHEN d.metodo = 'EFECTIVO' THEN rec - d.monto END,
+       'APROBADO', d.fecha_pago
+  FROM demo_pago d
+  CROSS JOIN LATERAL (SELECT CASE d.b
+                        WHEN 0 THEN d.monto
+                        WHEN 1 THEN ceil(d.monto / 5000) * 5000
+                        WHEN 2 THEN ceil(d.monto / 10000) * 10000
+                        WHEN 3 THEN ceil(d.monto / 20000) * 20000
+                        ELSE ceil(d.monto / 50000) * 50000 END AS rec) r
+ ORDER BY d.fecha_pago;
+
+INSERT INTO comprobante (id_pago, numero, fecha_emision, total)
+SELECT id_pago, 'PKW-' || EXTRACT(YEAR FROM fecha_pago) || '-' || lpad(nextval('seq_comprobante')::text, 6, '0'), fecha_pago, monto
+  FROM (SELECT * FROM pago ORDER BY fecha_pago, id_pago) p;
+
+-- Tres anulaciones de los últimos días (RF09). Dos se cobraron de nuevo en
+-- efectivo; la tercera queda pendiente para mostrar "Cobrar de nuevo".
+CREATE TEMP TABLE demo_anulado AS
+SELECT p.id_pago, p.id_registro, p.monto, p.fecha_pago, x.n, x.motivo
+  FROM (SELECT p.*, row_number() OVER (ORDER BY p.fecha_pago DESC) AS n
+          FROM pago p
+         WHERE p.metodo = 'TARJETA' AND p.fecha_pago < CURRENT_DATE AND p.fecha_pago >= CURRENT_DATE - 6) p
+  JOIN (VALUES (3, 'El datáfono aprobó, pero la tarjeta fue rechazada al cerrar el lote'),
+               (9, 'Se registró con tarjeta y el cliente pagó en efectivo'),
+               (15, 'Se cobró a la placa equivocada; el cliente aún debe la visita')) AS x (n, motivo)
+    ON x.n = p.n;
+
+UPDATE pago p
+   SET estado = 'ANULADO', motivo_anulacion = a.motivo, fecha_anulacion = a.fecha_pago + interval '25 minutes',
+       id_anulado_por = (SELECT id_usuario FROM usuario WHERE correo = 'admin@parkway.test')
+  FROM demo_anulado a WHERE p.id_pago = a.id_pago;
+
+WITH nuevos AS (
+    INSERT INTO pago (id_registro, id_operador, monto, metodo, recibido, cambio, estado, fecha_pago)
+    SELECT a.id_registro, (SELECT id_usuario FROM usuario WHERE correo = 'admin@parkway.test'), a.monto, 'EFECTIVO',
+           a.monto, 0, 'APROBADO', a.fecha_pago + interval '30 minutes'
+      FROM demo_anulado a WHERE a.n IN (3, 9)
+    RETURNING id_pago, monto, fecha_pago
+)
+INSERT INTO comprobante (id_pago, numero, fecha_emision, total)
+SELECT id_pago, 'PKW-' || EXTRACT(YEAR FROM fecha_pago) || '-' || lpad(nextval('seq_comprobante')::text, 6, '0'), fecha_pago, monto
+  FROM nuevos;
+
 -- Bitácora de los movimientos de demostración
 INSERT INTO transaccion (id_usuario, tipo_operacion, entidad, id_entidad, estado, fecha_inicio, fecha_fin, detalle)
 SELECT r.id_operador_ingreso, 'INGRESO', 'registro_estacionamiento', r.id_registro::text, 'CONFIRMADA',
@@ -353,9 +425,19 @@ UNION ALL
 SELECT r.id_cliente, 'RESERVA', 'reserva', r.id_reserva::text, 'CONFIRMADA',
        r.fecha_inicio, r.fecha_inicio, jsonb_build_object('placa', r.placa, 'espacio', e.codigo)
   FROM reserva r JOIN espacio e USING (id_espacio)
+UNION ALL
+SELECT p.id_operador, 'PAGO', 'pago', p.id_pago::text, 'CONFIRMADA', p.fecha_pago, p.fecha_pago,
+       jsonb_build_object('placa', r.placa, 'valor', p.monto, 'metodo', p.metodo, 'comprobante', c.numero)
+  FROM pago p JOIN registro_estacionamiento r USING (id_registro) JOIN comprobante c USING (id_pago)
+UNION ALL
+SELECT p.id_anulado_por, 'ANULAR_PAGO', 'pago', p.id_pago::text, 'CONFIRMADA', p.fecha_anulacion, p.fecha_anulacion,
+       jsonb_build_object('comprobante', c.numero, 'valor', p.monto, 'metodo', p.metodo, 'motivo', p.motivo_anulacion)
+  FROM pago p JOIN comprobante c USING (id_pago) WHERE p.estado = 'ANULADO'
 ORDER BY 6;
 
 DROP TABLE demo_vehiculo;
+DROP TABLE demo_pago;
+DROP TABLE demo_anulado;
 
 COMMIT;
 

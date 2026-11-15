@@ -76,7 +76,7 @@ export const postIngreso = asyncHandler<Req>(async (req, res) => {
 });
 
 export const postSalida = asyncHandler<Req>(async (req, res) => {
-  const registro = await estacionamientoService.registrarSalida(Number(req.params.idRegistro), req.usuario!);
+  const registro = await estacionamientoService.registrarSalida(Number(req.params.idRegistro), req.usuario!, req.body ?? {});
   res.json(registro);
 });
 

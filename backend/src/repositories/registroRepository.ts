@@ -62,7 +62,9 @@ const SELECT_DETALLE = `
          oi.nombre AS operador_ingreso, os.nombre AS operador_salida,
          t.valor_hora::float AS valor_hora, t.valor_fraccion::float AS valor_fraccion,
          t.valor_dia::float AS valor_dia,
-         r.id_reserva, p.nombre AS sede
+         r.id_reserva, p.nombre AS sede,
+         pg.id_pago, pg.comprobante, pg.metodo AS metodo_pago, pg.estado AS estado_pago,
+         pg.recibido, pg.cambio, pg.referencia
     FROM registro_estacionamiento r
     JOIN espacio e        ON e.id_espacio = r.id_espacio
     JOIN parqueadero p    ON p.id_parqueadero = e.id_parqueadero
@@ -70,7 +72,16 @@ const SELECT_DETALLE = `
     JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo
     JOIN usuario oi       ON oi.id_usuario = r.id_operador_ingreso
     LEFT JOIN usuario os  ON os.id_usuario = r.id_operador_salida
-    LEFT JOIN tarifa t    ON t.id_tarifa = r.id_tarifa`;
+    LEFT JOIN tarifa t    ON t.id_tarifa = r.id_tarifa
+    -- RF08: el pago vigente del registro (el aprobado o, si no hay, el último).
+    LEFT JOIN LATERAL (
+        SELECT x.id_pago, c.numero AS comprobante, x.metodo, x.estado,
+               x.recibido::float AS recibido, x.cambio::float AS cambio, x.referencia_externa AS referencia
+          FROM pago x LEFT JOIN comprobante c ON c.id_pago = x.id_pago
+         WHERE x.id_registro = r.id_registro
+         ORDER BY (x.estado = 'APROBADO') DESC, x.fecha_pago DESC
+         LIMIT 1
+    ) pg ON true`;
 
 export async function listarActivos(idParqueadero: number, placa?: string) {
   const { rows } = await pool.query(
@@ -175,13 +186,18 @@ export async function obtenerDetalle(idRegistro: number) {
   return rows[0] ?? null;
 }
 
-/** Totales del día para el panel: ingresos, salidas y recaudo calculado. */
+/** Totales del día para el panel: ingresos, salidas y lo recaudado en pagos aprobados. */
 export async function totalesDelDia(idParqueadero: number) {
   const { rows } = await pool.query(
     `SELECT
         count(*) FILTER (WHERE r.fecha_ingreso::date = CURRENT_DATE)::int AS ingresos_hoy,
         count(*) FILTER (WHERE r.fecha_salida::date  = CURRENT_DATE)::int AS salidas_hoy,
-        COALESCE(sum(r.valor_calculado) FILTER (WHERE r.fecha_salida::date = CURRENT_DATE), 0)::float AS recaudo_hoy
+        -- RF08: lo recaudado son los pagos aprobados de hoy, no los valores calculados.
+        (SELECT COALESCE(sum(pg.monto), 0)::float
+           FROM pago pg
+           JOIN registro_estacionamiento rp ON rp.id_registro = pg.id_registro
+           JOIN espacio ep ON ep.id_espacio = rp.id_espacio
+          WHERE ep.id_parqueadero = $1 AND pg.estado = 'APROBADO' AND pg.fecha_pago::date = CURRENT_DATE) AS recaudo_hoy
        FROM registro_estacionamiento r
        JOIN espacio e ON e.id_espacio = r.id_espacio
       WHERE e.id_parqueadero = $1`,

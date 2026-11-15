@@ -34,8 +34,13 @@ psql $env:DB -f database/demo.sql
 
 La URL ya incluye la contraseña, así que estos comandos no la piden.
 
-Si la base ya existía antes de la actualización en tiempo real, no hace
-falta recrearla: basta con `psql $env:DB -f database/migracion_tiempo_real.sql`.
+Si la base ya existía, no hace falta recrearla. Ejecuta las migraciones de
+lo que se agregó después:
+
+```powershell
+psql $env:DB -f database/migracion_tiempo_real.sql   # tiempo real (RF12)
+psql $env:DB -f database/migracion_pagos.sql         # pagos y anulaciones (RF08, RF09)
+```
 Render admite WebSocket sin configuración adicional; el aviso llega por
 `wss://` al mismo dominio del servicio.
 

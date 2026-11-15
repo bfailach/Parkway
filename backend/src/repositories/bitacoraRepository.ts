@@ -1,3 +1,4 @@
+import { PoolClient } from "pg";
 import { pool } from "../db/pool";
 import type { FiltrosBitacora } from "../validators/bitacoraValidator";
 
@@ -43,4 +44,20 @@ export async function opciones() {
     entidades: entidades.rows.map((r) => r.entidad as string),
     usuarios: usuarios.rows as { id_usuario: number; nombre: string; rol: string }[],
   };
+}
+
+/**
+ * Agrega una fila a la bitácora dentro de una transacción ya abierta, para
+ * operaciones que ocurren junto con otra: el pago que acompaña a la salida.
+ * Si la transacción se revierte, esta fila se revierte con ella.
+ */
+export async function registrar(
+  client: PoolClient,
+  f: { idUsuario: number; tipo: string; entidad: string; idEntidad: string | number; detalle: Record<string, unknown> }
+) {
+  await client.query(
+    `INSERT INTO transaccion (id_usuario, tipo_operacion, entidad, id_entidad, estado, fecha_fin, detalle)
+     VALUES ($1, $2, $3, $4, 'CONFIRMADA', now(), $5)`,
+    [f.idUsuario, f.tipo, f.entidad, String(f.idEntidad), JSON.stringify(f.detalle)]
+  );
 }

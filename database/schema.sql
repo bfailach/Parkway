@@ -28,6 +28,7 @@ DROP TABLE IF EXISTS tarifa CASCADE;
 DROP TABLE IF EXISTS horario CASCADE;
 DROP TABLE IF EXISTS operador_parqueadero CASCADE;
 DROP SEQUENCE IF EXISTS seq_bicicleta;
+DROP SEQUENCE IF EXISTS seq_comprobante;
 DROP TABLE IF EXISTS espacio CASCADE;
 DROP TABLE IF EXISTS vehiculo CASCADE;
 DROP TABLE IF EXISTS parqueadero CASCADE;
@@ -123,6 +124,8 @@ CREATE INDEX idx_vehiculo_cliente ON vehiculo (id_cliente);
 -- Las bicicletas no tienen placa: al registrarlas reciben un código único
 -- BICI001, BICI002... tomado de esta secuencia.
 CREATE SEQUENCE seq_bicicleta START 1;
+-- Número consecutivo de los comprobantes: PKW-2026-000001.
+CREATE SEQUENCE seq_comprobante START 1;
 
 -- =====================================================================
 -- Tabla: espacio
@@ -232,13 +235,31 @@ CREATE TABLE pago (
     monto               NUMERIC(10, 2) NOT NULL CHECK (monto > 0),
     metodo              VARCHAR(15) NOT NULL
         CHECK (metodo IN ('EFECTIVO', 'TARJETA', 'TRANSFERENCIA')),
-    referencia_externa  VARCHAR(60) UNIQUE,
+    -- Número de aprobación del datáfono o referencia de la transferencia.
+    -- Único por medio de pago: el mismo pago externo no se registra dos
+    -- veces (idempotencia, RF08).
+    referencia_externa  VARCHAR(60),
+    -- Solo efectivo: lo que entregó el cliente y el cambio.
+    recibido            NUMERIC(10, 2) NULL,
+    cambio              NUMERIC(10, 2) NULL,
     estado              VARCHAR(12) NOT NULL DEFAULT 'PENDIENTE'
         CHECK (estado IN ('PENDIENTE', 'APROBADO', 'RECHAZADO', 'ANULADO')),
-    fecha_pago          TIMESTAMP NOT NULL DEFAULT now()
+    fecha_pago          TIMESTAMP NOT NULL DEFAULT now(),
+    -- Anulación (RF09): el pago no se borra; queda ANULADO con su motivo.
+    motivo_anulacion    VARCHAR(300) NULL,
+    id_anulado_por      INT NULL REFERENCES usuario (id_usuario),
+    fecha_anulacion     TIMESTAMP NULL,
+    CONSTRAINT uq_pago_referencia UNIQUE (metodo, referencia_externa),
+    CHECK (metodo = 'EFECTIVO' OR referencia_externa IS NOT NULL),
+    CHECK (recibido IS NULL OR recibido >= monto),
+    CHECK ((estado = 'ANULADO') = (fecha_anulacion IS NOT NULL))
 );
 
 CREATE INDEX idx_pago_registro ON pago (id_registro);
+CREATE INDEX idx_pago_fecha ON pago (fecha_pago);
+-- Un registro tiene a lo sumo un pago aprobado. Si se anula, se puede
+-- cobrar de nuevo con otro pago.
+CREATE UNIQUE INDEX ux_pago_aprobado_por_registro ON pago (id_registro) WHERE estado = 'APROBADO';
 
 -- =====================================================================
 -- Tabla: comprobante

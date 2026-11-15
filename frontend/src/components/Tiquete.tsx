@@ -1,4 +1,6 @@
-import { Registro } from "../lib/api";
+import { MetodoPago, Registro } from "../lib/api";
+
+const NOMBRE_METODO: Record<MetodoPago, string> = { EFECTIVO: "Efectivo", TARJETA: "Tarjeta", TRANSFERENCIA: "Transferencia" };
 import { duracion, fechaCorta, nombreTipo, pesos } from "../lib/formato";
 import { Placa } from "./Placa";
 
@@ -32,9 +34,18 @@ export function Tiquete({ registro, sede }: { registro: Registro; sede: string }
       </dl>
       {salida && (
         <div className="tiquete-total">
-          <span>Total a pagar</span>
+          <span>{registro.estado_pago === "APROBADO" ? "Total pagado" : "Total a pagar"}</span>
           <strong>{pesos(registro.valor_calculado)}</strong>
         </div>
+      )}
+      {salida && registro.comprobante && (
+        <dl className="tiquete-datos tiquete-pago">
+          <div><dt>Comprobante</dt><dd className={registro.estado_pago === "ANULADO" ? "tachado" : undefined}>{registro.comprobante}</dd></div>
+          {registro.metodo_pago && <div><dt>Medio de pago</dt><dd>{NOMBRE_METODO[registro.metodo_pago]}{registro.referencia ? ` · ${registro.referencia}` : ""}</dd></div>}
+          {registro.metodo_pago === "EFECTIVO" && registro.recibido != null && <div><dt>Recibido</dt><dd>{pesos(registro.recibido)}</dd></div>}
+          {registro.metodo_pago === "EFECTIVO" && registro.cambio != null && registro.cambio > 0 && <div><dt>Cambio</dt><dd>{pesos(registro.cambio)}</dd></div>}
+          {registro.estado_pago === "ANULADO" && <div><dt>Estado</dt><dd className="campo-error">Pago anulado</dd></div>}
+        </dl>
       )}
     </article>
   );

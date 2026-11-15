@@ -159,6 +159,11 @@ export async function ingresos(f: FiltrosReporte) {
   const salidas = filas.reduce((a, r) => a + r.salidas, 0);
   const valor = filas.reduce((a, r) => a + r.valor, 0);
   const minutos = filas.reduce((a, r) => a + (r.minutos_promedio ?? 0) * r.salidas, 0);
+  const porMetodo = {
+    efectivo: filas.reduce((a, r) => a + r.efectivo, 0),
+    tarjeta: filas.reduce((a, r) => a + r.tarjeta, 0),
+    transferencia: filas.reduce((a, r) => a + r.transferencia, 0),
+  };
   const porPeriodo = new Map<string, number>();
   for (const r of filas) porPeriodo.set(r.periodo, (porPeriodo.get(r.periodo) ?? 0) + r.valor);
   const mejor = [...porPeriodo].reduce<[string, number] | null>((a, x) => (!a || x[1] > a[1] ? x : a), null);
@@ -178,6 +183,7 @@ export async function ingresos(f: FiltrosReporte) {
       permanenciaPromedio: salidas ? minutos / salidas : null,
       mejorPeriodo: mejor && mejor[1] > 0 ? { nombre: nombrePeriodo(mejor[0], f.agrupacion), valor: mejor[1] } : null,
       porSede: [...porSede.values()],
+      porMetodo,
       dias: diasEntre(f.desde, f.hasta),
     },
   };
@@ -189,6 +195,9 @@ const COLUMNAS_INGRESOS: ColumnaCsv<FilaIngresos & { nombre: string }>[] = [
   { titulo: "Sede", valor: (f) => f.sede },
   { titulo: "Salidas", valor: (f) => f.salidas },
   { titulo: "Valor cobrado", valor: (f) => f.valor, decimales: 0 },
+  { titulo: "Efectivo", valor: (f) => f.efectivo, decimales: 0 },
+  { titulo: "Tarjeta", valor: (f) => f.tarjeta, decimales: 0 },
+  { titulo: "Transferencia", valor: (f) => f.transferencia, decimales: 0 },
   { titulo: "Valor promedio por salida", valor: (f) => (f.salidas ? f.valor / f.salidas : null), decimales: 0 },
   { titulo: "Permanencia promedio (min)", valor: (f) => f.minutos_promedio, decimales: 0 },
 ];

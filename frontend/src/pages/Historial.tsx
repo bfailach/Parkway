@@ -5,6 +5,7 @@ import { duracion, fechaCorta, nombreTipo, pesos } from "../lib/formato";
 import { Placa } from "../components/Placa";
 import { Selector } from "../components/Selector";
 import { COLORES, MARCAS } from "../components/CampoOpciones";
+import { CeldaPago } from "../components/CeldaPago";
 
 const hoy = (dias = 0) => {
   const d = new Date(Date.now() - dias * 86400000);
@@ -275,6 +276,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
                 <th scope="col">Ingreso</th>
                 <th scope="col">Salida</th>
                 <th scope="col">Permanencia</th>
+                <th scope="col">Comprobante</th>
                 <th scope="col" className="num">Valor</th>
               </tr>
             </thead>
@@ -290,6 +292,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
                   <td>{fechaCorta(r.fecha_ingreso)}</td>
                   <td>{fechaCorta(r.fecha_salida)}</td>
                   <td>{duracion(r.minutos)}</td>
+                  <td><CeldaPago r={r} /></td>
                   <td className="num">{pesos(r.valor_calculado)}</td>
                 </tr>
               ))}
