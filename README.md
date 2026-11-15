@@ -145,8 +145,10 @@ barra del navegador.
   app** de la portada, o el ícono del celular en la barra del panel, abre el
   diálogo de instalación. También funciona desde el menú del navegador:
   "Instalar aplicación" o "Agregar a la pantalla principal".
-- **iPhone (Safari):** el mismo botón explica los pasos: Compartir, Agregar
-  a inicio.
+- **iPhone (Safari) y Firefox en Android:** estos navegadores no avisan que
+  la app se puede instalar, así que el mismo botón explica los pasos: en
+  Safari, Compartir y Agregar a inicio; en Firefox, el menú de tres puntos y
+  Agregar a la pantalla de inicio.
 
 La pieza que lo hace posible es `frontend/public/manifest.webmanifest`
 (nombre, íconos y colores) y `frontend/public/sw.js`, un *service worker*

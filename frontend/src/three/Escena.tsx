@@ -1,4 +1,4 @@
-import { MutableRefObject, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Component, MutableRefObject, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import { Bloom, EffectComposer, N8AO } from "@react-three/postprocessing";
@@ -8,7 +8,7 @@ import { alturaPiso, distribuir, Distribucion, EspacioPlano, Plaza } from "./lay
 import { Maqueta } from "./Estructura";
 import { Plazas } from "./Plazas";
 import { Vehiculo } from "./Vehiculo";
-import { ControlEscena, PLACA_HISTORIA, plazaAsignada } from "./control";
+import { ControlEscena, PLACA_HISTORIA, plazaAsignada, capacidades3D } from "./control";
 import { PALETA_CLARA, PALETA_OSCURA, PaletaEscena, TemaEscena, usePaleta } from "./tema";
 import { rutaEntrada, TraficoContexto, ubicar, useTrafico } from "./rutas";
 import { movimientoReducido, useApariencia } from "../lib/apariencia";
@@ -298,10 +298,13 @@ function Contenido({
       {modo !== "panel" && <Rig control={control} plazas={dist.plazas} dist={dist} />}
       {modo === "panel" && <CamaraPanel d={dist} pisoVisible={pisoVisible} />}
       {/* Oclusión ambiental: el sombreado suave entre piezas que hace que se vea como maqueta. */}
-      <EffectComposer multisampling={0} enableNormalPass={false}>
-        <N8AO halfRes aoRadius={2.2} distanceFalloff={1} intensity={paleta.claro ? 2.6 : 2} color={paleta.claro ? "#3d362c" : "#000000"} />
-        {paleta.claro ? <></> : <Bloom intensity={0.45} luminanceThreshold={0.8} luminanceSmoothing={0.2} mipmapBlur />}
-      </EffectComposer>
+      {/* Solo si el dispositivo tiene texturas de punto flotante; si no, la escena se ve sin estos efectos. */}
+      {EFECTOS && (
+        <EffectComposer multisampling={0} enableNormalPass={false}>
+          <N8AO halfRes aoRadius={2.2} distanceFalloff={1} intensity={paleta.claro ? 2.6 : 2} color={paleta.claro ? "#3d362c" : "#000000"} />
+          {paleta.claro ? <></> : <Bloom intensity={0.45} luminanceThreshold={0.8} luminanceSmoothing={0.2} mipmapBlur />}
+        </EffectComposer>
+      )}
     </TraficoContexto.Provider>
   );
 }
@@ -316,6 +319,25 @@ export interface EscenaProps {
   pisoVisible?: number | null;
   onSeleccionar?: (p: Plaza) => void;
   className?: string;
+}
+
+const EFECTOS = capacidades3D().efectos;
+
+/**
+ * Si la escena falla al dibujarse (un navegador sin las funciones gráficas
+ * necesarias), se muestra el fondo sin maqueta en lugar de tumbar la página.
+ */
+class RespaldoEscena extends Component<{ className?: string; children: ReactNode }, { fallo: boolean }> {
+  state = { fallo: false };
+  static getDerivedStateFromError() {
+    return { fallo: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.warn("Parkway: la escena 3D no se pudo dibujar en este navegador.", error);
+  }
+  render() {
+    return this.state.fallo ? <div className={`${this.props.className ?? ""} escena-sin-3d`} /> : this.props.children;
+  }
 }
 
 let fuentesListas: Promise<unknown> | null = null;
@@ -343,6 +365,7 @@ export default function Escena({ espacios, control, resaltarTipo, resaltarId, pi
   }, []);
   if (!listo) return <div className={className} />;
   return (
+    <RespaldoEscena className={className}>
     <div className={className} aria-hidden={control.current.modo !== "panel"}>
       <Canvas
         key={intento}
@@ -375,5 +398,6 @@ export default function Escena({ espacios, control, resaltarTipo, resaltarId, pi
         </TemaEscena.Provider>
       </Canvas>
     </div>
+    </RespaldoEscena>
   );
 }

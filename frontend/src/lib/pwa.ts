@@ -27,6 +27,16 @@ function esPantallaCompleta() {
 /** iPhone y iPad no tienen botón de instalar: se agrega desde "Compartir". */
 export const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
+/**
+ * Firefox en Android instala la app desde su menú, pero nunca avisa que se
+ * puede instalar (no tiene beforeinstallprompt). En computador no la instala.
+ */
+export const esFirefoxAndroid = () => /android/i.test(navigator.userAgent) && /firefox/i.test(navigator.userAgent);
+
+/** Navegador en el que la app se instala a mano, con instrucciones. */
+export type InstalacionManual = "ios" | "firefox" | null;
+const instalacionManual = (): InstalacionManual => (esIOS() ? "ios" : esFirefoxAndroid() ? "firefox" : null);
+
 if (typeof window !== "undefined") {
   // Se escucha desde el arranque: Chrome lo dispara una sola vez, muy pronto.
   window.addEventListener("beforeinstallprompt", (e) => {
@@ -65,14 +75,14 @@ export interface EstadoInstalacion {
   instalada: boolean;
   /** El navegador ofrece instalarla con un clic (Chrome, Edge, Android). */
   disponible: boolean;
-  /** iPhone o iPad: se muestran las instrucciones de "Agregar a inicio". */
-  ios: boolean;
+  /** iPhone o Firefox en Android: se muestran las instrucciones para instalarla a mano. */
+  manual: InstalacionManual;
 }
 
-let instantanea: EstadoInstalacion = { instalada: false, disponible: false, ios: false };
+let instantanea: EstadoInstalacion = { instalada: false, disponible: false, manual: null };
 function leer(): EstadoInstalacion {
-  const nuevo = { instalada, disponible: !!eventoInstalar, ios: typeof navigator !== "undefined" && esIOS() };
-  if (nuevo.instalada !== instantanea.instalada || nuevo.disponible !== instantanea.disponible || nuevo.ios !== instantanea.ios) {
+  const nuevo = { instalada, disponible: !!eventoInstalar, manual: typeof navigator !== "undefined" ? instalacionManual() : null };
+  if (nuevo.instalada !== instantanea.instalada || nuevo.disponible !== instantanea.disponible || nuevo.manual !== instantanea.manual) {
     instantanea = nuevo;
   }
   return instantanea;

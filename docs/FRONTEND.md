@@ -369,6 +369,18 @@ así que la página aparece primero. Si el equipo no soporta WebGL se muestra el
 plano 2D, y si el sistema tiene activada la opción de reducir movimiento la
 cámara no se mueve sola.
 
+
+**Compatibilidad.** La escena usa three.js, que necesita WebGL2. Al
+arrancar, `three/control.ts` revisa qué ofrece el navegador:
+
+- **Sin WebGL2** (navegadores o teléfonos muy antiguos): no se monta la
+  escena y la página muestra un fondo degradado en su lugar.
+- **WebGL2 sin texturas de punto flotante** (Firefox en muchos teléfonos
+  Android): la maqueta se dibuja y se anima sin el sombreado suave ni el
+  brillo, que son los efectos que las necesitan.
+- **Si la escena falla al dibujarse** por cualquier otro motivo, un límite de
+  errores (`RespaldoEscena`) la cambia por el fondo, sin tumbar el resto de
+  la página.
 ## Organización del código
 
 ```

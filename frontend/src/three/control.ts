@@ -27,22 +27,42 @@ export function plazaAsignada(plazas: Plaza[]): Plaza | undefined {
   return autos.find((p) => p.estado === "LIBRE") ?? autos[Math.floor(autos.length / 2)];
 }
 
-let webglDisponible: boolean | null = null;
+export interface Capacidades3D {
+  /** three.js necesita WebGL2: sin él no se dibuja la escena. */
+  webgl2: boolean;
+  /**
+   * Texturas de punto flotante para los efectos (sombreado suave y brillo).
+   * Firefox en muchos celulares Android ofrece WebGL2 sin ellas: ahí la
+   * escena se dibuja sin efectos en lugar de quedar en negro.
+   */
+  efectos: boolean;
+}
+
+let capacidades: Capacidades3D | null = null;
 
 /**
- * Indica si el navegador puede dibujar 3D. La prueba se hace una sola vez y
- * el contexto de prueba se libera: los navegadores admiten pocos contextos
+ * Qué puede dibujar el navegador. La prueba se hace una sola vez y el
+ * contexto de prueba se libera: los navegadores admiten pocos contextos
  * WebGL a la vez y, si se acumulan, apagan los más antiguos.
  */
-export function soportaWebGL() {
-  if (webglDisponible !== null) return webglDisponible;
+export function capacidades3D(): Capacidades3D {
+  if (capacidades) return capacidades;
+  capacidades = { webgl2: false, efectos: false };
   try {
     const c = document.createElement("canvas");
-    const gl = (c.getContext("webgl2") || c.getContext("webgl")) as WebGLRenderingContext | null;
-    webglDisponible = !!gl;
-    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    const gl = c.getContext("webgl2") as WebGL2RenderingContext | null;
+    if (gl) {
+      const flotante = !!(gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float"));
+      capacidades = { webgl2: true, efectos: flotante };
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+    }
   } catch {
-    webglDisponible = false;
+    // Sin WebGL: las páginas muestran el fondo sin maqueta.
   }
-  return webglDisponible;
+  return capacidades;
+}
+
+/** Indica si el navegador puede dibujar la escena 3D (necesita WebGL2). */
+export function soportaWebGL() {
+  return capacidades3D().webgl2;
 }
