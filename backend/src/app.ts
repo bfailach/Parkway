@@ -7,6 +7,7 @@ import catalogoRoutes from "./routes/catalogoRoutes";
 import estacionamientoRoutes from "./routes/estacionamientoRoutes";
 import clienteRoutes from "./routes/clienteRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import { getPronostico } from "./controllers/catalogoController";
 import { errorHandler } from "./middlewares/errorHandler";
 
 /** Configuración de la aplicación Express (separada de index.ts para poder probarla). */
@@ -24,6 +25,8 @@ app.use("/api/catalogos", catalogoRoutes);
 app.use("/api/estacionamiento", estacionamientoRoutes);
 app.use("/api/cliente", clienteRoutes);
 app.use("/api/admin", adminRoutes);
+// Ruta del documento maestro (sección 13) para el pronóstico de 24 horas.
+app.get("/api/prediccion", getPronostico);
 
 app.use("/api", (_req, res) => res.status(404).json({ error: "Ruta no encontrada" }));
 app.use(errorHandler);

@@ -55,6 +55,17 @@ export const getPrediccion = asyncHandler(async (req, res) => {
   res.json(p);
 });
 
+/**
+ * Ocupación esperada en cada una de las próximas 24 horas, con su rango de
+ * confianza, calculada por Prophet (RF15, sección 13). Acepta la sede en la
+ * ruta o como ?idParqueadero=1.
+ */
+export const getPronostico = asyncHandler(async (req, res) => {
+  const id = Number(req.params.id ?? req.query.idParqueadero);
+  if (!Number.isInteger(id) || !(await catalogoRepository.existeParqueadero(id))) throw notFound("La sede no existe");
+  res.json(await prediccionService.pronostico(id));
+});
+
 /** Pesos y métricas de la red, para el simulador de la página "Red neuronal". */
 export const getRed = asyncHandler(async (_req, res) => {
   res.json({ ...pesosRed, umbralAlerta: prediccionService.UMBRAL_ALERTA });

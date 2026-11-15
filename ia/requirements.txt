@@ -1,2 +1,5 @@
 numpy>=1.24
 matplotlib>=3.7  # opcional, solo para la gráfica
+prophet>=1.1.5        # pronóstico de 24 horas (pronostico_prophet.py)
+pandas>=2.0
+psycopg[binary]>=3.1  # lee los registros y guarda el pronóstico en PostgreSQL

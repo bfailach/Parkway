@@ -134,6 +134,17 @@ en cada plaza la placa o el código de bicicleta del vehículo; al hacer clic se
 abre el detalle con el vehículo, el dueño, la hora de ingreso, el valor hasta
 ahora y el botón para registrar la salida.
 
+Debajo de los cupos está la ocupación esperada en una hora, de la red
+neuronal, y la gráfica de las **próximas 24 horas** (RF15): la línea es la
+ocupación esperada, la franja es el rango de confianza del 80 %, la línea
+punteada es lo que estimó Prophet solo con el calendario y las horas
+sombreadas son las de la sede cerrada. Al pasar el cursor o tocar una hora
+muestra su valor. Arriba resume la hora con más cupo, la hora pico y las
+horas en que estará casi llena. Para lectores de pantalla, los mismos datos
+van en una tabla oculta.
+
+![Pronóstico de 24 horas](capturas/44_pronostico.jpg)
+
 | Disponibilidad | Salida desde el plano 3D | Salida registrada |
 | --- | --- | --- |
 | ![Disponibilidad](capturas/18_disponibilidad.jpg) | ![Salida 3D](capturas/19_salida_desde_3d.jpg) | ![Salida](capturas/20_salida.jpg) |
@@ -331,7 +342,7 @@ frontend/src/
 │   ├── Bitacora.tsx        # Bitácora (administrador)
 │   ├── admin/              # Sedes, Usuarios y Red neuronal
 │   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial, Notificaciones
-├── components/             # Placa, Tiquete, Selector, CampoOpciones, FiltroPisos, Apariencia, Notificador, diálogos
+├── components/             # PronosticoDia, Placa, Tiquete, Selector, CampoOpciones, FiltroPisos, Apariencia, Notificador, diálogos
 ├── three/                  # Escena 3D
 ├── lib/
 │   ├── api.ts              # Cliente HTTP y tipos de la API

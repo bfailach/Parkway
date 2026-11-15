@@ -39,6 +39,27 @@ falta recrearla: basta con `psql $env:DB -f database/migracion_tiempo_real.sql`.
 Render admite WebSocket sin configuración adicional; el aviso llega por
 `wss://` al mismo dominio del servicio.
 
+## Pronóstico de cada noche (RF15)
+
+El pronóstico de las próximas 24 horas lo calcula Prophet en GitHub Actions,
+porque el servicio de Render solo corre Node.js. Se configura una vez:
+
+1. En Render, copia la **External Database URL** de `parkway-db`.
+2. En GitHub, abre el repositorio y ve a **Settings > Secrets and variables >
+   Actions > New repository secret**. Nombre: `DATABASE_URL`. Valor: la URL.
+3. En la pestaña **Actions**, abre **Pronóstico de ocupación** y pulsa
+   **Run workflow** para calcularlo la primera vez. Debe terminar en verde y
+   mostrar el MAPE de cada sede.
+
+Desde ahí corre solo cada noche a las 2:17 a. m. Si falta el secreto, el
+flujo termina con un aviso y la aplicación muestra que el pronóstico no está
+listo; nada más se afecta. GitHub pausa los flujos programados de un
+repositorio sin actividad durante 60 días: si eso pasa, actívalo de nuevo
+desde la misma pestaña.
+
+También se puede calcular desde tu computador con
+`$env:DATABASE_URL = "..."; python ia/pronostico_prophet.py`.
+
 ## 3. Probar
 
 Abre la URL del servicio, por ejemplo `https://parkway.onrender.com`, y entra

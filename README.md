@@ -59,7 +59,7 @@ El detalle de cada pantalla, con capturas, está en
 | Notificaciones configurables de tiempo, valor y vencimiento de la reserva | RF03 | Implementado |
 | Gestión de usuarios: crear, consultar, editar e inactivar clientes, operadores y administradores, con turno y sedes | RF02 | Implementado |
 | Pagos y comprobantes, anulación | RF08, RF09 | Siguiente fase |
-| Predicción de ocupación con IA | RF15 | Red neuronal 6-8-1 para la próxima hora (sección 14). Falta el horizonte de varias horas con rango de confianza |
+| Predicción de ocupación con IA: próximas 24 horas con rango de confianza (Prophet) y la hora siguiente corregida por una red neuronal | RF15 | Implementado |
 
 ## Tecnologías
 
@@ -235,6 +235,50 @@ datos con `psql -U postgres -d parkway -f database/migracion_tiempo_real.sql`.
 Si falta, el backend lo indica al arrancar y las pantallas siguen
 consultando cada pocos segundos.
 
+## Pronóstico de las próximas 24 horas (RF15)
+
+Prophet estima la ocupación de cada sede para cada una de las próximas horas,
+con un rango de confianza del 80 % (sección 13 del documento maestro). Usa la
+estacionalidad diaria (una curva para entre semana y otra para fines de
+semana y festivos), la semanal y los festivos de Colombia.
+
+```bash
+pip install -r ia/requirements.txt
+python ia/pronostico_prophet.py      # todas las sedes; --sede 1 para una
+```
+
+El script arma la serie de ocupación por hora de las últimas 12 semanas con
+los registros de entrada y salida. Si una sede todavía no tiene ocho semanas
+de registros, el mínimo de la ficha técnica, usa una serie simulada con el
+mismo patrón de la red neuronal y lo deja anotado. Evalúa el modelo con las
+dos últimas semanas reservadas y guarda en `prediccion_ocupacion` las
+próximas 48 horas (modelo `PROPHET`), así el cálculo de las 2:00 a. m. sirve
+el día completo. Las métricas quedan en `modelo_pronostico`.
+
+Resultado actual con datos simulados: MAPE de 16,1 % en Sede Chapinero, que
+cumple la meta de menos de 20 %, y de 21,1 % en Sede Zona T, que no la
+cumple. El error medio es de 4 a 5 puntos porcentuales y cerca del 80 % de
+los valores reales cae dentro del rango. El MAPE no cuenta las horas con
+menos de 10 % de ocupación, porque dividir por casi cero lo infla.
+
+**Cada noche.** El flujo `.github/workflows/pronostico.yml` lo ejecuta en
+GitHub Actions a las 2:17 a. m. contra la base de producción. Necesita el
+secreto `DATABASE_URL` (ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)).
+
+**Prophet y la red trabajan juntos** (sección 14.1). Prophet solo conoce el
+calendario y el histórico; la red sabe cómo está la sede ahora. La API toma
+la estimación de la red para la hora siguiente y suma la diferencia a la
+curva de Prophet, una diferencia que pierde 30 % de peso cada hora. Así un
+domingo con la sede llena no aparece vacío solo porque los domingos suelen
+estarlo.
+
+En **Disponibilidad** se ve la gráfica: la ocupación esperada, el rango de
+confianza, la curva original de Prophet y las horas en que la sede está
+cerrada. Arriba resume la hora con más cupo en las próximas 12 horas, la
+hora pico y cuántas horas estará casi llena.
+
+![Pronóstico de 24 horas](docs/capturas/44_pronostico.jpg)
+
 ## Red neuronal de ocupación
 
 Un perceptrón multicapa 6-8-1 estima qué porcentaje de la sede estará ocupado
@@ -271,7 +315,7 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 45 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, tiempo real y red neuronal
+npm test                                   # 50 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, tiempo real, pronóstico y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -288,9 +332,11 @@ Parkway/
 │   ├── seed.sql            # Usuarios, dos sedes (una de dos pisos), 71 espacios y tarifas
 │   ├── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
 │   ├── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
-│   └── migracion_tiempo_real.sql # Agrega el aviso de cambios (RF12) a una base existente
+│   ├── migracion_tiempo_real.sql # Agrega el aviso de cambios (RF12) a una base existente
+│   └── migracion_pronostico.sql  # Agrega las tablas del pronóstico (RF15); el script la ejecuta solo
 ├── ia/
-│   └── entrenar_red.py     # Entrena la red neuronal 6-8-1 y exporta los pesos
+│   ├── entrenar_red.py     # Entrena la red neuronal 6-8-1 y exporta los pesos
+│   └── pronostico_prophet.py # Pronóstico de 24 horas con Prophet, guardado en la base
 ├── backend/
 │   ├── src/
 │   │   ├── routes/         # Rutas Express por módulo (auth, catálogos, estacionamiento, cliente, admin)
@@ -334,6 +380,8 @@ Parkway/
 | GET | `/api/catalogos/tipos-vehiculo?idParqueadero=1` | Público | Tipos de vehículo con la tarifa vigente de la sede |
 | GET | `/api/catalogos/parqueaderos/:id/horario` | Público | Horario de la sede y si está abierta ahora |
 | GET | `/api/catalogos/parqueaderos/:id/prediccion?idTipo=1` | Público | Ocupación esperada en una hora (red neuronal) y sede alternativa si pasa del 90 % |
+| GET | `/api/catalogos/parqueaderos/:id/pronostico` | Público | Ocupación esperada en cada una de las próximas 24 horas con su rango de confianza, la mejor hora y la hora pico |
+| GET | `/api/prediccion?idParqueadero=1` | Público | Lo mismo, con la ruta del documento maestro (sección 13) |
 | GET | `/api/catalogos/red-neuronal` | Público | Pesos y métricas de la red, para el simulador |
 | GET | `/api/estacionamiento/resumen?idParqueadero=1` | Público | Cupos por tipo de vehículo |
 | GET | `/api/estacionamiento/disponibilidad?idParqueadero=1&idTipo=1` | Público | Espacios libres |
@@ -381,6 +429,7 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 - Pagos con pasarela, comprobantes y anulación (RF08, RF09).
 - Reportes de ocupación por franja, rotación por espacio e ingresos por
   periodo, exportables a CSV (RF13).
-- Predicción para las próximas horas con rango de confianza (RF15).
+- Pronóstico por tipo de vehículo y con registros reales cuando se junten
+  ocho semanas de operación (RF15).
 - Medición de cobertura de pruebas (RNF07), prueba de carga con 100 usuarios
   (RNF02) y prueba de concurrencia con 50 ingresos sobre 10 espacios (RNF03).

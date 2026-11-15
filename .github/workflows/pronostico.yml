@@ -1,0 +1,47 @@
+# Pronóstico de ocupación de las próximas horas con Prophet (RF15).
+# Corre cada noche a las 2:17 a. m. de Bogotá (7:17 UTC) contra la base de
+# datos de producción y guarda el pronóstico en prediccion_ocupacion.
+# También se puede ejecutar a mano: Actions > Pronóstico de ocupación > Run workflow.
+#
+# Requiere el secreto DATABASE_URL del repositorio con la External Database
+# URL de Render (Settings > Secrets and variables > Actions). Ver docs/DESPLIEGUE.md.
+name: Pronóstico de ocupación
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pronostico
+  cancel-in-progress: false
+
+jobs:
+  pronostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ia/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r ia/requirements.txt
+
+      - name: Calcular y guardar el pronóstico
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_SSL: "true"
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::Falta el secreto DATABASE_URL. Configúrelo para calcular el pronóstico (docs/DESPLIEGUE.md)."
+            exit 0
+          fi
+          python ia/pronostico_prophet.py

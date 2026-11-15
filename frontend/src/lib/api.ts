@@ -397,6 +397,42 @@ export interface Prediccion {
   alternativa?: { idParqueadero: number; nombre: string; ocupacionEstimada: number } | null;
 }
 
+/** Ocupación esperada en cada una de las próximas 24 horas (RF15, Prophet). */
+export interface HoraPronostico {
+  fecha: string;
+  hora: string;
+  estimada: number;
+  prophet?: number;
+  inferior: number;
+  superior: number;
+  abierta: boolean;
+}
+
+export interface Pronostico {
+  idParqueadero: number;
+  disponible: boolean;
+  mensaje?: string;
+  horas: HoraPronostico[];
+  resumen: {
+    mejorHora: { hora: string; estimada: number } | null;
+    pico: { hora: string; estimada: number } | null;
+    horasCriticas: number;
+  } | null;
+  ocupacionActual: number | null;
+  redProximaHora: { hora: string; estimada: number } | null;
+  corregida: boolean;
+  modelo: {
+    nombre: string;
+    entrenado: string;
+    fuente: "REAL" | "SIMULADA";
+    mape: number | null;
+    maePp: number | null;
+    cobertura: number | null;
+    intervalo: number;
+    desactualizado: boolean;
+  } | null;
+}
+
 export interface RedNeuronal {
   modelo: string;
   W1: number[][];
@@ -451,6 +487,7 @@ export const api = {
   horario: (id: number) => request<EstadoHorario>("GET", `/catalogos/parqueaderos/${id}/horario`),
   prediccion: (id: number, idTipo?: number) =>
     request<Prediccion>("GET", `/catalogos/parqueaderos/${id}/prediccion?${qs({ idTipo })}`),
+  pronostico: (id: number) => request<Pronostico>("GET", `/catalogos/parqueaderos/${id}/pronostico`),
   redNeuronal: () => request<RedNeuronal>("GET", "/catalogos/red-neuronal"),
   tiposVehiculo: (idParqueadero?: number) => request<TipoVehiculo[]>("GET", `/catalogos/tipos-vehiculo?${qs({ idParqueadero })}`),
   buscarVehiculos: (q: string, idTipo?: number) => request<VehiculoRegistrado[]>("GET", `/estacionamiento/vehiculos?${qs({ q, idTipo })}`),

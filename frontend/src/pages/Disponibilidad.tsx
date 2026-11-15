@@ -7,6 +7,7 @@ import { Placa } from "../components/Placa";
 import { MapaEspacios } from "../components/MapaEspacios";
 import { Odometro } from "../components/Odometro";
 import { PrediccionOcupacion } from "../components/PrediccionOcupacion";
+import { PronosticoDia } from "../components/PronosticoDia";
 import { SalidaDialogo } from "../components/SalidaDialogo";
 import { contarPisos, FiltroPisos } from "../components/FiltroPisos";
 import { crearControl, soportaWebGL } from "../three/control";
@@ -105,6 +106,7 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
       )}
 
       <PrediccionOcupacion idSede={sede.id_parqueadero} idTipo={tipo ?? undefined} />
+      <PronosticoDia idSede={sede.id_parqueadero} />
 
       {esPersonal && totales.datos && (
         <dl className="hoy" aria-label="Movimiento de hoy">

@@ -18,6 +18,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto; -- soporte para hash de contraseñas si
 -- ---------------------------------------------------------------------
 -- Limpieza (solo para entornos de desarrollo / recreación del esquema)
 -- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS modelo_pronostico CASCADE;
 DROP TABLE IF EXISTS prediccion_ocupacion CASCADE;
 DROP TABLE IF EXISTS comprobante CASCADE;
 DROP TABLE IF EXISTS pago CASCADE;
@@ -286,6 +287,22 @@ CREATE TABLE IF NOT EXISTS prediccion_ocupacion (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_prediccion
     ON prediccion_ocupacion (id_parqueadero, (COALESCE(id_tipo, 0)), fecha_hora, modelo);
+
+-- Último entrenamiento de Prophet por sede (sección 13 del documento
+-- maestro). El script ia/pronostico_prophet.py la actualiza cada noche; la
+-- API la usa para decir de cuándo es el pronóstico y qué tan preciso es.
+-- fuente = REAL si hubo ocho semanas de registros, SIMULADA si no.
+CREATE TABLE IF NOT EXISTS modelo_pronostico (
+    id_parqueadero  INT PRIMARY KEY REFERENCES parqueadero (id_parqueadero) ON DELETE CASCADE,
+    modelo          VARCHAR(10)  NOT NULL DEFAULT 'PROPHET',
+    entrenado       TIMESTAMP    NOT NULL,
+    fuente          VARCHAR(10)  NOT NULL CHECK (fuente IN ('REAL', 'SIMULADA')),
+    semanas         SMALLINT     NOT NULL,
+    mape            NUMERIC(6, 2),
+    mae_pp          NUMERIC(6, 2),
+    cobertura       NUMERIC(5, 2),
+    intervalo       NUMERIC(3, 2) NOT NULL
+);
 
 -- =====================================================================
 -- Actualización en tiempo real (RF12)

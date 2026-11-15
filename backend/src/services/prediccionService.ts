@@ -1,5 +1,5 @@
 import { pool } from "../db/pool";
-import { ZONA_HORARIA } from "./horarioService";
+import { estadoEn, horariosDe, ZONA_HORARIA } from "./horarioService";
 import { esFestivo, EntradasRed, METRICAS, predecir, vectorEntrada } from "../ia/redOcupacion";
 
 /**
@@ -127,4 +127,170 @@ export async function predecirConAlternativa(idParqueadero: number, idTipo: numb
       : null;
   }
   return p;
+}
+
+// ---------------------------------------------------------------------
+// Pronóstico de las próximas 24 horas con Prophet (RF15, sección 13)
+// ---------------------------------------------------------------------
+/** Si el último entrenamiento tiene más de 36 horas, se avisa que está desactualizado. */
+export const HORAS_VIGENCIA = 36;
+
+export interface HoraPronostico {
+  /** Inicio de la hora en Bogotá, "2026-11-15T14:00". */
+  fecha: string;
+  hora: string;
+  /** Ocupación esperada, ya corregida con la red neuronal. */
+  estimada: number;
+  /** Lo que estimó Prophet solo con el calendario y el histórico. */
+  prophet?: number;
+  inferior: number;
+  superior: number;
+  /** false si la sede está cerrada a esa hora. */
+  abierta: boolean;
+}
+
+export interface ResumenPronostico {
+  /** Hora abierta con menos ocupación esperada en las próximas 12 horas. */
+  mejorHora: { hora: string; estimada: number } | null;
+  /** Hora abierta con más ocupación esperada en las próximas 24 horas. */
+  pico: { hora: string; estimada: number } | null;
+  /** Horas abiertas en las que se espera la sede casi llena (90 % o más). */
+  horasCriticas: number;
+}
+
+/**
+ * Cada hora que pasa, la diferencia entre la red y Prophet pesa un 30 %
+ * menos: a las 3 horas queda un tercio y a las 8 horas casi nada.
+ */
+export const DECAIMIENTO_CORRECCION = 0.7;
+
+/**
+ * Corrige la curva de Prophet con la red neuronal (sección 14.1): Prophet
+ * solo conoce el calendario y el histórico; la red sabe cómo está la sede
+ * ahora y cuántas reservas vienen. La diferencia en la primera hora se
+ * suma a la curva y se desvanece en las horas siguientes. El rango de
+ * confianza se desplaza con la estimación. Función pura.
+ */
+export function corregirConRed(horas: HoraPronostico[], redPrimeraHora: number, decaimiento = DECAIMIENTO_CORRECCION): HoraPronostico[] {
+  if (!horas.length) return horas;
+  const diferencia = redPrimeraHora - horas[0].estimada;
+  const recortar = (v: number) => Math.min(1, Math.max(0, v));
+  return horas.map((h, i) => {
+    const ajuste = diferencia * decaimiento ** i;
+    return {
+      ...h,
+      prophet: h.estimada,
+      estimada: recortar(h.estimada + ajuste),
+      inferior: recortar(h.inferior + ajuste),
+      superior: recortar(h.superior + ajuste),
+    };
+  });
+}
+
+/** Mejor hora para llegar, hora pico y horas críticas. Función pura, probada en tests/pronostico.test.ts. */
+export function resumirPronostico(horas: HoraPronostico[]): ResumenPronostico {
+  const abiertas = horas.filter((h) => h.abierta);
+  const menor = (l: HoraPronostico[]) => l.reduce<HoraPronostico | null>((a, h) => (!a || h.estimada < a.estimada ? h : a), null);
+  const mayor = (l: HoraPronostico[]) => l.reduce<HoraPronostico | null>((a, h) => (!a || h.estimada > a.estimada ? h : a), null);
+  const mejor = menor(horas.slice(0, 12).filter((h) => h.abierta));
+  const pico = mayor(abiertas);
+  return {
+    mejorHora: mejor ? { hora: mejor.hora, estimada: mejor.estimada } : null,
+    pico: pico ? { hora: pico.hora, estimada: pico.estimada } : null,
+    horasCriticas: abiertas.filter((h) => h.estimada >= UMBRAL_ALERTA).length,
+  };
+}
+
+export interface Pronostico {
+  idParqueadero: number;
+  disponible: boolean;
+  mensaje?: string;
+  horas: HoraPronostico[];
+  resumen: ResumenPronostico | null;
+  ocupacionActual: number | null;
+  /** La red neuronal corrige la próxima hora con lo que pasa ahora (sección 14.1). */
+  redProximaHora: { hora: string; estimada: number } | null;
+  /** true si la curva de Prophet se corrigió con la red. */
+  corregida: boolean;
+  modelo: {
+    nombre: string;
+    entrenado: string;
+    fuente: "REAL" | "SIMULADA";
+    mape: number | null;
+    maePp: number | null;
+    cobertura: number | null;
+    intervalo: number;
+    desactualizado: boolean;
+  } | null;
+}
+
+const vacio = (idParqueadero: number, mensaje: string): Pronostico => ({
+  idParqueadero, disponible: false, mensaje, horas: [], resumen: null, ocupacionActual: null, redProximaHora: null, corregida: false, modelo: null,
+});
+
+export async function pronostico(idParqueadero: number): Promise<Pronostico> {
+  let meta, filas;
+  try {
+    [meta, filas] = await Promise.all([
+      pool.query(
+        `SELECT to_json(entrenado AT TIME ZONE current_setting('TimeZone')) #>> '{}' AS entrenado, fuente, mape::float, mae_pp::float, cobertura::float,
+                intervalo::float, entrenado < now() - make_interval(hours => $2) AS desactualizado
+           FROM modelo_pronostico WHERE id_parqueadero = $1`,
+        [idParqueadero, HORAS_VIGENCIA]
+      ),
+      pool.query(
+        `SELECT to_char(fecha_hora, 'YYYY-MM-DD"T"HH24:MI') AS fecha, to_char(fecha_hora, 'HH24:MI') AS hora,
+                EXTRACT(ISODOW FROM fecha_hora)::int AS dia, EXTRACT(HOUR FROM fecha_hora)::int AS h,
+                ocupacion_estimada::float AS estimada, limite_inferior::float AS inferior, limite_superior::float AS superior
+           FROM prediccion_ocupacion
+          WHERE id_parqueadero = $1 AND id_tipo IS NULL AND modelo = 'PROPHET' AND fecha_hora > now()
+          ORDER BY fecha_hora
+          LIMIT 24`,
+        [idParqueadero]
+      ),
+    ]);
+  } catch (err) {
+    if ((err as { code?: string }).code === "42P01") {
+      return vacio(idParqueadero, "Aún no se ha calculado el pronóstico. Ejecute ia/pronostico_prophet.py.");
+    }
+    throw err;
+  }
+  const m = meta.rows[0];
+  if (!m || filas.rows.length < 6) {
+    return vacio(idParqueadero, "El pronóstico de las próximas horas todavía no está listo.");
+  }
+
+  const horarios = await horariosDe(idParqueadero);
+  const curva: HoraPronostico[] = filas.rows.map((r) => ({
+    fecha: r.fecha,
+    hora: r.hora,
+    estimada: r.estimada,
+    inferior: r.inferior ?? r.estimada,
+    superior: r.superior ?? r.estimada,
+    abierta: horarios.length ? estadoEn(horarios, r.dia, r.h * 60).abierto : true,
+  }));
+
+  // La red estima la hora siguiente; si coincide con la primera hora de la curva, la corrige.
+  const red = await predecirSede(idParqueadero).catch(() => null);
+  const corrige = !!red && curva[0].hora === red.horaObjetivo;
+  const horas = corrige ? corregirConRed(curva, red!.ocupacionEstimada) : curva;
+  return {
+    idParqueadero,
+    disponible: true,
+    horas,
+    resumen: resumirPronostico(horas),
+    ocupacionActual: red?.ocupacionActual ?? null,
+    redProximaHora: red ? { hora: red.horaObjetivo, estimada: red.ocupacionEstimada } : null,
+    corregida: corrige,
+    modelo: {
+      nombre: "Prophet",
+      entrenado: m.entrenado,
+      fuente: m.fuente,
+      mape: m.mape,
+      maePp: m.mae_pp,
+      cobertura: m.cobertura,
+      intervalo: m.intervalo,
+      desactualizado: m.desactualizado,
+    },
+  };
 }

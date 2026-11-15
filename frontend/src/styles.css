@@ -961,6 +961,45 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .form-usuario .lista-operadores { margin-top: 0; }
 .aviso-propio { margin: -8px 0 18px; }
 
+/* Pronóstico de 24 horas (RF15) */
+.pronostico { margin: 18px 0; padding: 18px 20px; border-radius: var(--radio); background: var(--superficie); display: grid; gap: 14px; }
+.pronostico .bloque-cabeza { margin: 0; flex-wrap: wrap; gap: 8px 16px; }
+.pronostico-lectura { margin: 0; font-size: 0.9375rem; min-height: 1.4em; }
+.pronostico-claves { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pronostico-clave { background: var(--superficie-2); border-radius: var(--radio); padding: 10px 12px; display: grid; gap: 2px; border-left: 3px solid var(--superficie-4); }
+.pronostico-clave span { font-size: 0.8125rem; color: var(--tinta-2); }
+.pronostico-clave strong { font-family: var(--display); font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.pronostico-clave small { font-size: 0.8125rem; color: var(--tinta-3); }
+.clave-mejor { border-left-color: var(--libre); }
+.clave-pico { border-left-color: var(--alerta); }
+.clave-critica { border-left-color: var(--ocupado); }
+.pronostico-grafico { width: 100%; height: auto; display: block; overflow: visible; touch-action: manipulation; }
+.pg-guia { stroke: var(--superficie-3); stroke-width: 1; }
+.pg-eje { fill: var(--tinta-3); font-size: 11px; font-family: var(--texto); }
+.pg-umbral { stroke: var(--ocupado); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
+.pg-cerrada { fill: var(--rayas); }
+.pg-franja { fill: var(--acento); opacity: 0.18; }
+.pg-linea { fill: none; stroke: var(--acento); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.pg-prophet { fill: none; stroke: var(--tinta-3); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.pg-cursor { stroke: var(--tinta-2); stroke-width: 1; }
+.pg-punto { fill: var(--acento); stroke: var(--superficie); stroke-width: 2; }
+.pg-zona { fill: transparent; cursor: crosshair; outline: none; }
+.pg-zona:focus-visible { fill: var(--acento-suave); }
+.pronostico-leyenda { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.8125rem; color: var(--tinta-2); }
+.pronostico-leyenda li { display: inline-flex; align-items: center; gap: 7px; }
+.ley { display: inline-block; width: 18px; height: 10px; border-radius: 2px; }
+.ley-linea { height: 3px; background: var(--acento); }
+.ley-franja { background: var(--acento); opacity: 0.25; }
+.ley-prophet { height: 0; border-top: 2px dashed var(--tinta-3); }
+.ley-cerrada { background: var(--superficie-3); }
+.pronostico-nota { margin: 0; font-size: 0.8125rem; }
+@media (max-width: 560px) {
+  .pronostico { padding: 14px; }
+  .pronostico-claves { grid-template-columns: 1fr 1fr; }
+  .pronostico-clave strong { font-size: 1.25rem; }
+  .pg-eje { font-size: 22px; }
+}
+
 @media (max-width: 900px) {
   .portada-nav { display: none; }
   .portada-barra .controles { margin-left: auto; }
