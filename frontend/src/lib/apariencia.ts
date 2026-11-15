@@ -51,6 +51,8 @@ const oyentes = new Set<() => void>();
 function aplicar(a: Apariencia) {
   const html = document.documentElement;
   html.dataset.theme = a.tema === "claro" ? "light" : "dark";
+  // En la app instalada, la barra del sistema toma el color del fondo.
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", a.tema === "claro" ? "#f4f5f7" : "#000000");
   html.dataset.texto = a.texto;
   html.dataset.contraste = a.contraste ? "alto" : "normal";
   html.dataset.movimiento = movimientoReducido(a) ? "reducido" : "normal";

@@ -2,9 +2,17 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Cupos en tiempo real, reservas, portería y administración de parqueaderos." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Aplicación instalable (PWA) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#000000" />
+    <link rel="apple-touch-icon" href="/iconos/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Parkway" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Parkway</title>
     <script>
       // Aplica el tema y el tamaño de letra guardados antes de pintar la página.
@@ -12,6 +20,8 @@
         var a = JSON.parse(localStorage.getItem("parkway.apariencia") || "{}");
         document.documentElement.dataset.theme = a.tema === "claro" ? "light" : "dark";
         document.documentElement.dataset.texto = a.texto || "normal";
+        // La barra del sistema toma el color del fondo del tema.
+        if (a.tema === "claro") document.querySelector('meta[name="theme-color"]').content = "#f4f5f7";
       } catch (e) {
         document.documentElement.dataset.theme = "dark";
       }

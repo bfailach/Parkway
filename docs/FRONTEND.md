@@ -19,6 +19,7 @@ animados cuando el operador registra cada movimiento.
 - [Cómo está hecha la escena 3D](#cómo-está-hecha-la-escena-3d)
 - [Organización del código](#organización-del-código)
 - [Diseño y accesibilidad](#diseño-y-accesibilidad)
+- [App instalable (PWA)](#app-instalable-pwa)
 
 ## Portada pública
 
@@ -413,3 +414,16 @@ frontend/src/
   opción de reducir movimiento.
 - **Validación:** cada formulario valida antes de enviar y muestra los errores
   que devuelve el backend en el campo correspondiente.
+
+
+## App instalable (PWA)
+
+`public/manifest.webmanifest` define el nombre, los íconos (`public/iconos/`,
+con versiones adaptables para Android) y los colores. `public/sw.js` guarda la
+página y los archivos de `assets/` para que la app abra sin conexión, y nunca
+guarda la API. `src/lib/pwa.ts` registra el service worker (solo en
+producción, para no interferir con Vite en desarrollo) y escucha el evento de
+instalación del navegador. `src/components/Instalar.tsx` tiene el botón
+**Instalar la app** (en iPhone, las instrucciones de Safari) y la franja de
+**sin conexión**. En la app instalada, la barra del sistema toma el color del
+tema y el contenido respeta la muesca y la barra de gestos del celular.

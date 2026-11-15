@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { AvisoConexion } from "./components/Instalar";
+import { registrarServiceWorker } from "./lib/pwa";
 import "@fontsource/big-shoulders-display/700.css";
 import "@fontsource/big-shoulders-display/800.css";
 import "@fontsource/big-shoulders-display/900.css";
@@ -10,8 +12,12 @@ import "@fontsource/barlow/600.css";
 import "@fontsource/barlow/700.css";
 import "./styles.css";
 
+// Aplicación instalable (PWA): solo en producción.
+registrarServiceWorker();
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <AvisoConexion />
     <App />
   </StrictMode>
 );

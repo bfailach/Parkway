@@ -35,6 +35,27 @@ app.use(errorHandler);
 // con un solo servicio y no hay que configurar CORS ni otra URL de la API.
 const frontend = path.resolve(__dirname, "../../frontend/dist");
 if (fs.existsSync(frontend)) {
-  app.use(express.static(frontend, { maxAge: "1h", index: false }));
-  app.get("*", (_req, res) => res.sendFile(path.join(frontend, "index.html")));
+  app.use(
+    express.static(frontend, {
+      index: false,
+      setHeaders(res, archivo) {
+        const nombre = path.basename(archivo);
+        if (archivo.includes(`${path.sep}assets${path.sep}`)) {
+          // El nombre lleva una huella del contenido: nunca cambia.
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else if (nombre === "sw.js" || nombre === "manifest.webmanifest") {
+          // App instalable (PWA): las actualizaciones deben llegar enseguida.
+          res.setHeader("Cache-Control", "no-cache");
+          if (nombre === "sw.js") res.setHeader("Service-Worker-Allowed", "/");
+          if (nombre === "manifest.webmanifest") res.setHeader("Content-Type", "application/manifest+json");
+        } else {
+          res.setHeader("Cache-Control", "public, max-age=3600");
+        }
+      },
+    })
+  );
+  app.get("*", (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(frontend, "index.html"));
+  });
 }

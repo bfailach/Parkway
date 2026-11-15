@@ -14,6 +14,7 @@ import { MisVehiculos } from "./pages/cliente/MisVehiculos";
 import { MiHistorial } from "./pages/cliente/MiHistorial";
 import { Selector } from "./components/Selector";
 import { BotonAccesibilidad, BotonTema } from "./components/Apariencia";
+import { BotonInstalar } from "./components/Instalar";
 import { Sedes } from "./pages/admin/Sedes";
 import { RedNeuronal } from "./pages/admin/RedNeuronal";
 import { Usuarios } from "./pages/admin/Usuarios";
@@ -159,6 +160,7 @@ export default function App() {
           <span className="usuario-nombre">{usuario.nombre}</span>
           <span className="usuario-rol">{NOMBRE_ROL[usuario.rol]}</span>
           <div className="controles">
+            <BotonInstalar />
             <BotonAccesibilidad />
             <BotonTema />
           </div>

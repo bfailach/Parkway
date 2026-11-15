@@ -66,6 +66,20 @@ desde la misma pestaña.
 También se puede calcular desde tu computador con
 `$env:DATABASE_URL = "..."; python ia/pronostico_prophet.py`.
 
+## Instalar la app en el celular
+
+La aplicación se instala desde la URL de Render, que ya usa HTTPS (requisito
+para instalarla):
+
+1. En el celular Android, abre la URL en **Chrome**.
+2. Toca **Instalar la app** en la portada, o en el menú de Chrome elige
+   **Instalar aplicación**.
+3. Parkway queda en la pantalla de inicio y se abre a pantalla completa.
+
+En iPhone se abre en **Safari** y se usa Compartir, Agregar a inicio. Para la
+sustentación conviene instalarla antes, con la aplicación ya despierta: el
+plan gratuito de Render tarda unos 30 segundos en responder la primera vez.
+
 ## 3. Probar
 
 Abre la URL del servicio, por ejemplo `https://parkway.onrender.com`, y entra

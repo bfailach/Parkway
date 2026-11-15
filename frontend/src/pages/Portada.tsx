@@ -9,6 +9,7 @@ import { Placa } from "../components/Placa";
 import { crearControl, plazaAsignada, PLACA_HISTORIA, soportaWebGL } from "../three/control";
 import { distribuir } from "../three/layout";
 import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
+import { BotonInstalar } from "../components/Instalar";
 import { movimientoReducido } from "../lib/apariencia";
 
 const Escena = lazy(() => import("../three/Escena"));
@@ -158,6 +159,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
             <div className="heroe-acciones">
               <button className="boton boton-primario boton-grande" onClick={() => irA("cupos")}>Ver cupos libres</button>
               <button className="boton boton-fantasma boton-grande" onClick={() => irA("como-funciona")}>Cómo funciona</button>
+              <BotonInstalar variante="boton" />
             </div>
           </div>
           <div className="heroe-cupos" aria-live="polite">

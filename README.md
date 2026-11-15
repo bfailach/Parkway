@@ -67,7 +67,7 @@ El detalle de cada pantalla, con capturas, está en
 
 | Elemento | Valor |
 | --- | --- |
-| Frontend | React 18, TypeScript, Vite |
+| Frontend | React 18, TypeScript, Vite; aplicación instalable (PWA) en Android, iPhone y escritorio |
 | 3D | Three.js con React Three Fiber, Drei y postprocesado (oclusión ambiental y bloom) |
 | Backend | Node.js, TypeScript, Express |
 | Base de datos | PostgreSQL |
@@ -133,6 +133,35 @@ servicio (API y frontend) y una base PostgreSQL. Los pasos están en
 
 También se puede crear un cliente nuevo desde "Crea una para reservar" en la
 pantalla de ingreso.
+
+## App en el celular (PWA)
+
+Parkway se instala como aplicación desde el navegador, sin código para
+Android ni iOS: es el mismo frontend en React y el mismo servidor. Queda con
+su ícono en la pantalla de inicio y se abre a pantalla completa, sin la
+barra del navegador.
+
+- **Android (Chrome) y computador (Chrome o Edge):** el botón **Instalar la
+  app** de la portada, o el ícono del celular en la barra del panel, abre el
+  diálogo de instalación. También funciona desde el menú del navegador:
+  "Instalar aplicación" o "Agregar a la pantalla principal".
+- **iPhone (Safari):** el mismo botón explica los pasos: Compartir, Agregar
+  a inicio.
+
+La pieza que lo hace posible es `frontend/public/manifest.webmanifest`
+(nombre, íconos y colores) y `frontend/public/sw.js`, un *service worker*
+que guarda la aplicación para que abra aunque no haya internet. La API y el
+WebSocket nunca se guardan: los cupos, los pagos y los datos de los usuarios
+siempre vienen del servidor. Sin conexión aparece una franja que lo avisa, y
+todo se actualiza solo cuando vuelve. Cada despliegue en Render llega a las
+apps instaladas al abrirlas, sin reinstalar.
+
+El documento maestro deja fuera del alcance la aplicación móvil nativa; la
+PWA no lo contradice, porque es la misma aplicación web, ahora instalable.
+
+| Instalar desde la portada | Sin conexión |
+| --- | --- |
+| ![Instalar la app](docs/capturas/53_pwa_instalar.jpg) | ![Sin conexión](docs/capturas/54_pwa_sin_conexion.jpg) |
 
 ## Reglas de negocio
 
