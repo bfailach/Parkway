@@ -177,7 +177,7 @@ vehículo.
 ## Pantallas del administrador
 
 Tiene las mismas pestañas del operador, en todas las sedes, más **Sedes**,
-**Usuarios**, **Bitácora** y **Red neuronal**.
+**Usuarios**, **Reportes**, **Bitácora** y **Red neuronal**.
 
 **Sedes.** El administrador crea o edita cada sede con:
 
@@ -230,6 +230,18 @@ en la bitácora.
 | Lista de usuarios | Editar un operador |
 | --- | --- |
 | ![Usuarios](capturas/42_usuarios.jpg) | ![Editar usuario](capturas/43_editar_usuario.jpg) |
+
+**Reportes (RF13).** Filtros de sede, tipo de vehículo y periodo, con atajos
+de fecha, y tres pestañas: ocupación por franja horaria (gráfica de barras
+de lunes a viernes contra fines de semana y festivos, con la hora pico
+resaltada en la tabla), rotación por espacio (con un medidor del tiempo
+ocupado) e ingresos por periodo y sede (agrupados por día, semana o mes).
+Cada pestaña empieza con cuatro indicadores y tiene el botón **Descargar
+CSV**.
+
+| Ocupación por franja | Rotación por espacio | Ingresos por periodo |
+| --- | --- | --- |
+| ![Ocupación](capturas/46_reporte_ocupacion.jpg) | ![Rotación](capturas/47_reporte_rotacion.jpg) | ![Ingresos](capturas/48_reporte_ingresos.jpg) |
 
 **Bitácora (RF14):** todas las operaciones del sistema con su usuario,
 entidad, resultado y detalle. Se filtran por usuario, operación, entidad
@@ -347,7 +359,7 @@ frontend/src/
 │   ├── Reservas.tsx        # Reservas de la sede (personal)
 │   ├── Historial.tsx       # Salidas registradas
 │   ├── Bitacora.tsx        # Bitácora (administrador)
-│   ├── admin/              # Sedes, Usuarios y Red neuronal
+│   ├── admin/              # Sedes, Usuarios, Reportes y Red neuronal
 │   └── cliente/            # Mi parqueo, Mis vehículos, Mi historial, Notificaciones
 ├── components/             # PronosticoDia, Placa, Tiquete, Selector, CampoOpciones, FiltroPisos, Apariencia, Notificador, diálogos
 ├── three/                  # Escena 3D

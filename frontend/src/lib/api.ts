@@ -367,6 +367,34 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+/**
+ * Descarga un archivo de la API (por ejemplo, un reporte en CSV) con el
+ * token de la sesión y lo guarda con el nombre que manda el servidor.
+ */
+async function descargar(path: string, nombrePorDefecto: string): Promise<void> {
+  const token = sesion.token();
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError(0, "No hay conexión con el servidor.");
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && token) alExpirar();
+    throw new ApiError(res.status, data.error || `Error ${res.status}`, data.detalles || {});
+  }
+  const nombre = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? nombrePorDefecto;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const qs = (params: Record<string, string | number | undefined>) => {
   const p = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
@@ -434,6 +462,85 @@ export interface Pronostico {
   } | null;
 }
 
+// Reportes (RF13)
+export type TipoReporte = "ocupacion" | "rotacion" | "ingresos";
+export interface FiltrosReporte {
+  idParqueadero?: number;
+  idTipo?: number;
+  desde: string;
+  hasta: string;
+  agrupacion?: "dia" | "semana" | "mes";
+}
+
+export interface FranjaHoraria {
+  hora: number;
+  promedio: number;
+  promedioLaboral: number | null;
+  promedioLibre: number | null;
+  maximo: number;
+  llegadasPromedio: number;
+  dias: number;
+}
+export interface ReporteOcupacion {
+  capacidad: number;
+  filas: FranjaHoraria[];
+  resumen: {
+    ocupacionPromedio: number;
+    horaPico: { hora: number; promedio: number } | null;
+    maximo: { fecha: string; hora: number; ocupacion: number } | null;
+    llegadas: number;
+    horasAnalizadas: number;
+  };
+}
+
+export interface RotacionEspacio {
+  id_espacio: number;
+  codigo: string;
+  sede: string;
+  tipo: string;
+  piso: number;
+  estado: string;
+  usos: number;
+  minutos_ocupado: number;
+  ingresos: number;
+  porcentajeOcupado: number;
+  rotacionDiaria: number;
+}
+export interface ReporteRotacion {
+  filas: RotacionEspacio[];
+  resumen: {
+    espacios: number;
+    usos: number;
+    rotacionPromedio: number;
+    masUsado: { codigo: string; sede: string; usos: number } | null;
+    sinUso: number;
+    ocupadoPromedio: number;
+    dias: number;
+  };
+}
+
+export interface FilaIngresos {
+  periodo: string;
+  nombre: string;
+  id_parqueadero: number;
+  sede: string;
+  salidas: number;
+  valor: number;
+  minutos_promedio: number | null;
+}
+export interface ReporteIngresos {
+  filas: FilaIngresos[];
+  resumen: {
+    valor: number;
+    salidas: number;
+    ticketPromedio: number | null;
+    permanenciaPromedio: number | null;
+    mejorPeriodo: { nombre: string; valor: number } | null;
+    porSede: { sede: string; salidas: number; valor: number }[];
+    dias: number;
+  };
+}
+
 export interface RedNeuronal {
   modelo: string;
   W1: number[][];
@@ -481,6 +588,10 @@ export const api = {
     usuarios: (f: { q?: string; rol?: string; estado?: string }) => request<UsuarioAdmin[]>("GET", `/admin/usuarios?${qs(f)}`),
     crearUsuario: (d: DatosUsuario) => request<UsuarioAdmin>("POST", "/admin/usuarios", d),
     editarUsuario: (id: number, d: DatosUsuario) => request<UsuarioAdmin>("PUT", `/admin/usuarios/${id}`, d),
+    reporte: <T,>(tipo: TipoReporte, f: FiltrosReporte) =>
+      request<T>("GET", `/admin/reportes/${tipo}?${qs(f as unknown as Record<string, string | number | undefined>)}`),
+    descargarReporte: (tipo: TipoReporte, f: FiltrosReporte) =>
+      descargar(`/admin/reportes/${tipo}?${qs({ ...(f as unknown as Record<string, string | number | undefined>), formato: "csv" })}`, `parkway_${tipo}.csv`),
     estadoUsuario: (id: number, estado: EstadoUsuario) => request<UsuarioAdmin>("PATCH", `/admin/usuarios/${id}/estado`, { estado }),
   },
   parqueaderos: () => request<Parqueadero[]>("GET", "/catalogos/parqueaderos"),

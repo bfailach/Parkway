@@ -1010,6 +1010,28 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .enlace-celda:hover { color: var(--acento-texto); text-decoration-color: currentColor; }
 .celda-rol { font-size: 0.8125rem; }
 
+/* Reportes (RF13) */
+.filtros-reporte .atajos-fecha { display: flex; flex-wrap: wrap; gap: 6px; }
+.atajos-fecha .boton[aria-pressed="true"] { background: var(--acento); color: #fff; }
+.pestanas-reporte { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; border-bottom: 1px solid var(--superficie-3); }
+.indicadores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
+.indicadores > div { background: var(--superficie); border-radius: var(--radio); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.indicadores dt { color: var(--tinta-2); font-size: 0.875rem; }
+.indicadores dd { margin: 0; font-family: var(--display); font-weight: 900; font-size: 1.875rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.indicadores .tenue { font-size: 0.8125rem; }
+.barras { margin: 6px 0 0; }
+.barras svg { width: 100%; height: auto; display: block; }
+.barra-a { fill: var(--acento); }
+.barra-b { fill: var(--alerta); }
+.ley-barra-a { background: var(--acento); }
+.ley-barra-b { background: var(--alerta); }
+.medidor { display: inline-block; width: 48px; height: 6px; border-radius: 3px; margin-right: 10px; vertical-align: middle;
+  background: linear-gradient(to right, var(--acento) calc(var(--valor) * 100%), var(--superficie-3) 0); }
+.fila-destacada td { background: var(--acento-suave); }
+.fila-tenue td { color: var(--tinta-3); }
+.reporte-sedes { margin: 0 0 18px; }
+@media (max-width: 900px) { .indicadores { grid-template-columns: 1fr 1fr; } }
+
 @media (max-width: 900px) {
   .portada-nav { display: none; }
   .portada-barra .controles { margin-left: auto; }

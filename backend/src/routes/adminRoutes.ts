@@ -7,6 +7,7 @@ const router = Router();
 router.use(verificarToken, requiereRol("ADMINISTRADOR"));
 
 router.get("/bitacora", c.getBitacora); // RF14
+router.get("/reportes/:tipo", c.getReporte); // RF13: ocupacion, rotacion o ingresos; ?formato=csv para descargar
 router.get("/parqueaderos", c.getParqueaderos);
 router.get("/parqueaderos/:id", c.getParqueadero);
 router.post("/parqueaderos", c.postParqueadero);

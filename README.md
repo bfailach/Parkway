@@ -31,7 +31,7 @@ en pocos segundos.
 | Visitante | Ver los cupos libres por sede, el recorrido de cómo funciona y calcular el cobro. |
 | Cliente | Crear su cuenta, registrar sus vehículos (las bicicletas reciben un código BICI) y ver en qué sede y espacio está cada uno, reservar un espacio por 30 minutos dentro del horario de la sede, ver su vehículo dentro con el valor acumulado, configurar avisos de tiempo y dinero y consultar su historial. |
 | Operador | Registrar ingresos y salidas en las sedes que tiene asignadas. Al digitar una placa conocida, el formulario trae la marca y el color guardados. Ve las reservas en camino, los vehículos dentro, el plano 3D y 2D y el historial con filtros. |
-| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores), la gestión de usuarios (crear, editar, asignar turno y sedes, inactivar) y la bitácora de transacciones. |
+| Administrador | Todo lo del operador en todas las sedes, más la creación y edición de sedes (espacios, tarifas, horario, espacios fuera de servicio y operadores), la gestión de usuarios (crear, editar, asignar turno y sedes, inactivar), los reportes con exportación a CSV y la bitácora de transacciones. |
 
 Todos los usuarios pueden cambiar entre modo oscuro y claro y ajustar la
 accesibilidad: tamaño del texto, alto contraste, movimiento reducido, letra de
@@ -53,6 +53,7 @@ El detalle de cada pantalla, con capturas, está en
 | Reservas: reservar, cancelar, expirar a los 30 minutos, vista del operador | RF10 | Implementado |
 | Actualización de la disponibilidad en tiempo real por WebSocket, sin recargar la página | RF12 | Implementado |
 | Historial de salidas y totales del día | RF13 | Implementado |
+| Reportes de ocupación por franja horaria, rotación por espacio e ingresos por periodo y sede, exportables a CSV | RF13 | Implementado |
 | Bitácora de transacciones con filtros por usuario, operación, entidad, resultado y fecha | RF14, RNF08 | Implementado |
 | Gestión de sedes: pisos, espacios por piso, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
 | Horario de atención: no se aceptan reservas fuera del horario | RF10 | Implementado |
@@ -235,6 +236,35 @@ datos con `psql -U postgres -d parkway -f database/migracion_tiempo_real.sql`.
 Si falta, el backend lo indica al arrancar y las pantallas siguen
 consultando cada pocos segundos.
 
+## Reportes (RF13)
+
+El administrador elige la sede (o todas), el tipo de vehículo y el periodo,
+de un día a un año, con atajos para hoy, 7 días, 30 días, este mes y el mes
+anterior. Hay tres reportes:
+
+- **Ocupación por franja horaria:** la ocupación promedio y la máxima de cada
+  hora del día, separando lunes a viernes de los fines de semana y festivos,
+  y las llegadas por hora. Señala la hora pico.
+- **Rotación por espacio:** cuántos vehículos usó cada espacio, cuántos por
+  día, qué parte del tiempo estuvo ocupado y cuánto se cobró en él. Muestra
+  el espacio más usado y los que no se usaron.
+- **Ingresos por periodo y sede:** salidas, valor cobrado, valor promedio por
+  salida y permanencia, agrupados por día, semana o mes. Incluye los
+  periodos sin movimiento para que la serie no tenga huecos.
+
+La ocupación de cada hora cuenta los vehículos dentro al inicio de la hora
+sobre los espacios en servicio. Los ingresos salen del valor calculado al
+registrar la salida; cuando existan los pagos (RF08) se podrán tomar de ahí.
+
+**Descargar CSV** guarda el reporte que se está viendo. El archivo usa UTF-8,
+punto y coma y coma decimal para abrirse con doble clic en Excel en español.
+Las celdas que empiezan por `=`, `+`, `-` o `@` llevan un apóstrofo para que
+Excel no las tome como fórmulas.
+
+| Ocupación por franja | Rotación por espacio | Ingresos por periodo |
+| --- | --- | --- |
+| ![Ocupación](docs/capturas/46_reporte_ocupacion.jpg) | ![Rotación](docs/capturas/47_reporte_rotacion.jpg) | ![Ingresos](docs/capturas/48_reporte_ingresos.jpg) |
+
 ## Pronóstico de las próximas 24 horas (RF15)
 
 Prophet estima la ocupación de cada sede para cada una de las próximas horas,
@@ -315,7 +345,7 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 53 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, bitácora, tiempo real, pronóstico y red neuronal
+npm test                                   # 59 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, reportes, bitácora, tiempo real, pronóstico y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -410,6 +440,7 @@ Parkway/
 | GET, POST | `/api/admin/usuarios?q=…&rol=…&estado=…` | Administrador | Consultar usuarios con filtros y crear uno con rol, turno y sedes |
 | GET, PUT | `/api/admin/usuarios/:id` | Administrador | Consultar y editar un usuario (la contraseña cambia solo si se envía) |
 | PATCH | `/api/admin/usuarios/:id/estado` | Administrador | Activar, inactivar o bloquear un usuario |
+| GET | `/api/admin/reportes/:tipo?desde=…&hasta=…&idParqueadero=…&idTipo=…&agrupacion=dia\|semana\|mes` | Administrador | Reportes `ocupacion`, `rotacion` o `ingresos`; con `&formato=csv` descarga el CSV |
 | GET | `/api/admin/bitacora?idUsuario=…&tipo=…&entidad=…&idEntidad=…&estado=…&desde=…&hasta=…` | Administrador | Bitácora de transacciones con sus filtros, y los usuarios, operaciones y entidades que aparecen en ella |
 
 Errores: 400 si un campo no es válido (con el detalle por campo), 401 sin
@@ -427,8 +458,6 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 ## Siguientes pasos
 
 - Pagos con pasarela, comprobantes y anulación (RF08, RF09).
-- Reportes de ocupación por franja, rotación por espacio e ingresos por
-  periodo, exportables a CSV (RF13).
 - Pronóstico por tipo de vehículo y con registros reales cuando se junten
   ocho semanas de operación (RF15).
 - Medición de cobertura de pruebas (RNF07), prueba de carga con 100 usuarios

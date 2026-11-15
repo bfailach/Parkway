@@ -2,6 +2,9 @@ import { asyncHandler } from "../utils/asyncHandler";
 import * as bitacoraRepository from "../repositories/bitacoraRepository";
 import { badRequest } from "../errors/AppError";
 import { leerFiltrosBitacora } from "../validators/bitacoraValidator";
+import { leerFiltrosReporte } from "../validators/reporteValidator";
+import * as reporteService from "../services/reporteService";
+import { aCsv } from "../utils/csv";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import * as parqueaderoService from "../services/parqueaderoService";
 import * as usuarioService from "../services/usuarioService";
@@ -60,4 +63,24 @@ export const putUsuario = asyncHandler<Req>(async (req, res) => {
 
 export const patchEstadoUsuario = asyncHandler<Req>(async (req, res) => {
   res.json(await usuarioService.cambiarEstado(Number(req.params.id), req.body?.estado, req.usuario!.id_usuario));
+});
+
+/**
+ * Reportes (RF13): /api/admin/reportes/ocupacion, /rotacion o /ingresos.
+ * Con ?formato=csv descarga el reporte como archivo para Excel.
+ */
+export const getReporte = asyncHandler(async (req, res) => {
+  const tipo = req.params.tipo as reporteService.TipoReporte;
+  if (!reporteService.TIPOS_REPORTE.includes(tipo)) throw badRequest("Reporte inválido: use ocupacion, rotacion o ingresos");
+  const v = leerFiltrosReporte(req.query as Record<string, unknown>);
+  if (!v.valido) throw badRequest("Revise los filtros", v.errores);
+  const { columnas, ...reporte } = await reporteService.generar(tipo, v.filtros);
+  if (req.query.formato === "csv") {
+    const f = v.filtros;
+    const nombre = `parkway_${tipo}_${f.desde}_a_${f.hasta}${f.idParqueadero ? `_sede${f.idParqueadero}` : ""}.csv`;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${nombre}"`);
+    return res.send(aCsv(columnas, reporte.filas as unknown[]));
+  }
+  res.json({ tipo, filtros: v.filtros, ...reporte });
 });
