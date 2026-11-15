@@ -7,12 +7,16 @@ SET TIME ZONE 'America/Bogota';
 -- =====================================================================
 -- Parkway - Datos de demostración (opcional)
 -- Ejecutar después de schema.sql y seed.sql para ver el parqueadero con
--- vehículos dentro y un historial del día:
+-- vehículos dentro y 12 semanas de historia:
 --   psql -d parkway -f demo.sql
 --
--- Ocupa cerca del 60 % de los espacios con ingresos abiertos de las
--- últimas 4 horas y registra salidas cerradas durante el día.
--- Se puede ejecutar varias veces: primero limpia los movimientos.
+-- - Ocupa cerca del 60 % de los espacios con ingresos abiertos de las
+--   últimas 4 horas y registra salidas cerradas durante el día.
+-- - Simula 12 semanas de operación hasta ayer, con el patrón de cada sede,
+--   para los reportes, el historial y el pronóstico de Prophet.
+-- - Crea dos reservas activas que vencen a los 18 minutos.
+-- Se puede ejecutar varias veces: primero limpia los movimientos. Tarda
+-- unos segundos.
 -- =====================================================================
 
 BEGIN;
@@ -110,37 +114,194 @@ SELECT s.placa, s.id_espacio, s.id_tarifa,
        'CERRADO'
   FROM salidas s;
 
--- Visitas de los últimos 7 días, para probar los filtros del historial.
--- Incluye algunas del carro del cliente de prueba (ABC123).
-WITH visitas AS (
-    SELECT s.n AS g,
-           CASE WHEN s.n % 9 = 0 THEN 'ABC123' ELSE dv.placa END AS placa,
-           CASE WHEN s.n % 9 = 0 THEN 1 ELSE dv.id_tipo END AS id_tipo,
-           1 + s.n % 2 AS id_parqueadero,
-           15 + (s.n * 47) % 420 AS minutos,
-           date_trunc('day', now()) - ((1 + s.n % 7) * interval '1 day')
-             + ((6 * 60 + (s.n * 71) % (14 * 60)) * interval '1 minute') AS ingreso
-      FROM generate_series(1, 90) AS s (n)
-      JOIN demo_vehiculo dv ON dv.g = 1 + (s.n * 13) % 120
-),
-con_espacio AS (
-    SELECT v.*, (SELECT e.id_espacio FROM espacio e
-                  WHERE e.id_parqueadero = v.id_parqueadero AND e.id_tipo = v.id_tipo
-                  ORDER BY md5(e.id_espacio::text || v.g) LIMIT 1) AS id_espacio
-      FROM visitas v
-)
-INSERT INTO registro_estacionamiento
-    (placa, id_espacio, id_tarifa, id_operador_ingreso, id_operador_salida,
-     fecha_ingreso, fecha_salida, minutos, valor_calculado, estado)
-SELECT c.placa, c.id_espacio, ta.id_tarifa,
-       (SELECT id_usuario FROM usuario WHERE correo = 'operador1@parkway.test'),
-       (SELECT id_usuario FROM usuario WHERE correo = 'operador2@parkway.test'),
-       c.ingreso, c.ingreso + c.minutos * interval '1 minute', c.minutos,
-       LEAST((c.minutos / 60) * ta.valor_hora + ceil((c.minutos % 60) / 15.0) * ta.valor_fraccion, ta.valor_dia),
-       'CERRADO'
-  FROM con_espacio c
-  JOIN tarifa ta ON ta.id_tipo = c.id_tipo AND ta.id_parqueadero = c.id_parqueadero AND ta.activa
- WHERE c.id_espacio IS NOT NULL;
+-- ---------------------------------------------------------------------
+-- Historia de 12 semanas (hasta ayer a la medianoche)
+--
+-- Simula la operación de cada sede hora por hora para que los reportes,
+-- el historial y el pronóstico de Prophet tengan datos con sentido:
+-- - Sede Chapinero es de oficinas: llegan de 6 a 9 a. m. y se quedan el
+--   día; los fines de semana y festivos hay poco movimiento.
+-- - Sede Zona T es comercial y de rumba: almuerzo, tarde y noche, con más
+--   movimiento los viernes por la noche, fines de semana y festivos.
+-- - Las demás sedes que cree el administrador siguen el patrón de oficinas.
+-- Cada vehículo ocupa el primer espacio libre de su tipo (piso 1 primero),
+-- como en el ingreso real; si la sede está llena, el vehículo no entra.
+-- Un mismo vehículo nunca está en dos lugares a la vez. Los festivos de
+-- Colombia se calculan con la Ley Emiliani. Con setseed el resultado es
+-- el mismo cada vez que se carga en el mismo día.
+-- ---------------------------------------------------------------------
+CREATE FUNCTION pg_temp.pascua(a int) RETURNS date LANGUAGE plpgsql IMMUTABLE AS $f$
+DECLARE b int; c int; d int; e int; f int; g int; h int; i int; k int; l int; m int;
+BEGIN
+    b := a / 100; c := a % 100; d := b / 4; e := b % 4; f := (b + 8) / 25; g := (b - f + 1) / 3;
+    h := (19 * (a % 19) + b - d - g + 15) % 30; i := c / 4; k := c % 4;
+    l := (32 + 2 * e + 2 * i - h - k) % 7; m := ((a % 19) + 11 * h + 22 * l) / 451;
+    RETURN make_date(a, (h + l - 7 * m + 114) / 31, ((h + l - 7 * m + 114) % 31) + 1);
+END $f$;
+
+-- Ley Emiliani: el festivo pasa al lunes siguiente.
+CREATE FUNCTION pg_temp.al_lunes(f date) RETURNS date LANGUAGE sql IMMUTABLE AS
+$f$ SELECT f + ((8 - EXTRACT(ISODOW FROM f)::int) % 7) $f$;
+
+CREATE FUNCTION pg_temp.es_festivo(d date) RETURNS boolean LANGUAGE plpgsql IMMUTABLE AS $f$
+DECLARE a int := EXTRACT(YEAR FROM d); p date := pg_temp.pascua(EXTRACT(YEAR FROM d)::int);
+BEGIN
+    RETURN d IN (make_date(a, 1, 1), make_date(a, 5, 1), make_date(a, 7, 20), make_date(a, 8, 7), make_date(a, 12, 8), make_date(a, 12, 25),
+                 pg_temp.al_lunes(make_date(a, 1, 6)), pg_temp.al_lunes(make_date(a, 3, 19)), pg_temp.al_lunes(make_date(a, 6, 29)),
+                 pg_temp.al_lunes(make_date(a, 8, 15)), pg_temp.al_lunes(make_date(a, 10, 12)), pg_temp.al_lunes(make_date(a, 11, 1)),
+                 pg_temp.al_lunes(make_date(a, 11, 11)), p - 3, p - 2,
+                 pg_temp.al_lunes(p + 39), pg_temp.al_lunes(p + 60), pg_temp.al_lunes(p + 68));
+END $f$;
+
+-- Parte de la capacidad que llega en cada hora, según el perfil de la sede.
+CREATE FUNCTION pg_temp.tasa_llegada(perfil text, libre boolean, dia_semana int, h int) RETURNS numeric LANGUAGE sql IMMUTABLE AS $f$
+SELECT CASE
+    WHEN perfil = 'OFICINAS' AND NOT libre THEN
+        (ARRAY[0,0,0,0,0,.01,.08,.22,.25,.12,.06,.07,.10,.10,.07,.05,.04,.03,.03,.02,.01,0,0,0])[h + 1]
+    WHEN perfil = 'OFICINAS' THEN
+        (ARRAY[0,0,0,0,0,0,0,0,.03,.05,.07,.08,.08,.07,.06,.05,.04,.03,.02,.01,0,0,0,0])[h + 1]
+    WHEN NOT libre THEN
+        (ARRAY[0,0,0,0,0,0,0,.06,.08,.06,.06,.09,.13,.12,.08,.07,.07,.09,.12,.13,.10,.06,.03,0])[h + 1]
+        * CASE WHEN dia_semana = 5 AND h >= 18 THEN 1.5 ELSE 1 END
+    ELSE
+        (ARRAY[0,0,0,0,0,0,0,0,0,0,.08,.12,.14,.13,.11,.10,.10,.11,.13,.16,.16,.12,.08,.04])[h + 1]
+END::numeric $f$;
+
+-- Minutos de permanencia según el perfil y la hora de llegada.
+CREATE FUNCTION pg_temp.permanencia(perfil text, libre boolean, h int) RETURNS int LANGUAGE sql VOLATILE AS $f$
+SELECT (CASE
+    WHEN perfil = 'OFICINAS' AND NOT libre AND h <= 9 THEN 420 + random() * 240
+    WHEN perfil = 'OFICINAS' AND NOT libre THEN 40 + random() * 150
+    WHEN perfil = 'OFICINAS' THEN 60 + random() * 180
+    WHEN NOT libre AND h <= 9 THEN 420 + random() * 180
+    WHEN h >= 18 THEN 90 + random() * 210
+    ELSE 45 + random() * 135
+END)::int $f$;
+
+-- Vehículos de la historia: unos frecuentes (vienen casi a diario) y muchos ocasionales.
+CREATE TEMP TABLE demo_flota (
+    placa      VARCHAR(10) PRIMARY KEY,
+    id_tipo    SMALLINT NOT NULL,
+    frecuente  BOOLEAN NOT NULL,
+    hasta      TIMESTAMP NOT NULL DEFAULT '-infinity'
+);
+INSERT INTO demo_flota (placa, id_tipo, frecuente)
+SELECT chr(65 + (g / 676) % 26) || chr(65 + (g / 26) % 26) || chr(65 + g % 26) || lpad(((g * 389) % 1000)::text, 3, '0'),
+       (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'AUTOMOVIL'), g % 5 = 0
+  FROM generate_series(1000, 1899) AS g
+UNION ALL
+SELECT chr(65 + (g / 676) % 26) || chr(65 + (g / 26) % 26) || chr(65 + g % 26) || lpad((g % 100)::text, 2, '0') || chr(65 + (g * 7) % 26),
+       (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'MOTOCICLETA'), g % 5 = 0
+  FROM generate_series(3000, 3299) AS g
+UNION ALL
+SELECT 'BICI' || lpad(nextval('seq_bicicleta')::text, 3, '0'),
+       (SELECT id_tipo FROM tipo_vehiculo WHERE nombre = 'BICICLETA'), g % 3 = 0
+  FROM generate_series(1, 90) AS g
+ON CONFLICT (placa) DO NOTHING;
+-- Los vehículos de los clientes de prueba también tienen visitas.
+INSERT INTO demo_flota (placa, id_tipo, frecuente)
+SELECT placa, id_tipo, true FROM vehiculo WHERE placa IN ('ABC123', 'XYZ78D')
+ON CONFLICT (placa) DO NOTHING;
+
+INSERT INTO vehiculo (placa, id_tipo, marca, color)
+SELECT f.placa, f.id_tipo,
+       CASE t.nombre
+           WHEN 'BICICLETA'   THEN NULL
+           WHEN 'MOTOCICLETA' THEN (ARRAY['Yamaha', 'Honda', 'Suzuki', 'Bajaj', 'AKT', 'Kawasaki'])[1 + abs(hashtext(f.placa)) % 6]
+           ELSE (ARRAY['Mazda', 'Renault', 'Chevrolet', 'Kia', 'Toyota', 'Nissan', 'Volkswagen', 'Hyundai'])[1 + abs(hashtext(f.placa)) % 8]
+       END,
+       (ARRAY['Blanco', 'Gris', 'Negro', 'Rojo', 'Azul', 'Plata'])[1 + abs(hashtext(f.placa || 'c')) % 6]
+  FROM demo_flota f JOIN tipo_vehiculo t USING (id_tipo)
+ON CONFLICT (placa) DO NOTHING;
+
+DO $simulacion$
+DECLARE
+    sede        record;
+    tipo        record;
+    tar         record;
+    perfil      text;
+    dia         date;
+    libre       boolean;
+    h           int;
+    n           int;
+    i           int;
+    idx         int;
+    cap         int;
+    ids         int[];
+    libres_en   timestamp[];
+    llegada     timestamp;
+    salida      timestamp;
+    minutos     int;
+    vehiculo    text;
+    factor      numeric;
+    tasa        numeric;
+    hoy         date := current_date;
+    inicio      date := current_date - 84;
+    op_dia      int := (SELECT id_usuario FROM usuario WHERE correo = 'operador1@parkway.test');
+    op_noche    int := (SELECT id_usuario FROM usuario WHERE correo = 'operador2@parkway.test');
+    admin       int := (SELECT id_usuario FROM usuario WHERE rol = 'ADMINISTRADOR' ORDER BY id_usuario LIMIT 1);
+    turno_noche boolean;
+BEGIN
+    PERFORM setseed(0.42);
+    FOR sede IN SELECT id_parqueadero, nombre FROM parqueadero ORDER BY id_parqueadero LOOP
+        perfil := CASE WHEN sede.nombre ILIKE '%zona t%' THEN 'COMERCIAL' ELSE 'OFICINAS' END;
+        -- Si la operadora de la noche trabaja en la sede, atiende desde las 2:00 p. m.
+        turno_noche := EXISTS (SELECT 1 FROM operador_parqueadero WHERE id_usuario = op_noche AND id_parqueadero = sede.id_parqueadero);
+        FOR tipo IN SELECT id_tipo, nombre FROM tipo_vehiculo ORDER BY id_tipo LOOP
+            SELECT array_agg(e.id_espacio ORDER BY e.piso, e.codigo) INTO ids
+              FROM espacio e WHERE e.id_parqueadero = sede.id_parqueadero AND e.id_tipo = tipo.id_tipo;
+            CONTINUE WHEN ids IS NULL;
+            SELECT * INTO tar FROM tarifa
+             WHERE id_parqueadero = sede.id_parqueadero AND id_tipo = tipo.id_tipo AND activa;
+            CONTINUE WHEN NOT FOUND;
+            cap := array_length(ids, 1);
+            libres_en := array_fill('-infinity'::timestamp, ARRAY[cap]);
+
+            FOR dia IN SELECT generate_series(inicio, hoy - 1, interval '1 day')::date LOOP
+                libre := EXTRACT(ISODOW FROM dia) >= 6 OR pg_temp.es_festivo(dia);
+                -- Días más o menos movidos y una demanda que crece un poco con las semanas.
+                factor := (0.85 + random() * 0.3) * (0.9 + 0.15 * (dia - inicio) / 84.0);
+                FOR h IN 5..23 LOOP
+                    tasa := pg_temp.tasa_llegada(perfil, libre, EXTRACT(ISODOW FROM dia)::int, h)
+                            * CASE tipo.nombre WHEN 'MOTOCICLETA' THEN 0.9 WHEN 'BICICLETA' THEN (CASE WHEN libre THEN 0.35 ELSE 0.6 END) ELSE 1 END;
+                    n := floor(cap * tasa * factor + random())::int;
+                    CONTINUE WHEN n = 0;
+                    FOR llegada IN
+                        SELECT dia + make_interval(hours => h, mins => m) FROM (
+                            SELECT floor(random() * 60)::int AS m FROM generate_series(1, n)) x ORDER BY m
+                    LOOP
+                        minutos := pg_temp.permanencia(perfil, libre, h);
+                        salida := llegada + make_interval(mins => minutos);
+                        CONTINUE WHEN salida >= hoy;  -- la historia termina ayer
+                        idx := NULL;
+                        FOR i IN 1..cap LOOP
+                            IF libres_en[i] <= llegada THEN idx := i; EXIT; END IF;
+                        END LOOP;
+                        CONTINUE WHEN idx IS NULL;  -- sede llena: el vehículo sigue de largo
+                        -- La mitad de las veces llega un cliente frecuente.
+                        SELECT placa INTO vehiculo FROM demo_flota
+                         WHERE id_tipo = tipo.id_tipo AND hasta <= llegada AND (frecuente OR random() < 0.5)
+                         ORDER BY random() LIMIT 1;
+                        CONTINUE WHEN vehiculo IS NULL;
+                        UPDATE demo_flota SET hasta = salida WHERE placa = vehiculo;
+                        libres_en[idx] := salida;
+                        INSERT INTO registro_estacionamiento
+                            (placa, id_espacio, id_tarifa, id_operador_ingreso, id_operador_salida,
+                             fecha_ingreso, fecha_salida, minutos, valor_calculado, estado)
+                        VALUES (vehiculo, ids[idx], tar.id_tarifa,
+                                CASE WHEN turno_noche AND h >= 14 THEN op_noche ELSE op_dia END,
+                                CASE WHEN random() < 0.05 THEN admin
+                                     WHEN turno_noche AND EXTRACT(HOUR FROM salida) >= 14 THEN op_noche ELSE op_dia END,
+                                llegada, salida, minutos,
+                                LEAST((minutos / 60) * tar.valor_hora + ceil((minutos % 60) / 15.0) * tar.valor_fraccion, tar.valor_dia),
+                                'CERRADO');
+                    END LOOP;
+                END LOOP;
+            END LOOP;
+        END LOOP;
+    END LOOP;
+END
+$simulacion$;
 
 -- Reservas de ejemplo: dos activas (clientes de seed.sql) y dos terminadas hoy
 WITH libre_auto AS (

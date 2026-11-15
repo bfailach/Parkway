@@ -48,7 +48,8 @@ porque el servicio de Render solo corre Node.js. Se configura una vez:
 2. En GitHub, abre el repositorio y ve a **Settings > Secrets and variables >
    Actions > New repository secret**. Nombre: `DATABASE_URL`. Valor: la URL.
 3. En la pestaña **Actions**, abre **Pronóstico de ocupación** y pulsa
-   **Run workflow** para calcularlo la primera vez. Debe terminar en verde y
+   **Run workflow** para calcularlo la primera vez. Si cargaste `demo.sql`, el pronóstico
+   usa sus 12 semanas de historia. Debe terminar en verde y
    mostrar el MAPE de cada sede.
 
 Desde ahí corre solo cada noche a las 2:17 a. m. Si falta el secreto, el

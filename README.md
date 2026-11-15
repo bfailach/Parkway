@@ -88,9 +88,15 @@ psql -U postgres -d parkway -f database/seed.sql
 psql -U postgres -d parkway -f database/demo.sql   # opcional, recomendado para presentar
 ```
 
-`demo.sql` ocupa cerca del 60 % de los espacios, registra salidas del día,
-crea dos reservas activas que vencen a los 18 minutos y llena la bitácora. Se
-puede ejecutar varias veces para reiniciar la demostración.
+`demo.sql` simula 12 semanas de operación hasta ayer, con el patrón de cada
+sede: Chapinero es de oficinas (llegan temprano, se quedan el día y el fin
+de semana baja a la mitad) y Zona T es comercial (almuerzo, tarde y noche,
+con más movimiento el viernes y el fin de semana). Respeta los festivos, la
+capacidad de cada sede y que un vehículo no esté en dos lugares a la vez.
+Hoy ocupa cerca del 60 % de los espacios, registra salidas del día, crea dos
+reservas activas que vencen a los 18 minutos y llena la bitácora. Así los
+reportes, el historial y el pronóstico tienen datos con sentido. Tarda unos
+segundos y se puede ejecutar varias veces para reiniciar la demostración.
 
 **2. Backend** (una terminal)
 
@@ -285,11 +291,13 @@ dos últimas semanas reservadas y guarda en `prediccion_ocupacion` las
 próximas 48 horas (modelo `PROPHET`), así el cálculo de las 2:00 a. m. sirve
 el día completo. Las métricas quedan en `modelo_pronostico`.
 
-Resultado actual con datos simulados: MAPE de 16,1 % en Sede Chapinero, que
-cumple la meta de menos de 20 %, y de 21,1 % en Sede Zona T, que no la
-cumple. El error medio es de 4 a 5 puntos porcentuales y cerca del 80 % de
-los valores reales cae dentro del rango. El MAPE no cuenta las horas con
-menos de 10 % de ocupación, porque dividir por casi cero lo infla.
+Resultado con la historia de 12 semanas de `demo.sql`: MAPE de 16,5 % en
+Sede Chapinero, que cumple la meta de menos de 20 %, y de 22,9 % en Sede
+Zona T, que no la cumple. El error medio es de 4 a 5 puntos porcentuales y
+cerca del 80 % de los valores reales cae dentro del rango. El MAPE no cuenta
+las horas con menos de 10 % de ocupación, porque dividir por casi cero lo
+infla. Sin esa historia (una base solo con `seed.sql`), el script usa la
+serie simulada y lo indica.
 
 **Cada noche.** El flujo `.github/workflows/pronostico.yml` lo ejecuta en
 GitHub Actions a las 2:17 a. m. contra la base de producción. Necesita el
@@ -360,7 +368,7 @@ Parkway/
 ├── database/
 │   ├── schema.sql          # Tablas, claves, restricciones e índices
 │   ├── seed.sql            # Usuarios, dos sedes (una de dos pisos), 71 espacios y tarifas
-│   ├── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
+│   ├── demo.sql            # 12 semanas de historia, vehículos dentro, reservas y bitácora de ejemplo
 │   ├── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
 │   ├── migracion_tiempo_real.sql # Agrega el aviso de cambios (RF12) a una base existente
 │   └── migracion_pronostico.sql  # Agrega las tablas del pronóstico (RF15); el script la ejecuta solo
