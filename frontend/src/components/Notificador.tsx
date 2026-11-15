@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, EstadoCliente, PreferenciasNotificacion } from "../lib/api";
 import { calcularCobro } from "../lib/tarifa";
 import { duracion, pesos } from "../lib/formato";
+import { escucharAvisos } from "../lib/tiempoReal";
 
 /**
  * Avisos del cliente: tiempo y valor acumulado de su vehículo, aviso al
@@ -135,9 +136,20 @@ export function Notificador() {
 
     revisar();
     const id = window.setInterval(revisar, 20000);
+    // RF12: la entrada y la salida se avisan en el momento, sin esperar la revisión periódica.
+    let pendiente: number | null = null;
+    const quitarAvisos = escucharAvisos(() => {
+      if (pendiente !== null) return;
+      pendiente = window.setTimeout(() => {
+        pendiente = null;
+        revisar();
+      }, 300);
+    });
     return () => {
       vivo = false;
       window.clearInterval(id);
+      quitarAvisos();
+      if (pendiente !== null) window.clearTimeout(pendiente);
     };
   }, []);
 

@@ -19,7 +19,7 @@ export function PrediccionOcupacion({
   onCambiarSede?: (id: number) => void;
   compacta?: boolean;
 }) {
-  const p = useConsulta(() => api.prediccion(idSede, idTipo).catch(() => null), [idSede, idTipo], 60000);
+  const p = useConsulta(() => api.prediccion(idSede, idTipo).catch(() => null), [idSede, idTipo], 60000, { tiempoReal: false });
   const d = p.datos;
   if (!d) return null;
   const clase = d.nivel === "CRITICA" ? "prediccion-critica" : d.nivel === "ALTA" ? "prediccion-alta" : "";

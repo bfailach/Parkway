@@ -144,8 +144,9 @@ ahora y el botón para registrar la salida.
 aparece en el borde de la maqueta, espera a que se levante la talanquera,
 sube por la rampa si su plaza está en otro piso y entra de frente a su
 plaza. Cuando se registra la salida, sale de reversa, baja por la rampa y se
-va por la talanquera de salida. Lo ve cualquier pantalla que tenga abierto
-el plano, porque el plano se consulta cada 5 segundos.
+va por la talanquera de salida. Lo ve en el momento cualquier pantalla que
+tenga abierto el plano, porque el backend avisa por WebSocket cada cambio
+confirmado (RF12).
 
 | Solo el piso 1 | Un ingreso al piso 2, en cuatro momentos |
 | --- | --- |
@@ -284,9 +285,11 @@ de cámara, las piezas redondeadas y las etiquetas sobre las plazas.
 Postprocessing agrega la oclusión ambiental (N8AO) y, en modo oscuro, el
 brillo de las luces.
 
-**Datos.** La página consulta el estado de cada espacio cada 5 segundos
+**Datos.** La página pide el estado de cada espacio
 (`/api/estacionamiento/plano`, o `/espacios` para el personal, que incluye
-placas). Cada espacio trae su piso.
+placas) cada vez que llega un aviso por WebSocket de su sede, y cada 5
+segundos si la conexión en tiempo real está caída. Cada espacio trae su
+piso.
 
 | Archivo | Qué dibuja o calcula |
 | --- | --- |
@@ -332,7 +335,8 @@ frontend/src/
 ├── three/                  # Escena 3D
 ├── lib/
 │   ├── api.ts              # Cliente HTTP y tipos de la API
-│   ├── useConsulta.ts      # Consultas que se repiten cada N segundos
+│   ├── useConsulta.ts      # Consultas que se recargan con cada aviso en tiempo real
+│   ├── tiempoReal.ts       # Conexión WebSocket única con reconexión (RF12)
 │   ├── tarifa.ts           # Regla de cobro (igual a la del backend)
 │   ├── formato.ts          # Pesos, horas, duraciones y formatos de placa
 │   ├── apariencia.ts       # Tema y opciones de accesibilidad

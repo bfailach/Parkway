@@ -124,7 +124,7 @@ function ReservaActiva({ reserva, ahora, minutos, onCambio }: { reserva: Reserva
   const webgl = useMemo(soportaWebGL, []);
   const { plano2d } = useApariencia();
   const control = useRef(crearControl("panel"));
-  const plano = useConsulta(() => api.plano(reserva.id_parqueadero), [reserva.id_parqueadero], 10000);
+  const plano = useConsulta(() => api.plano(reserva.id_parqueadero), [reserva.id_parqueadero], 10000, { sede: reserva.id_parqueadero });
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,9 +213,9 @@ function FormReserva({
   const [placa, setPlaca] = useState(vehiculos[0]?.placa ?? "");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const resumen = useConsulta(() => api.resumen(idSede), [idSede], 5000);
+  const resumen = useConsulta(() => api.resumen(idSede), [idSede], 5000, { sede: idSede });
   // Solo se puede reservar con la sede abierta y si la reserva termina antes del cierre.
-  const horario = useConsulta(() => api.horario(idSede), [idSede], 60000);
+  const horario = useConsulta(() => api.horario(idSede), [idSede], 60000, { tiempoReal: false });
 
   useEffect(() => {
     if (!vehiculos.some((v) => v.placa === placa)) setPlaca(vehiculos[0]?.placa ?? "");

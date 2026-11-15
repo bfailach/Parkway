@@ -31,7 +31,7 @@ const restante = (fin: string, ahora: number) => {
  * registrar el ingreso con la placa ya escrita.
  */
 export function Reservas({ sede, onRegistrarIngreso }: { sede: Parqueadero; onRegistrarIngreso: (r: ReservaSede) => void }) {
-  const reservas = useConsulta(() => api.reservasSede(sede.id_parqueadero), [sede.id_parqueadero], 10000);
+  const reservas = useConsulta(() => api.reservasSede(sede.id_parqueadero), [sede.id_parqueadero], 10000, { sede: sede.id_parqueadero });
   const ahora = useAhora();
   const lista = reservas.datos ?? [];
   const activas = lista.filter((r) => r.estado === "ACTIVA");

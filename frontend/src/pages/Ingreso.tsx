@@ -47,9 +47,9 @@ export function Ingreso({
   const [envios, setEnvios] = useState(0);
   const placaRef = useRef<HTMLInputElement>(null);
 
-  const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 5000);
-  const libres = useConsulta(() => api.espacios(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 10000);
-  const reservas = useConsulta(() => api.reservasSede(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 15000);
+  const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 5000, { sede: sede.id_parqueadero });
+  const libres = useConsulta(() => api.espacios(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 10000, { sede: sede.id_parqueadero });
+  const reservas = useConsulta(() => api.reservasSede(sede.id_parqueadero), [sede.id_parqueadero, ultimo], 15000, { sede: sede.id_parqueadero });
   const tarifas = useConsulta(() => api.tiposVehiculo(sede.id_parqueadero), [sede.id_parqueadero]);
   const placaNorm = normalizarPlaca(placa);
   const reserva = (reservas.datos ?? []).find((r) => r.estado === "ACTIVA" && r.placa === placaNorm);

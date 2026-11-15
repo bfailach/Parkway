@@ -11,6 +11,7 @@ import { SalidaDialogo } from "../components/SalidaDialogo";
 import { contarPisos, FiltroPisos } from "../components/FiltroPisos";
 import { crearControl, soportaWebGL } from "../three/control";
 import { Plaza } from "../three/layout";
+import { useEnVivo } from "../lib/tiempoReal";
 
 const Escena = lazy(() => import("../three/Escena"));
 
@@ -30,16 +31,19 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
   const [piso, setPiso] = useState<number | null>(null);
   const control = useRef(crearControl("panel"));
 
-  const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero], 5000);
+  const enVivo = useEnVivo();
+  const resumen = useConsulta(() => api.resumen(sede.id_parqueadero), [sede.id_parqueadero], 5000, { sede: sede.id_parqueadero });
   const mapa = useConsulta(
     () => (esPersonal ? api.espacios(sede.id_parqueadero) : api.plano(sede.id_parqueadero)),
     [sede.id_parqueadero, esPersonal],
-    5000
+    5000,
+    { sede: sede.id_parqueadero }
   );
   const totales = useConsulta(
     () => (esPersonal ? api.totalesDia(sede.id_parqueadero) : Promise.resolve(null)),
     [sede.id_parqueadero, esPersonal],
-    15000
+    15000,
+    { sede: sede.id_parqueadero }
   );
 
   useEffect(() => {
@@ -60,7 +64,12 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
           <h1 className="pagina-titulo">{sede.nombre}</h1>
           <p className="pagina-sub">{sede.direccion}</p>
         </div>
-        {r && <p className="actualizado">Actualizado a las {horaCorta(r.actualizado)}</p>}
+        {r && (
+          <p className="actualizado">
+            {enVivo ? <span className="en-vivo">En vivo</span> : <span className="en-vivo en-vivo-no">Reconectando</span>}
+            Actualizado a las {horaCorta(r.actualizado)}
+          </p>
+        )}
       </header>
 
       {resumen.error && <p className="alerta alerta-error" role="alert">{resumen.error}</p>}

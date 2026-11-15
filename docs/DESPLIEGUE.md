@@ -34,6 +34,11 @@ psql $env:DB -f database/demo.sql
 
 La URL ya incluye la contraseña, así que estos comandos no la piden.
 
+Si la base ya existía antes de la actualización en tiempo real, no hace
+falta recrearla: basta con `psql $env:DB -f database/migracion_tiempo_real.sql`.
+Render admite WebSocket sin configuración adicional; el aviso llega por
+`wss://` al mismo dominio del servicio.
+
 ## 3. Probar
 
 Abre la URL del servicio, por ejemplo `https://parkway.onrender.com`, y entra

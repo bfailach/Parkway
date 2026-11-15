@@ -51,7 +51,7 @@ El detalle de cada pantalla, con capturas, está en
 | Registro de ingreso con asignación automática de espacio | RF06 | Implementado |
 | Registro de salida con cálculo de permanencia y tarifa | RF07 | Implementado |
 | Reservas: reservar, cancelar, expirar a los 30 minutos, vista del operador | RF10 | Implementado |
-| Actualización de la disponibilidad sin recargar la página | RF12 | Consulta cada 5 s. WebSocket en la siguiente fase |
+| Actualización de la disponibilidad en tiempo real por WebSocket, sin recargar la página | RF12 | Implementado |
 | Historial de salidas y totales del día | RF13 | Implementado |
 | Bitácora de transacciones con consulta para el administrador | RF14, RNF08 | Implementado |
 | Gestión de sedes: pisos, espacios por piso, tarifas por sede, horario, fuera de servicio y operadores asignados | RF11 | Implementado |
@@ -69,6 +69,7 @@ El detalle de cada pantalla, con capturas, está en
 | 3D | Three.js con React Three Fiber, Drei y postprocesado (oclusión ambiental y bloom) |
 | Backend | Node.js, TypeScript, Express |
 | Base de datos | PostgreSQL |
+| Tiempo real | WebSocket (`ws`) con avisos de PostgreSQL (`LISTEN/NOTIFY`) |
 | Seguridad | JWT, contraseñas con bcrypt |
 | Arquitectura | Tres capas (presentación, negocio, datos) con Gestor de transacciones |
 
@@ -203,6 +204,37 @@ la reserva se cancela.
 - Cada operación queda en la tabla `transaccion` con el usuario, el resultado
   y, si falló, el motivo.
 
+## Tiempo real (RF12)
+
+Las pantallas cambian en el momento en que la portería confirma una
+operación, sin recargar la página:
+
+1. Un trigger en la tabla `espacio` (`tr_espacio_tiempo_real`) envía un aviso
+   con `pg_notify` cada vez que cambia el estado de un espacio. PostgreSQL lo
+   entrega solo cuando la transacción hace COMMIT: una operación revertida
+   no avisa.
+2. El backend escucha el canal con `LISTEN` y reenvía el aviso
+   `{"tipo":"espacios","sede":1}` a las pantallas conectadas por WebSocket en
+   `/api/tiempo-real`.
+3. Cada pantalla abierta en esa sede vuelve a pedir sus datos a la API:
+   cupos, plano 3D, vehículos dentro, reservas y el estado del cliente.
+
+Cubre todo cambio de espacio, también la expiración automática de las
+reservas, y funciona aunque el servicio corra en varios nodos, porque el
+aviso sale de la base de datos. El aviso solo dice qué sede cambió; las
+placas y los datos del cliente siguen saliendo de la API con su token.
+Entre el COMMIT y el aviso pasan unos 150 ms.
+
+Si la conexión se cae, el frontend reintenta con espera creciente y mientras
+tanto vuelve a consultar cada 5 a 15 segundos, como antes. Con la conexión
+abierta solo consulta una vez por minuto, por si se pierde un aviso. En
+Disponibilidad se ve el estado: **En vivo** o **Reconectando**.
+
+En una base creada antes de esta versión, agregue el trigger sin borrar
+datos con `psql -U postgres -d parkway -f database/migracion_tiempo_real.sql`.
+Si falta, el backend lo indica al arrancar y las pantallas siguen
+consultando cada pocos segundos.
+
 ## Red neuronal de ocupación
 
 Un perceptrón multicapa 6-8-1 estima qué porcentaje de la sede estará ocupado
@@ -239,7 +271,7 @@ antes de esta versión, agréguela sin borrar datos con
 
 ```bash
 cd backend
-npm test                                   # 43 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes y red neuronal
+npm test                                   # 45 pruebas unitarias: tarifas, placas, cuentas, usuarios, vehículos, horarios, sedes, tiempo real y red neuronal
 npx tsx scripts/pruebaConcurrencia.ts 20   # con el backend corriendo
 ```
 
@@ -255,7 +287,8 @@ Parkway/
 │   ├── schema.sql          # Tablas, claves, restricciones e índices
 │   ├── seed.sql            # Usuarios, dos sedes (una de dos pisos), 71 espacios y tarifas
 │   ├── demo.sql            # Vehículos dentro, salidas, reservas y bitácora de ejemplo
-│   └── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
+│   ├── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
+│   └── migracion_tiempo_real.sql # Agrega el aviso de cambios (RF12) a una base existente
 ├── ia/
 │   └── entrenar_red.py     # Entrena la red neuronal 6-8-1 y exporta los pesos
 ├── backend/
@@ -268,6 +301,7 @@ Parkway/
 │   │   ├── transactions/   # Gestor de transacciones (BEGIN/COMMIT/ROLLBACK y bitácora)
 │   │   ├── middlewares/    # JWT, roles y manejo de errores
 │   │   ├── ia/             # Red neuronal: pesos entrenados y cálculo hacia adelante
+│   │   ├── tiempoReal/     # WebSocket y escucha de los avisos de PostgreSQL (RF12)
 │   │   └── index.ts        # Arranque y expiración periódica de reservas
 │   ├── tests/              # Pruebas unitarias
 │   └── scripts/            # Prueba de concurrencia
@@ -292,6 +326,7 @@ Parkway/
 | Método | Ruta | Acceso | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/health` | Público | Estado del servicio |
+| WS | `/api/tiempo-real` | Público | Avisos `{"tipo":"espacios","sede":1}` cuando cambian los espacios de una sede |
 | POST | `/api/auth/login` | Público | Inicia sesión y devuelve el token |
 | POST | `/api/auth/registro` | Público | Crea una cuenta de cliente e inicia la sesión |
 | GET | `/api/auth/me` | Sesión | Usuario de la sesión |
@@ -344,8 +379,6 @@ curl -X POST http://localhost:3000/api/estacionamiento/ingreso \
 ## Siguientes pasos
 
 - Pagos con pasarela, comprobantes y anulación (RF08, RF09).
-- Actualización en tiempo real con WebSocket en lugar de consultas cada 5
-  segundos (RF12).
 - Reportes de ocupación por franja, rotación por espacio e ingresos por
   periodo, exportables a CSV (RF13).
 - Predicción para las próximas horas con rango de confianza (RF15).

@@ -58,8 +58,8 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
     api.tiposVehiculo(idSede).then(setTipos).catch(() => {});
   }, [idSede]);
 
-  const plano = useConsulta(() => api.plano(idSede), [idSede], 5000);
-  const resumen = useConsulta(() => api.resumen(idSede), [idSede], 5000);
+  const plano = useConsulta(() => api.plano(idSede), [idSede], 5000, { sede: idSede });
+  const resumen = useConsulta(() => api.resumen(idSede), [idSede], 5000, { sede: idSede });
   const sede = sedes.find((s) => s.id_parqueadero === idSede);
   const espacios = plano.datos ?? [];
   const objetivo = useMemo(() => plazaAsignada(distribuir(espacios).plazas), [espacios]);
@@ -247,7 +247,7 @@ export function Portada({ onIngresar, enSesion }: { onIngresar: () => void; enSe
               ))}
             </dl>
             <p className="vivo-nota">
-              Las plazas verdes del plano están libres. El tablero se actualiza cada 5 segundos con los registros de la portería.
+              Las plazas verdes del plano están libres. El tablero cambia en el momento en que la portería registra un ingreso o una salida.
             </p>
             <button className="boton boton-primario boton-grande vivo-accion" onClick={onIngresar}>
               {enSesion ? "Ir a mi cuenta" : "Reservar un espacio"}

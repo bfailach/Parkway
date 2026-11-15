@@ -8,6 +8,7 @@ export default defineConfig({
   build: { chunkSizeWarningLimit: 1300 },
   server: {
     port: 5173,
-    proxy: { "/api": process.env.VITE_API_PROXY || "http://localhost:3000" },
+    // ws: true también reenvía el WebSocket de /api/tiempo-real (RF12).
+    proxy: { "/api": { target: process.env.VITE_API_PROXY || "http://localhost:3000", ws: true } },
   },
 });

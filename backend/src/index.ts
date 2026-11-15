@@ -9,12 +9,17 @@ process.env.TZ ||= "America/Bogota";
 import { app } from "./app";
 // eslint-disable-next-line import/first
 import { expirarVencidas } from "./repositories/reservaRepository";
+// eslint-disable-next-line import/first
+import { iniciarTiempoReal } from "./tiempoReal/servidor";
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Parkway backend escuchando en el puerto ${PORT}`);
 });
+
+// RF12: avisos por WebSocket en /api/tiempo-real cuando cambia un espacio.
+iniciarTiempoReal(server);
 
 // Libera cada 30 segundos los espacios de reservas cuyo plazo de llegada venció.
 setInterval(() => {

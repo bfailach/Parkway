@@ -14,7 +14,7 @@ export function Activos({ sede }: { sede: Parqueadero }) {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<Registro | null>(null);
 
-  const activos = useConsulta(() => api.activos(sede.id_parqueadero, filtro || undefined), [sede.id_parqueadero, filtro], 15000);
+  const activos = useConsulta(() => api.activos(sede.id_parqueadero, filtro || undefined), [sede.id_parqueadero, filtro], 15000, { sede: sede.id_parqueadero });
   const lista = activos.datos ?? [];
 
   return (
