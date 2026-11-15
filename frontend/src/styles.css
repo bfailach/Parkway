@@ -117,6 +117,10 @@ html[data-texto="muy-grande"] { font-size: 125%; }
 *::after { box-sizing: border-box; }
 
 html { background: var(--negro); }
+/* Nada puede ensanchar la página hacia los lados: en celular eso deja una
+   franja a la derecha y permite arrastrar la página. "clip" no rompe los
+   elementos sticky, a diferencia de "hidden". */
+html, body { overflow-x: clip; }
 body {
   margin: 0;
   font-family: var(--texto);
@@ -1180,9 +1184,10 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 @media (max-width: 900px) { .red-cuerpo { grid-template-columns: 1fr; } }
 .red-t-n, .red-t-y { stroke: var(--superficie); stroke-width: 3px; paint-order: stroke; }
 
-/* Celulares angostos (360 px o menos): la barra de la portada debe caber. */
-@media (max-width: 400px) {
-  .portada-barra { gap: 10px; padding-left: 16px; padding-right: 16px; }
+/* Celulares: la barra de la portada debe caber aunque el teléfono tenga la
+   letra del sistema agrandada. */
+@media (max-width: 480px) {
+  .portada-barra { gap: 8px; padding-left: 16px; padding-right: 16px; }
   .portada-barra .marca { font-size: 1.375rem; gap: 8px; }
   .portada-barra .controles { gap: 4px; }
   .portada-barra .boton-icono { width: 34px; height: 34px; }
