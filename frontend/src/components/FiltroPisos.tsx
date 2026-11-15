@@ -6,11 +6,11 @@ export function FiltroPisos({ pisos, valor, onChange }: { pisos: number; valor: 
   if (pisos < 2) return null;
   return (
     <div className="conmutador" role="radiogroup" aria-label="Piso">
-      <button type="button" role="radio" aria-checked={valor === null} aria-selected={valor === null} onClick={() => onChange(null)}>
+      <button type="button" role="radio" aria-checked={valor === null} onClick={() => onChange(null)}>
         Todos
       </button>
       {Array.from({ length: pisos }, (_, i) => i + 1).map((p) => (
-        <button key={p} type="button" role="radio" aria-checked={valor === p} aria-selected={valor === p} onClick={() => onChange(p)}>
+        <button key={p} type="button" role="radio" aria-checked={valor === p} onClick={() => onChange(p)}>
           Piso {p}
         </button>
       ))}

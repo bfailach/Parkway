@@ -61,7 +61,7 @@ export function Reservas({ sede, onRegistrarIngreso }: { sede: Parqueadero; onRe
         {reservas.datos && activas.length === 0 ? (
           <div className="vacio"><p>No hay reservas activas en esta sede.</p></div>
         ) : (
-          <div className="tabla-contenedor">
+          <div className="tabla-contenedor" tabIndex={0}>
             <table className="tabla">
               <thead>
                 <tr>
@@ -105,7 +105,7 @@ export function Reservas({ sede, onRegistrarIngreso }: { sede: Parqueadero; onRe
         {reservas.datos && hoy.length === 0 ? (
           <div className="vacio"><p>Aún no hay reservas terminadas hoy.</p></div>
         ) : (
-          <div className="tabla-contenedor">
+          <div className="tabla-contenedor" tabIndex={0}>
             <table className="tabla">
               <thead>
                 <tr>

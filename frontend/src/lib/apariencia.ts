@@ -58,8 +58,6 @@ function aplicar(a: Apariencia) {
   html.dataset.movimiento = movimientoReducido(a) ? "reducido" : "normal";
   html.dataset.lectura = a.lectura ? "facil" : "normal";
   html.dataset.simbolos = a.simbolos ? "si" : "no";
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", a.tema === "claro" ? "#f4f5f7" : "#000000");
 }
 
 export function movimientoReducido(a: Apariencia = actual) {

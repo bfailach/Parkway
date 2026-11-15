@@ -210,7 +210,7 @@ export function Bitacora() {
       {bitacora.datos && filas.length === 0 ? (
         <div className="vacio"><p>No hay operaciones con estos filtros.</p></div>
       ) : (
-        <div className="tabla-contenedor">
+        <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla">
             <thead>
               <tr>

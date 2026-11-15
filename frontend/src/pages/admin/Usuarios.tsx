@@ -93,7 +93,7 @@ export function Usuarios({ idActual, onCambio }: { idActual: number; onCambio: (
       {usuarios.datos && lista.length === 0 ? (
         <div className="vacio"><p>No hay usuarios con estos filtros.</p></div>
       ) : (
-        <div className="tabla-contenedor">
+        <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla tabla-usuarios">
             <thead>
               <tr>

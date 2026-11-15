@@ -13,7 +13,7 @@
   --superficie-3: #222831;
   --tinta: #f2f4f5;
   --tinta-2: #a7b0ba;
-  --tinta-3: #6c757f;
+  --tinta-3: #86909b;
   --amarillo: #f5c518;
   --amarillo-hover: #ffd84a;
   --azul-senal: #1f5faf;
@@ -21,6 +21,8 @@
   --acento-hover: #4f92f5;
   --acento-suave: rgba(47, 123, 234, 0.16);
   --acento-texto: #8fb9ff;
+  --relleno: #2266cc;        /* fondo de botones con texto blanco: 5,5:1 */
+  --relleno-hover: #2a70d8;  /* 4,8:1 */
   --libre: #3ddc97;
   --ocupado: #ff4d5e;
   --reservado: #4b90f5;
@@ -64,11 +66,13 @@
   --superficie-4: #cfd4dc;
   --tinta: #0d1117;
   --tinta-2: #4a525c;
-  --tinta-3: #6a727c;
+  --tinta-3: #565e68;
   --acento: #1f66d1;
   --acento-hover: #2f7bea;
   --acento-suave: rgba(31, 102, 209, 0.11);
   --acento-texto: #1655b5;
+  --relleno: #1f66d1;
+  --relleno-hover: #1a57b3;
   --libre: #12865a;
   --ocupado: #d42a3c;
   --reservado: #2563d9;
@@ -127,7 +131,7 @@ h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 800; line-heig
 p { margin: 0; }
 button, input, select { font: inherit; color: inherit; }
 a { color: inherit; }
-::selection { background: var(--acento); color: #fff; }
+::selection { background: var(--relleno); color: #fff; }
 
 :focus-visible { outline: 3px solid var(--acento-hover); outline-offset: 3px; }
 
@@ -184,8 +188,8 @@ a { color: inherit; }
 }
 .boton:active:not(:disabled) { transform: translateY(1px) scale(0.98); }
 .boton:disabled { opacity: 0.5; cursor: not-allowed; }
-.boton-primario { background: var(--acento); color: #fff; }
-.boton-primario:hover:not(:disabled) { background: var(--acento-hover); }
+.boton-primario { background: var(--relleno); color: #fff; }
+.boton-primario:hover:not(:disabled) { background: var(--relleno-hover); }
 .boton-secundario { background: var(--superficie-3); color: var(--tinta); }
 .boton-secundario:hover:not(:disabled) { background: var(--superficie-4); }
 .boton-fantasma { background: var(--fantasma); color: var(--tinta); }
@@ -210,7 +214,7 @@ a { color: inherit; }
 }
 .campo input::placeholder, .buscador input::placeholder { color: var(--tinta-3); }
 .campo input:hover, .campo select:hover, .buscador input:hover { border-color: var(--borde-hover); }
-.campo input:focus, .campo select:focus, .buscador input:focus { border-color: var(--acento); outline: none; }
+.campo input:focus, .campo select:focus, .buscador input:focus { border-color: var(--acento); outline: none; box-shadow: 0 0 0 1px var(--acento); }
 .campo input[aria-invalid="true"], .campo select[aria-invalid="true"] { border-color: var(--ocupado); }
 .campo-error { color: var(--error-texto); font-size: 0.875rem; font-weight: 500; }
 .campo-ayuda { color: var(--tinta-2); font-size: 0.875rem; }
@@ -247,8 +251,8 @@ a { color: inherit; }
 }
 .segmento span:hover { background: var(--superficie-3); }
 .segmento small { font-weight: 400; color: var(--tinta-2); font-size: 0.8125rem; }
-.segmento input:checked + span { background: var(--acento); color: #fff; }
-.segmento input:checked + span small { color: #d6e5ff; }
+.segmento input:checked + span { background: var(--relleno); color: #fff; }
+.segmento input:checked + span small { color: #fff; opacity: 0.92; }
 .segmento input:focus-visible + span { outline: 3px solid var(--acento-hover); outline-offset: 2px; }
 
 /* ---------- Alertas y vacíos ---------- */
@@ -340,7 +344,7 @@ a { color: inherit; }
 .historia-pasos li.hecho { opacity: 0.6; }
 .historia-pasos li.hecho::before { background: var(--libre); color: #000; }
 .historia-pasos li.activo { opacity: 1; }
-.historia-pasos li.activo::before { background: var(--acento); color: #fff; }
+.historia-pasos li.activo::before { background: var(--relleno); color: #fff; }
 .historia-pasos h3 { font-size: clamp(1.75rem, 2.6vw, 2.5rem); font-weight: 800; text-transform: uppercase; }
 .historia-pasos p {
   font-size: 1.125rem; color: var(--tinta); max-width: 40ch;
@@ -378,7 +382,7 @@ a { color: inherit; }
   font-weight: 700; cursor: pointer; transition: background-color 0.15s, color 0.15s;
 }
 .sede-tab:hover { background: var(--fantasma-hover); }
-.sede-tab[aria-selected="true"] { background: var(--acento); color: #fff; }
+.sede-tab[aria-selected="true"] { background: var(--relleno); color: #fff; }
 .vivo-direccion { color: var(--tinta-2); }
 .vivo-tipos { display: grid; gap: 4px; margin: 28px 0; }
 .vivo-tipos div { display: grid; grid-template-columns: 170px auto; align-items: baseline; gap: 16px; padding: 6px 0; }
@@ -491,7 +495,7 @@ a { color: inherit; }
 .bloque-titulo { font-size: 1.875rem; font-weight: 800; text-transform: uppercase; }
 .conmutador { display: inline-flex; background: var(--superficie-2); border-radius: var(--radio); padding: 3px; }
 .conmutador button { border: 0; background: none; color: var(--tinta-2); padding: 7px 16px; border-radius: 3px; font-weight: 700; cursor: pointer; }
-.conmutador button[aria-selected="true"] { background: var(--acento); color: #fff; }
+.conmutador button[aria-selected="true"], .conmutador button[aria-checked="true"] { background: var(--relleno); color: #fff; }
 
 /* Cupos */
 .cupos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px; }
@@ -532,7 +536,7 @@ a { color: inherit; }
 /* Plano 2D */
 .mapa { background: var(--superficie); color: var(--tinta-2); border-radius: var(--radio); padding: 20px 22px 16px; }
 .mapa-zona + .mapa-zona { margin-top: 22px; }
-.mapa-zona-piso { font-size: 0.8125rem; font-family: var(--texto); font-weight: 700; letter-spacing: 0.04em; background: var(--acento); color: #fff; padding: 2px 8px; border-radius: 3px; align-self: center; }
+.mapa-zona-piso { font-size: 0.8125rem; font-family: var(--texto); font-weight: 700; letter-spacing: 0.04em; background: var(--relleno); color: #fff; padding: 2px 8px; border-radius: 3px; align-self: center; }
 .mapa-zona-titulo { font-size: 1.375rem; color: var(--tinta); display: flex; gap: 12px; align-items: baseline; margin-bottom: 10px; text-transform: uppercase; }
 .mapa-zona-cuenta { font-family: var(--texto); font-size: 0.875rem; font-weight: 500; color: var(--tinta-2); text-transform: none; }
 .plazas {
@@ -1012,7 +1016,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 
 /* Reportes (RF13) */
 .filtros-reporte .atajos-fecha { display: flex; flex-wrap: wrap; gap: 6px; }
-.atajos-fecha .boton[aria-pressed="true"] { background: var(--acento); color: #fff; }
+.atajos-fecha .boton[aria-pressed="true"] { background: var(--relleno); color: #fff; }
 .pestanas-reporte { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 12px; border-bottom: 1px solid var(--superficie-3); }
 .indicadores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
 .indicadores > div { background: var(--superficie); border-radius: var(--radio); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
@@ -1200,3 +1204,71 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .diagnostico dt { color: #9aa0a6; }
 .diagnostico dd { margin: 0; word-break: break-word; }
 .diagnostico-error dd { color: #ff8a80; }
+
+/* =====================================================================
+   REVISIÓN DE DISEÑO (WCAG 2.2 AA y uso en celular)
+   ===================================================================== */
+
+/* Tablas con desplazamiento horizontal: se pueden enfocar con el teclado
+   y muestran una sombra en el borde cuando hay más columnas a un lado. */
+.tabla-contenedor:focus-visible { outline: 3px solid var(--acento-hover); outline-offset: 2px; }
+.tabla-contenedor {
+  background:
+    linear-gradient(to right, var(--superficie) 30%, transparent) left / 32px 100% no-repeat local,
+    linear-gradient(to left, var(--superficie) 30%, transparent) right / 32px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--sombra), transparent) left / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--sombra), transparent) right / 14px 100% no-repeat scroll,
+    var(--superficie);
+}
+
+/* Pestañas de secciones: en pantallas angostas se desplazan; un
+   desvanecido en los bordes indica que hay más. */
+@media (max-width: 900px) {
+  .navegacion { scrollbar-width: none; scroll-padding-inline: 24px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 28px), transparent 100%); }
+  .navegacion::-webkit-scrollbar { display: none; }
+}
+
+/* Pantallas táctiles: todo lo que se toca mide al menos 44 px de alto
+   (WCAG 2.5.5 y guías de Android e iOS). */
+@media (pointer: coarse), (max-width: 560px) {
+  .boton, .boton-barra { min-height: 44px; }
+  .boton-icono, .portada-barra .boton-icono { width: 44px; height: 44px; }
+  .aviso-cerrar { min-width: 44px; min-height: 44px; }
+  .nav-item { min-height: 48px; }
+  .segmento span { min-height: 48px; justify-content: center; }
+  .sede-tab, .conmutador button, .filtro-pisos button, .atajos-fecha .boton { min-height: 44px; }
+  .enlace, .enlace-celda { min-height: 44px; display: inline-flex; align-items: center; }
+  .enlace-celda { min-height: 40px; }
+  .cuentas-prueba summary { padding: 11px 0; }
+  .marca { min-height: 44px; }
+  input[type="range"] { min-height: 44px; }
+  .campo input, .campo select, .selector-boton, .buscador input { min-height: 48px; font-size: max(16px, 1rem); }
+}
+
+/* Títulos de tarjetas en letra condensada: si se parten en varias
+   líneas no se pegan. */
+.sede-tarjeta h3, .tarjeta h3 { line-height: 1.02; }
+
+/* Notas dentro de listas de datos (dl): texto normal, no cifra grande */
+.caja dd.nota, .indicadores dd.nota, .hoy dd.nota { margin: 0; font-family: var(--texto); font-weight: 400; font-size: 0.8125rem; line-height: 1.4; }
+
+/* Diagrama de la red en celular: conserva un tamaño legible y se desplaza */
+@media (max-width: 560px) {
+  .red-diagrama { overflow-x: auto; }
+  .red-svg { min-width: 560px; }
+}
+
+/* Portada en celular: el texto de la primera pantalla queda sobre la
+   escena 3D; un velo más fuerte asegura que se lea en ambos temas. */
+@media (max-width: 900px) {
+  .heroe::before { background: linear-gradient(180deg, rgba(var(--velo), 0.25) 0%, rgba(var(--velo), 0.72) 32%, rgba(var(--velo), 0.9) 100%); }
+}
+
+/* Filtros en celular: los campos ocupan el ancho disponible, de a dos por
+   fila cuando caben, en todas las pantallas por igual. */
+@media (max-width: 560px) {
+  .filtros .campo, .filtros-historial .filtros .campo, .filtros-bitacora .campo { flex: 1 1 140px; min-width: 0; max-width: none; }
+  .filtros .campo select, .filtros .campo input, .filtros .selector { width: 100%; }
+}

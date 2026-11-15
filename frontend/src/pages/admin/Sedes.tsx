@@ -402,7 +402,7 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
             </div>
             {err("pisos") && <p className="campo-error">{err("pisos")}</p>}
             {err("espacios") && <p className="campo-error">{err("espacios")}</p>}
-            <div className="tabla-contenedor">
+            <div className="tabla-contenedor" tabIndex={0}>
               <table className="tabla tabla-editor">
                 <caption className="visualmente-oculto">Espacios por piso</caption>
                 <thead>
@@ -439,7 +439,7 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                 </tbody>
               </table>
             </div>
-            <div className="tabla-contenedor tabla-tarifas">
+            <div className="tabla-contenedor tabla-tarifas" tabIndex={0}>
               <table className="tabla tabla-editor">
                 <caption className="visualmente-oculto">Tarifas de la sede</caption>
                 <thead>

@@ -72,7 +72,7 @@ export function RedNeuronal({ sede }: { sede: Parqueadero }) {
       )}
 
       <div className="red-cuerpo">
-        <section className="red-diagrama" aria-label="Diagrama de la red">
+        <section className="red-diagrama" aria-label="Diagrama de la red" tabIndex={0}>
           {r && salida ? <Diagrama red={r} x={x} h={salida.h} y={salida.y} /> : <p className="tenue">Cargando la red...</p>}
           <p className="red-formula">
             <b>h</b> = ReLU(W1·<b>x</b> + b1) &nbsp;·&nbsp; ŷ = σ(w2·<b>h</b> + b2)

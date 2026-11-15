@@ -34,7 +34,7 @@ export function MiHistorial() {
         {visitas.datos && lista.length === 0 ? (
           <div className="vacio"><p>Todavía no tienes visitas registradas.</p></div>
         ) : (
-          <div className="tabla-contenedor">
+          <div className="tabla-contenedor" tabIndex={0}>
             <table className="tabla">
               <thead>
                 <tr>
@@ -80,7 +80,7 @@ export function MiHistorial() {
         {reservas.datos && reservas.datos.length === 0 ? (
           <div className="vacio"><p>No has hecho reservas.</p></div>
         ) : (
-          <div className="tabla-contenedor">
+          <div className="tabla-contenedor" tabIndex={0}>
             <table className="tabla">
               <thead>
                 <tr>

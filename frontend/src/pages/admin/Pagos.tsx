@@ -86,13 +86,13 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
             <div key={m.metodo}>
               <dt>{NOMBRE_METODO[m.metodo]}</dt>
               <dd>{pesos(m.total)}</dd>
-              <span className="tenue">{m.pagos} {m.pagos === 1 ? "pago" : "pagos"}{m.anulados ? `, ${m.anulados} anulado${m.anulados === 1 ? "" : "s"}` : ""}</span>
+              <dd className="tenue nota">{m.pagos} {m.pagos === 1 ? "pago" : "pagos"}{m.anulados ? `, ${m.anulados} anulado${m.anulados === 1 ? "" : "s"}` : ""}</dd>
             </div>
           ))}
           <div className="caja-total">
             <dt>Total recaudado</dt>
             <dd>{pesos(t.total)}</dd>
-            <span className="tenue">{t.anulados ? `Sin contar ${pesos(t.totalAnulado)} anulados` : `${t.pagos} pagos`}</span>
+            <dd className="tenue nota">{t.anulados ? `Sin contar ${pesos(t.totalAnulado)} anulados` : `${t.pagos} pagos`}</dd>
           </div>
         </dl>
       )}
@@ -102,7 +102,7 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
       {datos.datos && pagos.length === 0 ? (
         <div className="vacio"><p>No hay pagos con estos filtros.</p></div>
       ) : (
-        <div className="tabla-contenedor">
+        <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla">
             <thead>
               <tr>

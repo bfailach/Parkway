@@ -44,7 +44,7 @@ export function Activos({ sede }: { sede: Parqueadero }) {
           <p>{filtro ? `Ningún vehículo dentro coincide con ${filtro}.` : "No hay vehículos dentro. Los ingresos que registre aparecerán aquí."}</p>
         </div>
       ) : (
-        <div className="tabla-contenedor">
+        <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla">
             <thead>
               <tr>

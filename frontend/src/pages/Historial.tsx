@@ -234,7 +234,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
       {cargado && filas === 0 ? (
         <div className="vacio"><p>No hay salidas con estos filtros. Amplíe el rango de fechas o quite algún filtro.</p></div>
       ) : agrupar ? (
-        <div className="tabla-contenedor">
+        <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla">
             <thead>
               <tr>
@@ -266,7 +266,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
           </table>
         </div>
       ) : (
-        <div className="tabla-contenedor">
+        <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla">
             <thead>
               <tr>

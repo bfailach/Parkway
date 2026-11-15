@@ -157,7 +157,7 @@ function Indicadores({ items }: { items: { rotulo: string; valor: string; nota?:
         <div key={i.rotulo}>
           <dt>{i.rotulo}</dt>
           <dd>{i.valor}</dd>
-          {i.nota && <span className="tenue">{i.nota}</span>}
+          {i.nota && <dd className="tenue nota">{i.nota}</dd>}
         </div>
       ))}
     </dl>
@@ -235,7 +235,7 @@ function VistaOcupacion({ r }: { r: ReporteOcupacion }) {
           formato={(v) => pct(v, 1)}
         />
       </section>
-      <div className="tabla-contenedor">
+      <div className="tabla-contenedor" tabIndex={0}>
         <table className="tabla">
           <thead>
             <tr>
@@ -280,7 +280,7 @@ function VistaRotacion({ r }: { r: ReporteRotacion }) {
           { rotulo: "Espacios sin uso", valor: `${s.sinUso} de ${s.espacios}`, nota: s.sinUso ? "candidatos a revisar" : undefined },
         ]}
       />
-      <div className="tabla-contenedor">
+      <div className="tabla-contenedor" tabIndex={0}>
         <table className="tabla">
           <thead>
             <tr>
@@ -349,11 +349,11 @@ function VistaIngresos({ r }: { r: ReporteIngresos }) {
       {sedes.length > 1 && (
         <dl className="hoy reporte-sedes">
           {s.porSede.map((x) => (
-            <div key={x.sede}><dt>{x.sede}</dt><dd>{pesos(x.valor)}</dd><span className="tenue">{x.salidas} salidas</span></div>
+            <div key={x.sede}><dt>{x.sede}</dt><dd>{pesos(x.valor)}</dd><dd className="tenue nota">{x.salidas} salidas</dd></div>
           ))}
         </dl>
       )}
-      <div className="tabla-contenedor">
+      <div className="tabla-contenedor" tabIndex={0}>
         <table className="tabla">
           <thead>
             <tr>
