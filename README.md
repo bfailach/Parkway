@@ -11,6 +11,9 @@ real.
 Proyecto de Sistemas Transaccionales, Universidad Manuela Beltrán.
 Grupo 2: Bryan Failach, Alejandro Castellanos y Brayan Bello.
 
+El documento maestro final del proyecto está en
+[docs/Documento_Maestro_Sistemas_Transaccionales_Parkway_Grupo2.pdf](docs/Documento_Maestro_Sistemas_Transaccionales_Parkway_Grupo2.pdf).
+
 ![Portada de Parkway](docs/capturas/01_portada.jpg)
 
 ## El problema
@@ -470,7 +473,11 @@ Parkway/
 ├── render.yaml             # Despliegue en Render
 ├── package.json            # Compila y arranca todo desde la raíz
 └── docs/
-    ├── Proyecto_S9_Parkway.pdf     # Documento maestro (incluye red neuronal, estado del arte, presupuesto y cronograma)
+    ├── Documento_Maestro_Sistemas_Transaccionales_Parkway_Grupo2.pdf  # Documento maestro final
+    ├── Proyecto_S8_Parkway.pdf     # Versión de la semana 8 (reemplazada por el documento final)
+    ├── Proyecto_S9_Parkway.pdf     # Versión de la semana 9 (reemplazada por el documento final)
+    ├── PRUEBAS.md                  # Pruebas de concurrencia, carga y cobertura
+    ├── DISENO.md                   # Revisión de accesibilidad y uso en celular
     ├── FRONTEND.md                 # Pantallas, 3D y diseño
     ├── INSTALACION_WINDOWS.md      # Instalación paso a paso en Windows
     ├── DESPLIEGUE.md               # Publicación en Render
