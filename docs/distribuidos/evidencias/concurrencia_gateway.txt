@@ -1,0 +1,13 @@
+
+Prueba de concurrencia (RNF03) en Sede Prueba RNF03
+Ingresos: 10 aceptados, 40 rechazados, 0 con otro código, en 266 ms
+Espacios asignados: A-01, A-02, A-03, A-04, A-05, A-06, A-07, A-08, A-09, A-10
+Bitácora: 10 confirmados, 40 revertidos
+Salidas con pago: 10; cobros simultáneos aceptados: 1 de 20
+
+CUMPLE     50 ingresos simultáneos sobre 10 espacios: se aceptan 10
+CUMPLE     Se rechazan 40 con 409
+CUMPLE     Ningún espacio queda con dos vehículos
+CUMPLE     La bitácora tiene 10 ingresos confirmados y 40 revertidos
+CUMPLE     Las 10 salidas simultáneas se cobran, cada una con su comprobante
+CUMPLE     20 cobros simultáneos de la misma salida dejan un solo pago

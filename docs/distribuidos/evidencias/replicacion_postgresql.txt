@@ -1,0 +1,21 @@
+== Prueba de replicación y relevo de PostgreSQL (2026-11-17 16:53:00)
+-- 1. Estado de la replicación en el primario
+ application_name |   state   | sync_state |   replay_lag    
+------------------+-----------+------------+-----------------
+ walreceiver      | streaming | async      | 00:00:00.002223
+(1 row)
+
+-- 2. Escritura en el primario y lectura inmediata en la réplica
+Fila 34ac9c70-f1a6-45c3-a49b-cc2e71ddef2d visible en la réplica a los 45 ms
+-- 3. Mismo número de filas en ambos nodos
+puerto 5432: en recuperación=false, registros=11462, pagos=11420, usuarios=5
+puerto 5433: en recuperación=true, registros=11462, pagos=11420, usuarios=5
+-- 4. La réplica rechaza escrituras (solo lectura)
+ERROR:  cannot execute DELETE in a read-only transaction
+-- 5. Relevo manual: se detiene el primario y se promueve la réplica
+server stopped
+server promoted
+Promoción completada en 110 ms
+nuevo primario: en recuperación=false, registros=11462
+escritura aceptada en el nuevo primario: fila de prueba borrada
+DELETE 1

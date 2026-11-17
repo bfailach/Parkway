@@ -1,0 +1,162 @@
+# =====================================================================
+# Parkway - despliegue distribuido con Docker Compose
+#
+#   ./despliegue/generar-llaves.sh      (una sola vez)
+#   docker compose up -d --build
+#   abrir http://localhost:8080
+#
+# Nodos del sistema (cada contenedor es un nodo):
+#   gateway            Nginx: punto único de entrada, balanceo y failover
+#   api1, api2         dos réplicas del backend (misma imagen, sin estado)
+#   eventos (x2)       microservicio consumidor de eventos (RabbitMQ)
+#   postgres-primario  base de datos transaccional (escrituras)
+#   postgres-replica   réplica en espera por replicación en streaming
+#   redis              bloqueos distribuidos, caché y liderazgo
+#   rabbitmq           bus de eventos de dominio (con consola en :15672)
+#   ia                 pronóstico de ocupación con Prophet (tarea periódica)
+# =====================================================================
+name: parkway
+
+x-api: &api
+  build: .
+  restart: unless-stopped
+  environment: &api-env
+    TZ: America/Bogota
+    PORT: "3000"
+    DB_HOST: postgres-primario
+    DB_PORT: "5432"
+    DB_NAME: parkway
+    DB_USER: postgres
+    DB_PASSWORD: ${POSTGRES_PASSWORD:-parkway-local}
+    JWT_SECRET: ${JWT_SECRET:-solo-para-tokens-antiguos}
+    JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_es256
+    JWT_EXPIRES_IN: 8h
+    RESERVA_MINUTOS: "30"
+    REDIS_URL: redis://redis:6379
+    RABBITMQ_URL: amqp://${RABBITMQ_USER:-parkway}:${RABBITMQ_PASSWORD:-parkway-local}@rabbitmq:5672
+    OUTBOX_HABILITADO: "true"
+  secrets: [jwt_es256]
+  depends_on:
+    postgres-primario: { condition: service_healthy }
+    redis: { condition: service_started }
+    rabbitmq: { condition: service_healthy }
+  networks: [interna]
+
+services:
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports: ["8080:80"]
+    volumes:
+      - ./despliegue/gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on: [api1, api2, eventos]
+    networks: [interna]
+
+  api1:
+    <<: *api
+    environment:
+      <<: *api-env
+      NODO_ID: api1
+
+  api2:
+    <<: *api
+    environment:
+      <<: *api-env
+      NODO_ID: api2
+
+  eventos:
+    build: ./servicios/eventos
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+    environment:
+      TZ: America/Bogota
+      PORT: "4000"
+      EVENTOS_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-parkway-local}@postgres-primario:5432/parkway_eventos
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-parkway}:${RABBITMQ_PASSWORD:-parkway-local}@rabbitmq:5672
+      JWKS_URL: http://gateway/.well-known/jwks.json
+    depends_on:
+      postgres-primario: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [interna]
+
+  postgres-primario:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: parkway
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parkway-local}
+      REPLICACION_PASSWORD: ${REPLICACION_PASSWORD:-replica-local}
+      TZ: America/Bogota
+    command: postgres -c wal_level=replica -c max_wal_senders=5 -c max_replication_slots=5
+    volumes:
+      - datos-primario:/var/lib/postgresql/data
+      - ./despliegue/postgres/00-replicacion.sh:/docker-entrypoint-initdb.d/00-replicacion.sh:ro
+      - ./despliegue/postgres/05-datos.sh:/docker-entrypoint-initdb.d/05-datos.sh:ro
+      - ./database:/parkway-sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d parkway"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
+    networks: [interna]
+
+  postgres-replica:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parkway-local}
+      REPLICACION_PASSWORD: ${REPLICACION_PASSWORD:-replica-local}
+      TZ: America/Bogota
+    entrypoint: ["/replica-entrypoint.sh"]
+    volumes:
+      - datos-replica:/var/lib/postgresql/data
+      - ./despliegue/postgres/replica-entrypoint.sh:/replica-entrypoint.sh:ro
+    depends_on:
+      postgres-primario: { condition: service_healthy }
+    networks: [interna]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    networks: [interna]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-parkway}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-parkway-local}
+    ports: ["15672:15672"] # consola de administración
+    volumes:
+      - datos-rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [interna]
+
+  ia:
+    build: ./ia
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-parkway-local}@postgres-primario:5432/parkway
+      INTERVALO_HORAS: "24"
+    depends_on:
+      postgres-primario: { condition: service_healthy }
+    networks: [interna]
+
+secrets:
+  jwt_es256:
+    file: ./despliegue/secretos/jwt_es256.pem
+
+volumes:
+  datos-primario:
+  datos-replica:
+  datos-rabbitmq:
+
+networks:
+  interna:

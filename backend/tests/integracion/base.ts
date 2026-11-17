@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Client } from "pg";
 import { pool } from "../../src/db/pool";
+import { cerrarRedis } from "../../src/distribuido/redis";
 import type { UsuarioToken } from "../../src/middlewares/auth";
 
 /**
@@ -33,13 +34,14 @@ export async function reiniciarBase() {
 
   const c = new Client(conexion(nombre));
   await c.connect();
-  for (const archivo of ["schema.sql", "seed.sql"]) await c.query(fs.readFileSync(path.join(SQL, archivo), "utf8"));
+  for (const archivo of ["schema.sql", "seed.sql", "migracion_distribuida.sql"]) await c.query(fs.readFileSync(path.join(SQL, archivo), "utf8"));
   // Las sedes atienden todo el día, para que las reservas no dependan de la hora en que corren las pruebas.
   await c.query(`UPDATE horario SET abre = '00:00', cierra = '24:00'`);
   await c.end();
 }
 
 export async function cerrar() {
+  await cerrarRedis(); // en modo distribuido (REDIS_URL) la conexión mantendría vivo el proceso
   await pool.end();
 }
 

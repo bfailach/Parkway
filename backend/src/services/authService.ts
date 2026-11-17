@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
-import jwt, { SignOptions } from "jsonwebtoken";
+import { SignOptions } from "jsonwebtoken";
+import { firmarToken } from "../distribuido/llaves";
 import * as usuarioRepository from "../repositories/usuarioRepository";
 import { badRequest, unauthorized, forbidden } from "../errors/AppError";
 import { JWT_SECRET, UsuarioToken } from "../middlewares/auth";
@@ -28,9 +29,7 @@ export async function iniciarSesion(correo: unknown, contrasena: unknown) {
 
 function emitirSesion(usuario: { id_usuario: number; nombre: string; rol: UsuarioToken["rol"]; correo: string; turno: string | null }) {
   const payload: UsuarioToken = { id_usuario: usuario.id_usuario, nombre: usuario.nombre, rol: usuario.rol };
-  const token = jwt.sign(payload, JWT_SECRET(), {
-    expiresIn: (process.env.JWT_EXPIRES_IN || "8h") as SignOptions["expiresIn"],
-  });
+  const token = firmarToken(payload, JWT_SECRET(), (process.env.JWT_EXPIRES_IN || "8h") as SignOptions["expiresIn"]);
   return { token, usuario: { ...payload, correo: usuario.correo, turno: usuario.turno } };
 }
 

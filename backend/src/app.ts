@@ -9,6 +9,9 @@ import clienteRoutes from "./routes/clienteRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import { getPronostico } from "./controllers/catalogoController";
 import { errorHandler } from "./middlewares/errorHandler";
+import { NODO_ID } from "./distribuido/config";
+import { jwks } from "./distribuido/llaves";
+import { saludDistribuida } from "./distribuido/salud";
 
 /** Configuración de la aplicación Express (separada de index.ts para poder probarla). */
 export const app = express();
@@ -16,8 +19,25 @@ export const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Sistemas distribuidos: cada respuesta dice qué réplica la atendió, para
+// observar el balanceo de carga del gateway y el relevo ante fallas.
+app.use((_req, res, next) => {
+  res.setHeader("X-Parkway-Nodo", NODO_ID);
+  next();
+});
+
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+// Estado de este nodo y de sus dependencias (base, réplica, Redis, RabbitMQ, outbox).
+app.get("/api/salud/distribuida", saludDistribuida);
+
+// Llave pública de firma de los tokens (JWKS, RFC 7517). Los demás
+// servicios la usan para verificar tokens sin conocer ningún secreto.
+app.get("/.well-known/jwks.json", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.json(jwks());
 });
 
 app.use("/api/auth", authRoutes);

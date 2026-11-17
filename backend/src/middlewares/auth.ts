@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import { verificarToken as verificarFirma } from "../distribuido/llaves";
 import { estadoSesion } from "../repositories/usuarioRepository";
 
 /**
@@ -33,7 +33,8 @@ export async function verificarToken(req: AuthenticatedRequest, res: Response, n
   const token = header.substring("Bearer ".length);
   let payload: UsuarioToken;
   try {
-    payload = jwt.verify(token, JWT_SECRET()) as UsuarioToken;
+    // ES256 con llave pública (varios nodos) o HS256 con el secreto (un nodo).
+    payload = verificarFirma(token, JWT_SECRET()) as unknown as UsuarioToken;
   } catch {
     return res.status(401).json({ error: "Token inválido o expirado" });
   }

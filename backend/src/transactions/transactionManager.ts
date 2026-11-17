@@ -1,6 +1,7 @@
 import { PoolClient } from "pg";
 import { pool } from "../db/pool";
 import { mensajeDeError } from "../middlewares/errorHandler";
+import { avisarEventoNuevo, registrarEvento } from "../distribuido/outbox";
 
 /**
  * GestorTransacciones (clase de control)
@@ -42,21 +43,23 @@ export class TransactionManager {
       await client.query("BEGIN");
 
       const resultado = await work(client);
+      const idEntidad = opciones.idEntidad ? String(opciones.idEntidad(resultado)) : null;
+      const detalle = opciones.detalle ? opciones.detalle(resultado) : null;
 
       await client.query(
         `INSERT INTO transaccion (id_usuario, tipo_operacion, entidad, id_entidad, estado, fecha_fin, detalle)
          VALUES ($1, $2, $3, $4, 'CONFIRMADA', now(), $5)`,
-        [
-          idUsuario,
-          tipoOperacion,
-          entidad,
-          opciones.idEntidad ? String(opciones.idEntidad(resultado)) : null,
-          opciones.detalle ? JSON.stringify(opciones.detalle(resultado)) : null,
-        ]
+        [idUsuario, tipoOperacion, entidad, idEntidad, detalle ? JSON.stringify(detalle) : null]
       );
+
+      // Sistemas distribuidos: el evento de dominio se guarda en la misma
+      // transacción (patrón outbox) y se publica en RabbitMQ después del
+      // COMMIT. Solo si OUTBOX_HABILITADO=true; si no, no hace nada.
+      await registrarEvento(client, { tipo: tipoOperacion, entidad, idEntidad, datos: detalle });
 
       await client.query("COMMIT");
       client.release();
+      avisarEventoNuevo();
       return resultado;
     } catch (error) {
       try {

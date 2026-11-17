@@ -1,5 +1,6 @@
 import { PoolClient } from "pg";
 import { pool } from "../db/pool";
+import { distribuido, NODO_ID } from "../distribuido/config";
 
 /** Repositorio de reservas (RF10). */
 
@@ -35,8 +36,20 @@ export async function expirarVencidas(): Promise<number> {
         SELECT id_cliente, 'EXPIRACION', 'reserva', id_reserva::text, 'CONFIRMADA', now(), jsonb_build_object('placa', placa)
           FROM vencidas
      RETURNING 1
-     )
-     SELECT (SELECT count(*) FROM vencidas)::int AS n, (SELECT count(*) FROM liberados) AS l, (SELECT count(*) FROM bitacora) AS b`
+     )${
+       // Sistemas distribuidos: cada expiración también sale como evento (outbox).
+       distribuido.outbox
+         ? `,
+     eventos AS (
+        INSERT INTO evento_outbox (tipo, entidad, id_entidad, id_parqueadero, datos, nodo_origen)
+        SELECT 'EXPIRACION', 'reserva', v.id_reserva::text, e.id_parqueadero, jsonb_build_object('placa', v.placa), $1
+          FROM vencidas v JOIN espacio e ON e.id_espacio = v.id_espacio
+     RETURNING 1
+     )`
+         : ""
+     }
+     SELECT (SELECT count(*) FROM vencidas)::int AS n, (SELECT count(*) FROM liberados) AS l, (SELECT count(*) FROM bitacora) AS b`,
+    distribuido.outbox ? [NODO_ID] : []
   );
   return rows[0]?.n ?? 0;
 }

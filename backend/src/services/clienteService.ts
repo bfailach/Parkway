@@ -4,6 +4,7 @@ import * as registroRepository from "../repositories/registroRepository";
 import * as espacioRepository from "../repositories/espacioRepository";
 import * as catalogoRepository from "../repositories/catalogoRepository";
 import { transactionManager } from "../transactions/transactionManager";
+import { conCandado } from "../distribuido/redis";
 import { DatosVehiculo, PREFERENCIAS_POR_DEFECTO, validarPreferencias } from "../validators/clienteValidator";
 import { normalizarPlaca, TIPOS_VEHICULO } from "../validators/ingresoValidator";
 import * as usuarioRepository from "../repositories/usuarioRepository";
@@ -101,7 +102,8 @@ export async function reservar(idCliente: number, body: Record<string, unknown>)
 
   await reservaRepository.expirarVencidas();
 
-  const reserva = await transactionManager.ejecutar(
+  // Sistemas distribuidos: el mismo bloqueo por placa que usa el ingreso.
+  const reserva = await conCandado(`placa:${placa}`, () => transactionManager.ejecutar(
     idCliente,
     "RESERVA",
     "reserva",
@@ -131,7 +133,7 @@ export async function reservar(idCliente: number, body: Record<string, unknown>)
       idEntidad: (r) => r.id_reserva,
       detalle: (r) => ({ placa: r.placa, espacio: r.codigo_espacio }),
     }
-  );
+  ));
   return reservaRepository.obtener(reserva.id_reserva);
 }
 

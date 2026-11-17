@@ -2,6 +2,7 @@ import { Server } from "http";
 import { PoolClient } from "pg";
 import { WebSocket, WebSocketServer } from "ws";
 import { pool } from "../db/pool";
+import { invalidarSede } from "../distribuido/redis";
 
 /**
  * Actualización en tiempo real (RF12).
@@ -98,7 +99,11 @@ export function iniciarTiempoReal(server: Server) {
       cliente = await pool.connect();
       cliente.on("notification", (n) => {
         const sede = n.channel === CANAL ? leerAviso(n.payload) : null;
-        if (sede) avisar(sede);
+        if (sede) {
+          // Sistemas distribuidos: borra la caché de la sede en Redis antes
+          // de avisar, para que la recarga de las pantallas traiga datos nuevos.
+          invalidarSede(sede).finally(() => avisar(sede));
+        }
       });
       cliente.on("error", reintentar);
       await cliente.query(`LISTEN ${CANAL}`);

@@ -1,0 +1,12 @@
+Prueba de carga (RNF02): 400 usuarios durante 30 s (320 consultan, 80 operan la portería)...
+
+operación pedidos errores  p50 ms  p95 ms  p99 ms   máx ms
+consulta    38903       0     121     288     541      780
+ingreso      1086       0     638    1018    1092     1200
+salida        846       0     364     529     584      743
+
+40835 solicitudes en 32 s: 1261 por segundo.
+
+CUMPLE     El 95 % de las consultas responde en menos de 2 s (p95 = 288 ms)
+CUMPLE     El 95 % de los ingresos responde en menos de 3 s (p95 = 1018 ms)
+CUMPLE     Ningún ingreso ni salida falla

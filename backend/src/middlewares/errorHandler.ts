@@ -23,6 +23,15 @@ export function mensajeDeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Errores de conexión con PostgreSQL: servidor caído, apagándose o en recuperación. */
+function esBaseNoDisponible(err: unknown): boolean {
+  const e = err as { code?: string; message?: string };
+  if (["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN", "57P01", "57P02", "57P03", "08006", "08001", "25006"].includes(e?.code ?? "")) {
+    return true;
+  }
+  return /timeout exceeded when trying to connect|Connection terminated/i.test(e?.message ?? "");
+}
+
 /**
  * Manejador central de errores.
  * - AppError: respuesta con su código y mensaje.
@@ -51,6 +60,14 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   }
   if (pgError?.code === "23514") {
     return res.status(400).json({ error: "Los datos no cumplen las reglas de validación" });
+  }
+
+  // Sistemas distribuidos: si la base de datos no está disponible (caída del
+  // primario, promoción de la réplica, conexiones agotadas) se responde 503
+  // con Retry-After, para que el cliente reintente en vez de darlo por perdido.
+  if (esBaseNoDisponible(err)) {
+    res.setHeader("Retry-After", "5");
+    return res.status(503).json({ error: "El servicio no está disponible en este momento. Intente de nuevo en unos segundos." });
   }
 
   // eslint-disable-next-line no-console

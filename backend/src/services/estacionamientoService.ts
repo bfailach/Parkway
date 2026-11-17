@@ -12,6 +12,7 @@ import { UsuarioToken } from "../middlewares/auth";
 import { verificarAcceso } from "./accesoService";
 import { FiltrosHistorial } from "../repositories/registroRepository";
 import { normalizarPlaca, TIPOS_VEHICULO } from "../validators/ingresoValidator";
+import { conCandado, enCache } from "../distribuido/redis";
 
 /**
  * Servicio de Estacionamiento (capa de lógica de negocio).
@@ -34,6 +35,12 @@ export async function consultarDisponibilidad(idParqueadero: number, idTipo: num
 
 export async function resumen(idParqueadero: number) {
   await validarSede(idParqueadero);
+  // Sistemas distribuidos: con Redis, la consulta pública se sirve desde la
+  // caché compartida por todos los nodos (se invalida con cada cambio).
+  return enCache(`resumen:${idParqueadero}`, 5, () => calcularResumen(idParqueadero));
+}
+
+async function calcularResumen(idParqueadero: number) {
   const porTipo = await espacioRepository.resumenPorTipo(idParqueadero);
   const totales = porTipo.reduce(
     (acc, t) => ({
@@ -49,7 +56,7 @@ export async function resumen(idParqueadero: number) {
 
 export async function planoPublico(idParqueadero: number) {
   await validarSede(idParqueadero);
-  return espacioRepository.listarPlano(idParqueadero);
+  return enCache(`plano:${idParqueadero}`, 5, () => espacioRepository.listarPlano(idParqueadero));
 }
 
 export async function reservasDeLaSede(idParqueadero: number) {
@@ -122,7 +129,11 @@ export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToke
   await reservaRepository.expirarVencidas();
   const idOperador = usuario.id_usuario;
 
-  const registro = await transactionManager.ejecutar(
+  // Sistemas distribuidos: bloqueo en Redis por placa. Si dos réplicas
+  // reciben a la vez una operación con la misma placa, la segunda espera.
+  // Las bicicletas sin código se serializan entre sí al generar el código.
+  const recurso = datos.generarCodigo ? "bicicleta-nueva" : `placa:${datos.placa}`;
+  const registro = await conCandado(recurso, () => transactionManager.ejecutar(
     idOperador,
     "INGRESO",
     "registro_estacionamiento",
@@ -203,7 +214,7 @@ export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToke
       idEntidad: (r) => r.id_registro,
       detalle: (r) => ({ placa: r.placa, espacio: r.codigo_espacio, reserva: r.id_reserva ?? null }),
     }
-  );
+  ));
 
   return registroRepository.obtenerDetalle(registro.id_registro);
 }
