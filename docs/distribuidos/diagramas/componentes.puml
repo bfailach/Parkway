@@ -1,0 +1,57 @@
+@startuml componentes
+skinparam defaultFontName "Liberation Sans"
+skinparam defaultFontSize 11
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #F4F7FB
+  BorderColor #4A6FA5
+}
+package "Frontend (React + TypeScript)" {
+  [Vistas por rol\nvisitante, cliente, operador, administrador] as vistas
+  [Cliente API (fetch + JWT)] as capi
+  [Cliente de tiempo real (WebSocket)] as cws
+}
+package "Backend: imagen parkway-api (cada réplica)" {
+  [Rutas y controladores] as rutas
+  [Middleware de seguridad\nJWT ES256/HS256, roles] as mw
+  [Servicios de negocio\nestacionamiento, cliente, pagos,\nparqueaderos, reportes, predicción] as serv
+  [Gestor de transacciones\nBEGIN/COMMIT/ROLLBACK + bitácora] as tm
+  [Repositorios (SQL)] as repo
+  [Tiempo real\nLISTEN/NOTIFY → WebSocket] as tr
+  package "Módulo distribuido (nuevo)" #EEF8F0 {
+    [Outbox y publicador] as ob
+    [Cliente RabbitMQ\npublisher confirms] as rmq
+    [Redis: candado, caché,\nliderazgo] as rd
+    [Circuit breaker] as cb
+    [Llaves y JWKS] as jw
+    [Salud distribuida] as sa
+  }
+}
+package "Servicio de eventos (nuevo)" #EEF8F0 {
+  [Consumidor AMQP\nidempotente + DLQ] as cons
+  [Proyección por sede y día] as proy
+  [Verificación JWKS] as vj
+  [API /eventos] as aev
+}
+vistas --> capi
+vistas --> cws
+capi --> rutas : REST
+cws --> tr : WebSocket
+rutas --> mw
+rutas --> serv
+serv --> tm
+serv --> rd
+tm --> repo
+tm --> ob : evento en la\nmisma transacción
+ob --> rmq
+rmq --> cb
+rd --> cb
+mw --> jw
+tr --> rd : invalida caché
+rmq ..> cons : AMQP
+cons --> proy
+aev --> vj
+vj ..> jw : HTTP JWKS
+aev --> proy
+@enduml

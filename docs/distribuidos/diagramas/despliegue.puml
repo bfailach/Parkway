@@ -1,0 +1,58 @@
+@startuml despliegue
+skinparam defaultFontName "Liberation Sans"
+skinparam defaultFontSize 11
+skinparam shadowing false
+skinparam node {
+  BackgroundColor #F4F7FB
+  BorderColor #4A6FA5
+}
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #777777
+}
+node "Dispositivo del usuario" as dev {
+  artifact "Navegador / PWA" as nav
+}
+node "Equipo anfitrión con Docker Engine (docker-compose.yml)" as host {
+  node "gateway\nnginx:1.27-alpine\n80 → 8080 publicado" as gw
+  node "api1\nparkway-api\n3000" as a1
+  node "api2\nparkway-api\n3000" as a2
+  node "eventos (réplica 1)\nparkway-eventos\n4000" as e1
+  node "eventos (réplica 2)\nparkway-eventos\n4000" as e2
+  node "redis\nredis:7-alpine\n6379" as rd
+  node "rabbitmq\n3.13-management\n5672, 15672 publicado" as mq
+  node "postgres-primario\npostgres:16-alpine\n5432\nvolumen datos-primario" as p1
+  node "postgres-replica\npostgres:16-alpine\n5432\nvolumen datos-replica" as p2
+  node "ia\npython:3.12 + Prophet" as ia
+  artifact "secreto jwt_es256\n(llave privada)" as sec
+}
+node "Render (piloto de un nodo)" as render {
+  node "parkway (Node.js)" as rw
+  node "parkway-db (PostgreSQL)" as rdb
+}
+node "GitHub Actions" as gha {
+  artifact "Pronóstico nocturno\n(Prophet)" as gp
+}
+nav --> gw : HTTPS
+nav ..> rw : HTTPS (piloto)
+gw --> a1
+gw --> a2
+gw --> e1
+gw --> e2
+a1 --> p1
+a2 --> p1
+a1 --> rd
+a2 --> rd
+a1 --> mq
+a2 --> mq
+mq --> e1
+mq --> e2
+e1 --> p1 : parkway_eventos
+e2 --> p1
+p1 --> p2 : WAL
+ia --> p1
+sec ..> a1
+sec ..> a2
+rw --> rdb
+gp ..> rdb
+@enduml

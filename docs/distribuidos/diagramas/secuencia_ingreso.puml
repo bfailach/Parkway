@@ -1,0 +1,47 @@
+@startuml secuencia_ingreso
+skinparam defaultFontName "Liberation Sans"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam ParticipantBackgroundColor #F4F7FB
+skinparam ParticipantBorderColor #4A6FA5
+autonumber
+actor Operador as op
+participant "Aplicación\nweb" as web
+participant "Gateway\nNginx" as gw
+participant "api1" as api
+database "Redis" as r
+database "PostgreSQL\nprimario" as pg
+participant "api2" as api2
+queue "RabbitMQ" as mq
+participant "eventos" as ev
+
+op -> web : digita la placa y confirma
+web -> gw : POST /api/estacionamiento/ingreso (JWT ES256)
+gw -> api : reenvía (round robin)
+api -> api : verifica la firma con la llave pública\ny el rol del usuario
+api -> r : SET candado:placa NX PX 10000
+r --> api : OK (este nodo tiene el candado)
+api -> pg : BEGIN
+api -> pg : vehículo, SELECT ... FOR UPDATE SKIP LOCKED\n(toma el primer espacio libre)
+api -> pg : INSERT registro, UPDATE espacio = OCUPADO
+api -> pg : INSERT transaccion (bitácora)\nINSERT evento_outbox (INGRESO)
+api -> pg : COMMIT
+pg -->> api : NOTIFY parkway_espacios
+pg -->> api2 : NOTIFY parkway_espacios
+api -> r : DEL caché de la sede
+api2 -> r : DEL caché de la sede
+api -> r : libera el candado (si sigue siendo el dueño)
+api --> gw : 201 Created + X-Parkway-Nodo: api1
+gw --> web : 201 Created
+web --> op : muestra el espacio asignado
+api -->> web : WebSocket {tipo: espacios, sede}\n(desde cada réplica a sus pantallas)
+== Después del COMMIT (asíncrono) ==
+api -> pg : SELECT pendientes FOR UPDATE SKIP LOCKED
+api -> mq : publish registro_estacionamiento.ingreso\n(persistente, con confirmación)
+mq --> api : confirmado
+api -> pg : UPDATE evento_outbox SET fecha_publicacion
+mq -> ev : entrega el evento
+ev -> ev : INSERT evento_recibido ON CONFLICT DO NOTHING\n(idempotencia) y suma al resumen
+ev --> mq : ack
+@enduml

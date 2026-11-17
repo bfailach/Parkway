@@ -14,6 +14,12 @@ Grupo 2: Bryan Failach, Alejandro Castellanos y Brayan Bello.
 El documento maestro final del proyecto está en
 [docs/Documento_Maestro_Sistemas_Transaccionales_Parkway_Grupo2.pdf](docs/Documento_Maestro_Sistemas_Transaccionales_Parkway_Grupo2.pdf).
 
+El mismo sistema es también el proyecto de **Sistemas Distribuidos**. La
+versión distribuida corre con `docker compose up`: un gateway Nginx, dos
+réplicas del backend, un microservicio de eventos, Redis, RabbitMQ y
+PostgreSQL con réplica. Vea [Arquitectura distribuida](#arquitectura-distribuida)
+y el [manual de despliegue](docs/distribuidos/MANUAL_DESPLIEGUE.md).
+
 ![Portada de Parkway](docs/capturas/01_portada.jpg)
 
 ## El problema
@@ -434,6 +440,37 @@ Las pruebas de integración reconstruyen `parkway_test` desde `schema.sql` y
 `_test`. El flujo `.github/workflows/pruebas.yml` las corre con la cobertura
 en cada push a `main`. El detalle de cada prueba, sus resultados y sus
 limitaciones está en [docs/PRUEBAS.md](docs/PRUEBAS.md).
+
+## Arquitectura distribuida
+
+![Arquitectura distribuida](docs/distribuidos/diagramas/arquitectura.png)
+
+| Mecanismo | Dónde está | Qué resuelve |
+|---|---|---|
+| API Gateway con balanceo y relevo | `despliegue/gateway/nginx.conf` | Un punto de entrada; si una réplica cae, la otra atiende |
+| Réplicas sin estado | `docker-compose.yml` (`api1`, `api2`) | La sesión viaja en el token; cualquier réplica atiende cualquier petición |
+| Patrón outbox | `backend/src/distribuido/outbox.ts`, `database/migracion_distribuida.sql` | El evento se guarda en la misma transacción del negocio y no se pierde si RabbitMQ cae |
+| Bus de eventos | RabbitMQ, exchange `parkway.eventos` | Comunicación asíncrona y desacoplada entre servicios |
+| Microservicio de eventos | `servicios/eventos` | Consumidor idempotente con cola de mensajes muertos y base propia |
+| Bloqueo distribuido, caché y liderazgo | `backend/src/distribuido/redis.ts` | Serializa operaciones sobre la misma placa entre nodos y reparte las consultas públicas |
+| Circuit breaker | `backend/src/distribuido/circuitBreaker.ts` | Aísla a Redis o RabbitMQ cuando fallan, sin detener el sistema |
+| JWT ES256 y JWKS | `backend/src/distribuido/llaves.ts`, `/.well-known/jwks.json` | Otros servicios verifican los tokens sin conocer ningún secreto |
+| Réplica de PostgreSQL | `despliegue/postgres` | Copia en espera para relevo manual; la API responde 503 mientras la base no está |
+
+Todo se activa con variables de entorno (`REDIS_URL`, `RABBITMQ_URL`,
+`OUTBOX_HABILITADO`, `JWT_PRIVATE_KEY_FILE`). Sin ellas, el backend funciona
+como antes, en un solo nodo, y así sigue publicado en Render.
+
+Pruebas de la arquitectura distribuida (11 escenarios, con caída de réplicas,
+de Redis, de RabbitMQ, del servicio de eventos y de la base):
+
+```bash
+cd backend
+API_URL=http://localhost:8080 npx tsx scripts/pruebaDistribuida.ts
+```
+
+Los resultados de la última corrida están en
+[docs/distribuidos/evidencias](docs/distribuidos/evidencias).
 
 ## Estructura del repositorio
 

@@ -1,0 +1,59 @@
+@startuml arquitectura
+skinparam defaultFontName "Liberation Sans"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam ArrowColor #444444
+skinparam nodesep 40
+skinparam ranksep 55
+skinparam node {
+  BackgroundColor #F4F7FB
+  BorderColor #4A6FA5
+}
+skinparam database {
+  BackgroundColor #FFF7E6
+  BorderColor #B7791F
+}
+skinparam queue {
+  BackgroundColor #EEF8F0
+  BorderColor #2F855A
+}
+top to bottom direction
+
+actor "Cliente" as cli
+actor "Operador" as ope
+actor "Administrador" as adm
+rectangle "Aplicación web React (PWA)\nnavegador o celular" as web #FFFFFF
+
+rectangle "Clúster Docker (red interna)" #FCFCFC {
+  node "API Gateway (Nginx)\npuerto 8080" as gw
+  rectangle "Backend: réplicas sin estado" as back #FFFFFF {
+    node "api1\nNode.js, Express" as api1
+    node "api2\nNode.js, Express" as api2
+  }
+  rectangle "Servicio de eventos" as srv #FFFFFF {
+    node "eventos ×2\nNode.js" as ev
+    database "parkway_eventos" as pge
+  }
+  queue "RabbitMQ\nexchange parkway.eventos\ncola eventos.proyeccion + DLQ" as mq
+  database "Redis\ncandados, caché, liderazgo" as redis
+  database "PostgreSQL primario\nparkway + evento_outbox" as pg
+  database "PostgreSQL réplica\nhot standby" as pgr
+  node "ia\nPython, Prophet" as ia
+}
+
+cli --> web
+ope --> web
+adm --> web
+web --> gw : HTTPS: REST (JSON)\ny WebSocket
+gw --> back : HTTP, round robin\ny relevo ante fallas
+gw --> ev : HTTP /eventos/*
+back --> redis : RESP
+back --> pg : SQL (ACID)\nLISTEN/NOTIFY
+back --> mq : AMQP: publica\nlos eventos del outbox
+mq --> ev : AMQP: entrega,\nack manual
+ev --> pge : SQL
+ev ..> gw : JWKS\n(llave pública)
+pg --> pgr : replicación en\nstreaming (WAL)
+ia --> pg : SQL
+@enduml
