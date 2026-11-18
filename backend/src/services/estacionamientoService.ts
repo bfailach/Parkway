@@ -123,9 +123,11 @@ export async function vehiculoPorPlaca(placa: string) {
 // ---------------------------------------------------------------------
 // RF06 - Registrar ingreso
 // ---------------------------------------------------------------------
-export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToken) {
+export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToken, opciones: { origen?: "QR" } = {}) {
   await validarSede(datos.idParqueadero);
-  await verificarAcceso(usuario, datos.idParqueadero);
+  // En la entrada con QR (autoservicio del cliente) el acceso a la sede lo
+  // concede el QR firmado, ya verificado por qrService.
+  if (opciones.origen !== "QR") await verificarAcceso(usuario, datos.idParqueadero);
   await reservaRepository.expirarVencidas();
   const idOperador = usuario.id_usuario;
 
@@ -212,7 +214,7 @@ export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToke
     },
     {
       idEntidad: (r) => r.id_registro,
-      detalle: (r) => ({ placa: r.placa, espacio: r.codigo_espacio, reserva: r.id_reserva ?? null }),
+      detalle: (r) => ({ placa: r.placa, espacio: r.codigo_espacio, reserva: r.id_reserva ?? null, ...(opciones.origen ? { origen: opciones.origen } : {}) }),
     }
   ));
 

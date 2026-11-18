@@ -7,6 +7,7 @@ import catalogoRoutes from "./routes/catalogoRoutes";
 import estacionamientoRoutes from "./routes/estacionamientoRoutes";
 import clienteRoutes from "./routes/clienteRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import propuestaRoutes from "./routes/propuestaRoutes";
 import { getPronostico } from "./controllers/catalogoController";
 import { errorHandler } from "./middlewares/errorHandler";
 import { NODO_ID } from "./distribuido/config";
@@ -45,6 +46,7 @@ app.use("/api/catalogos", catalogoRoutes);
 app.use("/api/estacionamiento", estacionamientoRoutes);
 app.use("/api/cliente", clienteRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api", propuestaRoutes); // topes tarifarios y autorización de datos
 // Ruta del documento maestro (sección 13) para el pronóstico de 24 horas.
 app.get("/api/prediccion", getPronostico);
 

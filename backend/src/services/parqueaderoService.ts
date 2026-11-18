@@ -5,6 +5,7 @@ import * as espacioRepository from "../repositories/espacioRepository";
 import * as usuarioRepository from "../repositories/usuarioRepository";
 import { transactionManager } from "../transactions/transactionManager";
 import { DatosParqueadero, validarParqueadero } from "../validators/parqueaderoValidator";
+import { validarTopesDeSede } from "./topeTarifarioService";
 import { badRequest, conflict, notFound } from "../errors/AppError";
 import { PoolClient } from "pg";
 
@@ -27,6 +28,8 @@ async function guardarDetalle(client: PoolClient, id: number, d: DatosParqueader
   if ((await parqueaderoRepository.cantidadOperadoresValidos(client, d.operadores)) !== d.operadores.length) {
     throw badRequest("Revise los campos del formulario", { operadores: "Solo se pueden asignar usuarios con rol de operador" });
   }
+  // Decreto 026 de 2026: ninguna tarifa puede superar el tope por minuto (422).
+  await validarTopesDeSede(client, id, d.tarifas);
   for (const t of d.tarifas) await parqueaderoRepository.guardarTarifa(client, id, t);
   await horarioRepository.reemplazar(client, id, d.horarios);
   await parqueaderoRepository.asignarOperadores(client, id, d.operadores);

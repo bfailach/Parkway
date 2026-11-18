@@ -16,12 +16,12 @@ after(cerrar);
 
 describe("cuenta", () => {
   test("crea la cuenta e inicia la sesión", async () => {
-    const s = await auth.registrarCliente({ nombre: "Ana Pérez", documento: "1020304050", correo: "ana@correo.co", contrasena: "clave1234" });
+    const s = await auth.registrarCliente({ nombre: "Ana Pérez", documento: "1020304050", correo: "ana@correo.co", contrasena: "clave1234", aceptaTratamiento: true });
     assert.ok(s.token);
     assert.equal(s.usuario.rol, "CLIENTE");
     const otra = await auth.iniciarSesion("ANA@correo.co", "clave1234");
     assert.equal(otra.usuario.id_usuario, s.usuario.id_usuario);
-    await fallaCon(auth.registrarCliente({ nombre: "Otra Ana", documento: "1020304050", correo: "otra@correo.co", contrasena: "clave1234" }), 409);
+    await fallaCon(auth.registrarCliente({ nombre: "Otra Ana", documento: "1020304050", correo: "otra@correo.co", contrasena: "clave1234", aceptaTratamiento: true }), 409);
     await fallaCon(auth.registrarCliente({ nombre: "A", documento: "x", correo: "x", contrasena: "1" }), 400);
   });
 

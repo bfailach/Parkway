@@ -355,6 +355,45 @@ export interface DatosCuenta {
   correo: string;
   telefono?: string;
   contrasena: string;
+  /** Ley 1581 de 2012: autorización obligatoria para crear la cuenta. */
+  aceptaTratamiento?: boolean;
+  /** Finalidad opcional: comunicaciones sobre sedes y novedades. */
+  aceptaComunicaciones?: boolean;
+}
+
+export interface PoliticaDatos {
+  version: string;
+  vigenteDesde: string;
+  responsable: string;
+  contacto: string;
+  datosQueSeRecogen: string[];
+  datosSensibles: string;
+  finalidades: { codigo: string; obligatoria: boolean; descripcion: string }[];
+  usoEstadistico: string;
+  derechos: string[];
+  plazos: string;
+}
+
+export interface Consentimientos {
+  versionPolitica: string;
+  vigentes: { finalidad: string; obligatoria: boolean; descripcion: string; otorgado: boolean | null; fecha: string | null }[];
+  historial: { finalidad: string; otorgado: boolean; version_politica: string; origen: string; fecha: string }[];
+}
+
+export interface QrSede {
+  sede: number;
+  nombre: string;
+  url: string;
+  svg: string;
+  expira: string;
+}
+
+export interface InfoQr {
+  sede: number;
+  nombre: string;
+  direccion: string | null;
+  expira: string;
+  vehiculos: VehiculoCliente[];
 }
 
 export interface TotalesDia {
@@ -623,7 +662,16 @@ export const api = {
     request<{ token: string; usuario: Usuario }>("POST", "/auth/login", { correo, contrasena }),
   me: () => request<Usuario>("GET", "/auth/me"),
   registro: (datos: DatosCuenta) => request<{ token: string; usuario: Usuario }>("POST", "/auth/registro", datos),
+  // Ley 1581 de 2012: aviso de privacidad y autorizaciones del usuario
+  politicaDatos: () => request<PoliticaDatos>("GET", "/politica-datos"),
+  consentimientos: () => request<Consentimientos>("GET", "/usuarios/me/consentimientos"),
+  cambiarConsentimiento: (finalidad: string, otorgado: boolean) =>
+    request<Consentimientos>("POST", "/usuarios/me/consentimientos", { finalidad, otorgado }),
+  // Entrada con QR: código de la sede para la portería
+  qrIngreso: (idParqueadero: number) => request<QrSede>("GET", `/estacionamiento/qr-ingreso?idParqueadero=${idParqueadero}`),
   cliente: {
+    infoQr: (token: string) => request<InfoQr>("GET", `/cliente/ingreso-qr/${encodeURIComponent(token)}`),
+    ingresoQr: (token: string, placa: string) => request<Registro>("POST", "/cliente/ingreso-qr", { token, placa }),
     estado: () => request<EstadoCliente>("GET", "/cliente/estado"),
     historial: () => request<(Registro & { sede: string })[]>("GET", "/cliente/historial"),
     vehiculos: () => request<VehiculoCliente[]>("GET", "/cliente/vehiculos"),

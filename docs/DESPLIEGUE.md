@@ -53,6 +53,8 @@ lo que se agregó después:
 ```powershell
 psql $env:DB -f database/migracion_tiempo_real.sql   # tiempo real (RF12)
 psql $env:DB -f database/migracion_pagos.sql         # pagos y anulaciones (RF08, RF09)
+psql $env:DB -f database/migracion_distribuida.sql   # outbox de eventos (Sistemas Distribuidos)
+psql $env:DB -f database/migracion_propuesta.sql     # topes tarifarios, autorización de datos
 ```
 
 Render admite WebSocket sin configuración adicional; el aviso llega por

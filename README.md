@@ -472,6 +472,17 @@ API_URL=http://localhost:8080 npx tsx scripts/pruebaDistribuida.ts
 Los resultados de la última corrida están en
 [docs/distribuidos/evidencias](docs/distribuidos/evidencias).
 
+## Funciones de la propuesta
+
+| Función | Cómo funciona |
+|---|---|
+| Topes tarifarios (Decreto 026 de 2026) | Al crear o editar una sede, ninguna tarifa puede superar el tope por minuto aplicado a su tramo: la hora hasta 60 veces el tope, la fracción de 15 minutos hasta 15 veces y el día hasta 1.440 veces. Si lo supera, la transacción se revierte con 422. Topes: automóvil $230 ($253 con Sello Oro), motocicleta $161 ($177) y bicicleta $10 ($0). |
+| Autorización de datos (Ley 1581 de 2012) | La cuenta de cliente solo se crea con la casilla de autorización marcada, y la autorización se guarda en la misma transacción. Las comunicaciones son opcionales y se pueden revocar desde *Notificaciones*. Cada decisión queda en `consentimiento_datos` con la versión de la política. |
+| Entrada con QR | El operador muestra el QR de la sede (*Registrar ingreso*, botón *Mostrar QR de entrada*). El cliente lo escanea con la cámara, inicia sesión, elige su vehículo y entra. Usa la misma transacción del operador; el flujo por placa no cambia. El QR vale 24 horas (`QR_HORAS`). |
+
+En una base existente, estas funciones necesitan una migración:
+`psql $DB -f database/migracion_propuesta.sql`.
+
 ## Estructura del repositorio
 
 ```
@@ -483,7 +494,9 @@ Parkway/
 │   ├── migracion_prediccion.sql  # Agrega la tabla de predicciones a una base existente
 │   ├── migracion_tiempo_real.sql # Agrega el aviso de cambios (RF12) a una base existente
 │   ├── migracion_pronostico.sql  # Agrega las tablas del pronóstico (RF15); el script la ejecuta solo
-│   └── migracion_pagos.sql       # Agrega pagos, comprobantes y anulaciones (RF08, RF09) a una base existente
+│   ├── migracion_pagos.sql       # Agrega pagos, comprobantes y anulaciones (RF08, RF09) a una base existente
+│   ├── migracion_distribuida.sql # Agrega la tabla de eventos (outbox) de la arquitectura distribuida
+│   └── migracion_propuesta.sql   # Agrega topes tarifarios (Decreto 026 de 2026) y autorizaciones de datos (Ley 1581)
 ├── ia/
 │   ├── entrenar_red.py     # Entrena la red neuronal 6-8-1 y exporta los pesos
 │   └── pronostico_prophet.py # Pronóstico de 24 horas con Prophet, guardado en la base
@@ -550,6 +563,7 @@ Parkway/
 | GET | `/api/estacionamiento/reservas?idParqueadero=1` | Personal | Reservas activas y del día, con el cliente |
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra la salida con su pago y comprobante. Cuerpo: `{"metodo":"EFECTIVO","recibido":10000}` o `{"metodo":"TARJETA","referencia":"482913"}` |
+| GET | `/api/estacionamiento/qr-ingreso?idParqueadero=1` | Personal | QR firmado de la sede para la entrada en autoservicio (enlace, imagen SVG y vencimiento) |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
 | GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
 | GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar (con la sede y el espacio donde está cada uno) y registrar vehículos propios |
@@ -557,6 +571,16 @@ Parkway/
 | GET, POST | `/api/cliente/reservas` | Cliente | Consultar y crear reservas |
 | POST | `/api/cliente/reservas/:idReserva/cancelar` | Cliente | Cancelar una reserva activa |
 | GET, PUT | `/api/cliente/preferencias` | Cliente | Configuración de las notificaciones |
+| GET | `/api/cliente/ingreso-qr/:token` | Cliente | Sede del QR escaneado y vehículos con los que puede entrar |
+| POST | `/api/cliente/ingreso-qr` | Cliente | Registra su propio ingreso con el QR. Cuerpo: `{"token":"…","placa":"ABC123"}` |
+| GET | `/api/topes-tarifarios` | Público | Tarifa máxima por minuto del Decreto 026 de 2026 y máximos por hora, fracción y día |
+| GET | `/api/topes-tarifarios/revision` | Administrador | Tarifas activas que superan el tope |
+| GET | `/api/politica-datos` | Público | Aviso de privacidad y finalidades (Ley 1581 de 2012) |
+| GET, POST | `/api/usuarios/me/consentimientos` | Sesión | Autorizaciones vigentes con su historial; otorgar o revocar la opcional |
+| GET | `/api/salud/distribuida` | Público | Réplica que responde y estado de la base, la réplica, Redis, RabbitMQ y el outbox |
+| GET | `/.well-known/jwks.json` | Público | Llave pública ES256 de firma de los tokens |
+| GET | `/eventos/resumen?sede=1&dias=7` | Administrador | Servicio de eventos: resumen por sede y día |
+| GET | `/eventos/recientes?limite=20` | Administrador | Servicio de eventos: últimos eventos recibidos |
 | GET, POST | `/api/admin/parqueaderos` | Administrador | Consultar y crear sedes con pisos, espacios por piso, tarifas, horario y operadores |
 | GET, PUT | `/api/admin/parqueaderos/:id` | Administrador | Consultar y editar una sede |
 | PATCH | `/api/admin/espacios/:id` | Administrador | Marcar un espacio fuera de servicio o habilitarlo |

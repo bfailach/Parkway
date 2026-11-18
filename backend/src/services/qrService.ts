@@ -1,0 +1,88 @@
+import { createHash } from "crypto";
+import jwt from "jsonwebtoken";
+import QRCode from "qrcode";
+import { badRequest, conflict, forbidden, notFound } from "../errors/AppError";
+import { JWT_SECRET, UsuarioToken } from "../middlewares/auth";
+import * as catalogoRepository from "../repositories/catalogoRepository";
+import * as vehiculoRepository from "../repositories/vehiculoRepository";
+import { verificarAcceso } from "./accesoService";
+import { registrarIngreso } from "./estacionamientoService";
+import { normalizarPlaca } from "../validators/ingresoValidator";
+
+/**
+ * Entrada con QR (autoservicio del cliente).
+ *
+ * El operador o el administrador genera el QR de su sede y lo muestra en la
+ * portería. El QR lleva un enlace con un token firmado (HMAC-SHA256) que
+ * dice a qué sede pertenece y hasta cuándo vale. El cliente lo escanea con
+ * la cámara del celular, inicia sesión, elige uno de sus vehículos y el
+ * sistema registra el ingreso con la misma transacción que usa el operador
+ * (bloqueo por placa, asignación del espacio o de su reserva, bitácora y
+ * evento de dominio).
+ *
+ * El token del QR se firma con una llave distinta a la de las sesiones, así
+ * que no sirve como token de sesión ni al revés.
+ */
+const TIPO = "QR_INGRESO";
+const horas = () => Math.min(Math.max(Number(process.env.QR_HORAS) || 24, 1), 168);
+const llave = () => createHash("sha256").update(`parkway-qr:${process.env.QR_SECRET || JWT_SECRET()}`).digest();
+
+export interface SedeQr {
+  sede: number;
+  exp: number;
+}
+
+export function firmarQr(idParqueadero: number): string {
+  return jwt.sign({ tipo: TIPO, sede: idParqueadero }, llave(), { algorithm: "HS256", expiresIn: `${horas()}h` });
+}
+
+/** Verifica el token del QR. Lanza 400 si es inválido o venció. */
+export function verificarQr(token: string): SedeQr {
+  try {
+    const p = jwt.verify(String(token), llave(), { algorithms: ["HS256"] }) as { tipo?: string; sede?: number; exp: number };
+    if (p.tipo !== TIPO || !Number.isInteger(p.sede)) throw new Error("tipo");
+    return { sede: p.sede as number, exp: p.exp };
+  } catch (e) {
+    if ((e as Error).name === "TokenExpiredError") throw badRequest("Este código QR ya venció. Pida en la portería el código del día.");
+    throw badRequest("El código QR no es válido para Parkway");
+  }
+}
+
+/** QR de una sede para mostrar en la portería (personal con acceso a la sede). */
+export async function generar(usuario: UsuarioToken, idParqueadero: number, origen: string) {
+  if (!Number.isInteger(idParqueadero) || idParqueadero <= 0) throw badRequest("Seleccione la sede");
+  const sedes = await catalogoRepository.listarParqueaderos();
+  const sede = sedes.find((s: { id_parqueadero: number }) => s.id_parqueadero === idParqueadero);
+  if (!sede) throw notFound("La sede no existe");
+  await verificarAcceso(usuario, idParqueadero);
+  const token = firmarQr(idParqueadero);
+  const url = `${(process.env.PUBLIC_URL || origen).replace(/\/$/, "")}/#/qr/${token}`;
+  const svg = await QRCode.toString(url, { type: "svg", errorCorrectionLevel: "M", margin: 1 });
+  return { sede: idParqueadero, nombre: sede.nombre, url, svg, expira: new Date(verificarQr(token).exp * 1000).toISOString() };
+}
+
+/** Lo que ve el cliente al abrir el enlace del QR. */
+export async function consultar(token: string, idCliente: number) {
+  const { sede, exp } = verificarQr(token);
+  const sedes = await catalogoRepository.listarParqueaderos();
+  const s = sedes.find((x: { id_parqueadero: number }) => x.id_parqueadero === sede);
+  if (!s) throw notFound("La sede del código QR ya no existe");
+  const vehiculos = await vehiculoRepository.listarDelCliente(idCliente);
+  return { sede, nombre: s.nombre, direccion: s.direccion ?? null, expira: new Date(exp * 1000).toISOString(), vehiculos };
+}
+
+/** Registra el ingreso del cliente con uno de sus vehículos. */
+export async function ingresar(cliente: UsuarioToken, body: Record<string, unknown>) {
+  const { sede } = verificarQr(String(body.token ?? ""));
+  const placa = normalizarPlaca(String(body.placa ?? ""));
+  if (!placa) throw badRequest("Elija el vehículo con el que va a ingresar");
+  const propios = await vehiculoRepository.listarDelCliente(cliente.id_usuario);
+  const vehiculo = propios.find((v: { placa: string }) => v.placa === placa);
+  if (!vehiculo) throw forbidden("Ese vehículo no está registrado en su cuenta. Agréguelo en Mis vehículos.");
+  if (vehiculo.dentro) throw conflict(`El vehículo ${placa} ya se encuentra dentro del parqueadero`);
+  return registrarIngreso(
+    { placa, idTipo: vehiculo.id_tipo, idParqueadero: sede, marca: vehiculo.marca ?? undefined, color: vehiculo.color ?? undefined },
+    cliente,
+    { origen: "QR" }
+  );
+}

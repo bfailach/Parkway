@@ -7,6 +7,7 @@ import { Tiquete } from "../components/Tiquete";
 import { CampoOpciones, COLORES, MARCAS } from "../components/CampoOpciones";
 import { Selector } from "../components/Selector";
 import { IconoBici } from "../components/Placa";
+import { QrSede } from "../components/QrSede";
 
 /**
  * Registro de ingreso (RF06).
@@ -183,6 +184,9 @@ export function Ingreso({
             <p className="pagina-sub">{sede.nombre}</p>
           </div>
         </header>
+
+        {/* Entrada con QR: el cliente registra su propio ingreso escaneando este código. */}
+        <QrSede key={sede.id_parqueadero} idSede={sede.id_parqueadero} nombre={sede.nombre} />
 
         {mensaje && <p className="alerta alerta-error" role="alert">{mensaje}</p>}
 

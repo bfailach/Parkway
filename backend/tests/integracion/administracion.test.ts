@@ -28,7 +28,7 @@ const sedeNueva = (nombre: string, autos = 6) => ({
   tarifas: [
     { idTipo: 1, valor_hora: 5000, valor_fraccion: 1500, valor_dia: 35000 },
     { idTipo: 2, valor_hora: 2000, valor_fraccion: 600, valor_dia: 15000 },
-    { idTipo: 3, valor_hora: 800, valor_fraccion: 200, valor_dia: 5000 },
+    { idTipo: 3, valor_hora: 600, valor_fraccion: 150, valor_dia: 5000 },
   ],
   horarios: [1, 2, 3, 4, 5, 6, 7].map((dia) => ({ dia, abre: "00:00", cierra: "24:00" })),
   operadores: [OPERADOR2.id_usuario],

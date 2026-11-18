@@ -3,6 +3,7 @@ import { api, ApiError, PreferenciasNotificacion } from "../../lib/api";
 import { pesos } from "../../lib/formato";
 import { Selector } from "../../components/Selector";
 import { avisar, EVENTO_PREFERENCIAS } from "../../components/Notificador";
+import { Privacidad } from "../../components/Privacidad";
 
 /**
  * Configuración de los avisos del cliente: cada cuánto ver el tiempo y el
@@ -170,6 +171,7 @@ export function Notificaciones() {
           <button className="boton boton-primario" disabled={guardando}>{guardando ? "Guardando..." : "Guardar"}</button>
         </div>
       </form>
+      <Privacidad />
     </div>
   );
 }

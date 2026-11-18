@@ -111,7 +111,8 @@ WHERE codigo = '2A-15'
   AND id_parqueadero = (SELECT id_parqueadero FROM parqueadero WHERE nombre = 'Sede Chapinero');
 
 -- ---------------------------------------------------------------------
--- Tarifas vigentes de cada sede
+-- Tarifas vigentes de cada sede. Ninguna supera los topes por minuto del
+-- Decreto Distrital 026 de 2026 (bicicletas: $10 por minuto, $600 la hora).
 -- ---------------------------------------------------------------------
 INSERT INTO tarifa (id_parqueadero, id_tipo, valor_hora, valor_fraccion, valor_dia, vigente_desde, activa)
 SELECT p.id_parqueadero, t.id_tipo, valor_hora, valor_fraccion, valor_dia, CURRENT_DATE, true
@@ -119,10 +120,10 @@ FROM (
     VALUES
         ('Sede Chapinero', 'AUTOMOVIL',   4000, 1500, 30000),
         ('Sede Chapinero', 'MOTOCICLETA', 2000, 800,  15000),
-        ('Sede Chapinero', 'BICICLETA',   1000, 400,  6000),
+        ('Sede Chapinero', 'BICICLETA',   600,  150,  6000),
         ('Sede Zona T',    'AUTOMOVIL',   4500, 1700, 34000),
         ('Sede Zona T',    'MOTOCICLETA', 2200, 900,  16000),
-        ('Sede Zona T',    'BICICLETA',   1000, 400,  6000)
+        ('Sede Zona T',    'BICICLETA',   600,  150,  6000)
 ) AS datos (nombre_sede, nombre_tipo, valor_hora, valor_fraccion, valor_dia)
 JOIN parqueadero p ON p.nombre = datos.nombre_sede
 JOIN tipo_vehiculo t ON t.nombre = datos.nombre_tipo;

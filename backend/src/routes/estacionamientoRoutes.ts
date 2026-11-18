@@ -1,6 +1,8 @@
 import { Router } from "express";
 import * as c from "../controllers/estacionamientoController";
-import { requiereRol, verificarToken } from "../middlewares/auth";
+import { AuthenticatedRequest, requiereRol, verificarToken } from "../middlewares/auth";
+import { asyncHandler } from "../utils/asyncHandler";
+import * as qr from "../services/qrService";
 
 const router = Router();
 
@@ -25,5 +27,10 @@ router.get("/historial", ...personal, c.getHistorial);
 router.get("/reservas", ...personal, c.getReservas); // RF10: reservas de la sede
 router.post("/ingreso", ...personal, c.postIngreso); // RF06
 router.post("/salida/:idRegistro", ...personal, c.postSalida); // RF07
+// Entrada con QR: código firmado de la sede para mostrar en la portería
+router.get("/qr-ingreso", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  const origen = `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.get("host")}`;
+  res.json(await qr.generar(req.usuario!, Number(req.query.idParqueadero), origen));
+}));
 
 export default router;

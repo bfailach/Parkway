@@ -34,7 +34,7 @@ export async function reiniciarBase() {
 
   const c = new Client(conexion(nombre));
   await c.connect();
-  for (const archivo of ["schema.sql", "seed.sql", "migracion_distribuida.sql"]) await c.query(fs.readFileSync(path.join(SQL, archivo), "utf8"));
+  for (const archivo of ["schema.sql", "seed.sql", "migracion_distribuida.sql", "migracion_propuesta.sql"]) await c.query(fs.readFileSync(path.join(SQL, archivo), "utf8"));
   // Las sedes atienden todo el día, para que las reservas no dependan de la hora en que corren las pruebas.
   await c.query(`UPDATE horario SET abre = '00:00', cierra = '24:00'`);
   await c.end();

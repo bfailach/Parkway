@@ -12,8 +12,11 @@ export async function buscarPorCorreo(correo: string) {
   return rows[0] ?? null;
 }
 
-export async function crearCliente(u: { nombre: string; documento: string; correo: string; telefono?: string; hash: string }) {
-  const { rows } = await pool.query(
+export async function crearCliente(
+  u: { nombre: string; documento: string; correo: string; telefono?: string; hash: string },
+  db: Pick<PoolClient, "query"> = pool
+) {
+  const { rows } = await db.query(
     `INSERT INTO usuario (nombre, documento, correo, telefono, contrasena_hash, rol)
      VALUES ($1, $2, $3, $4, $5, 'CLIENTE')
      RETURNING id_usuario, nombre, correo, rol, turno, estado`,

@@ -44,6 +44,8 @@ otro entorno deben cambiarse.
 | `REPLICACION_PASSWORD` | `replica-local` | Usuario `replicador` de la réplica |
 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `parkway` / `parkway-local` | Acceso a RabbitMQ y a su consola |
 | `JWT_SECRET` | `solo-para-tokens-antiguos` | Solo para validar tokens HS256 emitidos antes del cambio |
+| `QR_HORAS` | `24` | Vigencia del QR de entrada de cada sede |
+| `PUBLIC_URL` | (la del gateway) | Dirección pública que se pone en el enlace del QR |
 
 Variables del backend que activan la parte distribuida (ya vienen en el
 `docker-compose.yml`). Sin ellas el backend funciona como un solo nodo:
@@ -75,7 +77,7 @@ docker compose ps
 ```
 
 La primera vez, `postgres-primario` crea las tablas y carga `seed.sql`,
-`demo.sql` y `migracion_distribuida.sql` (unos 30 a 60 s). La réplica se
+`demo.sql`, `migracion_distribuida.sql` y `migracion_propuesta.sql` (unos 30 a 60 s). La réplica se
 copia sola del primario cuando este está listo.
 
 Abra <http://localhost:8080>. Usuarios de prueba:
@@ -147,12 +149,17 @@ ejecútelas dentro de la red de Docker o suba temporalmente el límite en
 
 ## 8. Base de datos existente (sin Docker)
 
-Si la base ya existe (por ejemplo, la de Render) y se quiere activar el
-outbox, ejecute una vez la migración. No modifica ninguna tabla existente:
+Si la base ya existe (por ejemplo, la de Render), ejecute una vez las
+migraciones. Solo agregan tablas y una columna; no cambian datos existentes:
 
 ```bash
-psql "$DATABASE_URL" -f database/migracion_distribuida.sql
+psql "$DATABASE_URL" -f database/migracion_distribuida.sql   # outbox de eventos
+psql "$DATABASE_URL" -f database/migracion_propuesta.sql     # topes tarifarios y autorización de datos
 ```
+
+Las tarifas de bicicleta de una base creada antes de este cambio ($1.000 la
+hora) superan el tope de $600. `GET /api/topes-tarifarios/revision` las
+lista; el administrador las corrige desde *Sedes*.
 
 ## 9. Detener y limpiar
 

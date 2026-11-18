@@ -4,6 +4,7 @@ import { crearControl, soportaWebGL } from "../three/control";
 import type { EspacioMapa } from "../lib/api";
 import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
 import { SenalP } from "../components/SenalP";
+import { AvisoPrivacidad } from "../components/AvisoPrivacidad";
 
 const Escena = lazy(() => import("../three/Escena"));
 
@@ -124,6 +125,9 @@ export function Login({ onIngresar, onVolver }: { onIngresar: (u: Usuario) => vo
 /** Creación de cuenta de cliente (RF01). Al terminar inicia la sesión. */
 function CrearCuenta({ onCreada, onIngresar }: { onCreada: (u: Usuario) => void; onIngresar: () => void }) {
   const [f, setF] = useState({ nombre: "", documento: "", correo: "", telefono: "", contrasena: "", confirmar: "" });
+  // Ley 1581 de 2012: autorización expresa (obligatoria) y comunicaciones (opcional).
+  const [acepta, setAcepta] = useState(false);
+  const [comunicaciones, setComunicaciones] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -138,6 +142,7 @@ function CrearCuenta({ onCreada, onIngresar }: { onCreada: (u: Usuario) => void;
     if (f.contrasena.length < 8) err.contrasena = "Mínimo 8 caracteres";
     else if (!/\d/.test(f.contrasena) || !/[A-Za-z]/.test(f.contrasena)) err.contrasena = "Debe tener letras y números";
     if (f.confirmar !== f.contrasena) err.confirmar = "Las contraseñas no coinciden";
+    if (!acepta) err.aceptaTratamiento = "Debe autorizar el tratamiento de sus datos para crear la cuenta";
     return err;
   }
 
@@ -155,6 +160,8 @@ function CrearCuenta({ onCreada, onIngresar }: { onCreada: (u: Usuario) => void;
         correo: f.correo,
         telefono: f.telefono || undefined,
         contrasena: f.contrasena,
+        aceptaTratamiento: acepta,
+        aceptaComunicaciones: comunicaciones,
       });
       sesion.guardar(r.token);
       onCreada(r.usuario);
@@ -191,6 +198,19 @@ function CrearCuenta({ onCreada, onIngresar }: { onCreada: (u: Usuario) => void;
         {campo("contrasena", "Contraseña", { type: "password", autoComplete: "new-password" })}
         {campo("confirmar", "Repetir contraseña", { type: "password", autoComplete: "new-password" })}
       </div>
+      <details className="aviso">
+        <summary>Aviso de privacidad</summary>
+        <AvisoPrivacidad />
+      </details>
+      <label className="casilla">
+        <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} aria-invalid={!!errores.aceptaTratamiento} />
+        <span>Autorizo a Parkway a tratar mis datos personales para prestarme el servicio, según el aviso de privacidad (Ley 1581 de 2012).</span>
+      </label>
+      {errores.aceptaTratamiento && <span className="campo-error">{errores.aceptaTratamiento}</span>}
+      <label className="casilla">
+        <input type="checkbox" checked={comunicaciones} onChange={(e) => setComunicaciones(e.target.checked)} />
+        <span>Quiero recibir información sobre sedes, tarifas y novedades (opcional).</span>
+      </label>
       <button className="boton boton-primario boton-ancho" disabled={enviando}>
         {enviando ? "Creando cuenta..." : "Crear cuenta"}
       </button>

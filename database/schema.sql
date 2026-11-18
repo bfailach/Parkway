@@ -18,6 +18,11 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto; -- soporte para hash de contraseñas si
 -- ---------------------------------------------------------------------
 -- Limpieza (solo para entornos de desarrollo / recreación del esquema)
 -- ---------------------------------------------------------------------
+-- Tablas de las migraciones de Sistemas Distribuidos (se vuelven a crear con
+-- migracion_distribuida.sql y migracion_propuesta.sql).
+DROP TABLE IF EXISTS evento_outbox CASCADE;
+DROP TABLE IF EXISTS consentimiento_datos CASCADE;
+DROP TABLE IF EXISTS tope_tarifario CASCADE;
 DROP TABLE IF EXISTS modelo_pronostico CASCADE;
 DROP TABLE IF EXISTS prediccion_ocupacion CASCADE;
 DROP TABLE IF EXISTS comprobante CASCADE;

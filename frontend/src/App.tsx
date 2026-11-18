@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, onSesionExpirada, Parqueadero, sesion, TipoVehiculo, Usuario } from "./lib/api";
-import { useRuta } from "./lib/ruta";
+import { tokenDeQr, useRuta } from "./lib/ruta";
+import { EntradaQr } from "./pages/cliente/EntradaQr";
 import { Portada } from "./pages/Portada";
 import { Login } from "./pages/Login";
 import { Disponibilidad } from "./pages/Disponibilidad";
@@ -80,6 +81,21 @@ export default function App() {
   const [precarga, setPrecarga] = useState<{ placa: string; idTipo: number } | null>(null);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [versionSedes, setVersionSedes] = useState(0);
+  // Entrada con QR: el token del enlace escaneado se conserva mientras el cliente inicia sesión.
+  const [qrPendiente, setQrPendiente] = useState<string | null>(() => tokenDeQr() ?? sessionStorage.getItem("parkway.qr"));
+  useEffect(() => {
+    const t = tokenDeQr();
+    if (t) {
+      setQrPendiente(t);
+      sessionStorage.setItem("parkway.qr", t);
+    }
+  }, [ruta]);
+  const terminarQr = () => {
+    sessionStorage.removeItem("parkway.qr");
+    setQrPendiente(null);
+    setVista("mi-parqueo");
+    ir("panel");
+  };
 
   useEffect(() => {
     onSesionExpirada(() => {
@@ -181,6 +197,13 @@ export default function App() {
 
       <main className="contenido">
         {errorCarga && <p className="alerta alerta-error" role="alert">{errorCarga}</p>}
+        {qrPendiente && usuario.rol === "CLIENTE" && <EntradaQr token={qrPendiente} onTerminar={terminarQr} />}
+        {qrPendiente && esPersonal && (
+          <p className="alerta alerta-error" role="alert">
+            Este código QR es para que los clientes registren su ingreso desde su cuenta.{" "}
+            <button className="enlace" onClick={terminarQr}>Cerrar</button>
+          </p>
+        )}
         {esPersonal && !errorCarga && sedes.length === 0 && usuario.rol === "OPERADOR" && (
           <div className="vacio"><p>Aún no tienes sedes asignadas. Pide al administrador que te dé acceso a una sede.</p></div>
         )}
