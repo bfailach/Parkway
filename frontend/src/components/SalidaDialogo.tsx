@@ -64,7 +64,8 @@ export function SalidaDialogo({
     setReferencia("");
   }, [registro?.id_registro]);
 
-  const valor = registro && registro.valor_hora != null ? calcularCobro(minutos, registro).total : registro?.valor_estimado ?? 0;
+  const cobro = registro && registro.valor_hora != null ? calcularCobro(minutos, registro) : null;
+  const valor = cobro ? cobro.total : registro?.valor_estimado ?? 0;
   const recibidoNum = Number(recibido.replace(/\D/g, "")) || 0;
   const cambio = metodo === "EFECTIVO" && recibidoNum ? recibidoNum - valor : null;
   const falta = metodo === "EFECTIVO" && recibidoNum > 0 && recibidoNum < valor;
@@ -119,6 +120,9 @@ export function SalidaDialogo({
               <span>Total a pagar</span>
               <strong>{pesos(valor)}</strong>
             </div>
+            {cobro?.topeLegalAplicado && (
+              <p className="tenue cobro-tope">Se aplicó el tope del Decreto 026 de 2026: {pesos(registro.tope_minuto ?? 0)} por minuto.</p>
+            )}
           </div>
 
           <fieldset className="campo pago-metodos">

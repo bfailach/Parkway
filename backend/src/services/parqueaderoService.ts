@@ -5,7 +5,7 @@ import * as espacioRepository from "../repositories/espacioRepository";
 import * as usuarioRepository from "../repositories/usuarioRepository";
 import { transactionManager } from "../transactions/transactionManager";
 import { DatosParqueadero, validarParqueadero } from "../validators/parqueaderoValidator";
-import { validarTopesDeSede } from "./topeTarifarioService";
+import { olvidarSello, validarTopesDeSede } from "./topeTarifarioService";
 import { badRequest, conflict, notFound } from "../errors/AppError";
 import { PoolClient } from "pg";
 
@@ -33,6 +33,7 @@ async function guardarDetalle(client: PoolClient, id: number, d: DatosParqueader
     await client.query("SAVEPOINT sello_oro");
     try {
       await client.query("UPDATE parqueadero SET sello_oro = $2 WHERE id_parqueadero = $1", [id, d.selloOro]);
+      olvidarSello(id);
       await client.query("RELEASE SAVEPOINT sello_oro");
     } catch (e) {
       await client.query("ROLLBACK TO SAVEPOINT sello_oro");

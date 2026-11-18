@@ -44,7 +44,8 @@ const numero = (v: string) => (v.trim() === "" ? undefined : Number(v.replace(",
 const soloDigitos = (v: string) => v.replace(/\D/g, "").slice(0, 8);
 
 /**
- * Historial de salidas con filtros por placa, tipo de vehículo, marca,
+ * Historial de salidas (o, en la pestaña "Entradas y salidas", cada
+ * movimiento en orden de hora) con filtros por placa, tipo de vehículo, marca,
  * color, fechas, horas de permanencia y valor pagado. Se puede ver por
  * visita o agrupado por vehículo (visitas, tiempo total y dinero gastado
  * en la sede); en la vista agrupada, los rangos se aplican a los totales.
@@ -52,7 +53,10 @@ const soloDigitos = (v: string) => v.replace(/\D/g, "").slice(0, 8);
 export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehiculo[] }) {
   const [form, setForm] = useState<Formulario>(VACIO);
   const [filtros, setFiltros] = useState<Formulario>(VACIO);
-  const [agrupar, setAgrupar] = useState(false);
+  // Vista: por visita (salidas), por vehículo o entradas y salidas en orden de hora.
+  const [vista, setVista] = useState<"visita" | "vehiculo" | "movimientos">("visita");
+  const agrupar = vista === "vehiculo";
+  const movimientos = vista === "movimientos";
   const [errorForm, setErrorForm] = useState<string | null>(null);
   const [masFiltros, setMasFiltros] = useState(false);
 
@@ -71,9 +75,10 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
     orden: filtros.orden,
   };
 
-  const visitas = useConsulta(() => (agrupar ? Promise.resolve(null) : api.historial(consulta)), [sede.id_parqueadero, filtros, agrupar]);
-  const porVehiculo = useConsulta(() => (agrupar ? api.historialPorVehiculo(consulta) : Promise.resolve(null)), [sede.id_parqueadero, filtros, agrupar]);
-  const error = visitas.error ?? porVehiculo.error;
+  const visitas = useConsulta(() => (vista === "visita" ? api.historial(consulta) : Promise.resolve(null)), [sede.id_parqueadero, filtros, vista]);
+  const porVehiculo = useConsulta(() => (agrupar ? api.historialPorVehiculo(consulta) : Promise.resolve(null)), [sede.id_parqueadero, filtros, vista]);
+  const listaMov = useConsulta(() => (movimientos ? api.movimientos(consulta) : Promise.resolve(null)), [sede.id_parqueadero, filtros, vista]);
+  const error = visitas.error ?? porVehiculo.error ?? listaMov.error;
 
   function aplicar(e: FormEvent) {
     e.preventDefault();
@@ -114,19 +119,21 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
   const grupos = porVehiculo.datos ?? [];
   const total = agrupar ? grupos.reduce((s, g) => s + g.valor_total, 0) : lista.reduce((s, r) => s + (r.valor_calculado ?? 0), 0);
   const minutosTotal = agrupar ? grupos.reduce((s, g) => s + g.minutos_total, 0) : lista.reduce((s, r) => s + (r.minutos ?? 0), 0);
-  const cargado = agrupar ? porVehiculo.datos : visitas.datos;
-  const filas = agrupar ? grupos.length : lista.length;
+  const movs = listaMov.datos ?? [];
+  const cargado = movimientos ? listaMov.datos : agrupar ? porVehiculo.datos : visitas.datos;
+  const filas = movimientos ? movs.length : agrupar ? grupos.length : lista.length;
 
   return (
     <div className="pagina">
       <header className="pagina-cabeza">
         <div>
-          <h1 className="pagina-titulo">Historial de salidas</h1>
+          <h1 className="pagina-titulo">{movimientos ? "Entradas y salidas" : "Historial de salidas"}</h1>
           <p className="pagina-sub">{sede.nombre}</p>
         </div>
         <div className="conmutador" role="tablist" aria-label="Vista del historial">
-          <button role="tab" aria-selected={!agrupar} onClick={() => setAgrupar(false)}>Por visita</button>
-          <button role="tab" aria-selected={agrupar} onClick={() => setAgrupar(true)}>Por vehículo</button>
+          <button role="tab" aria-selected={vista === "visita"} onClick={() => setVista("visita")}>Por visita</button>
+          <button role="tab" aria-selected={agrupar} onClick={() => setVista("vehiculo")}>Por vehículo</button>
+          <button role="tab" aria-selected={movimientos} onClick={() => setVista("movimientos")}>Entradas y salidas</button>
         </div>
       </header>
 
@@ -153,7 +160,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
             <span className="campo-rotulo">Hasta</span>
             <input type="date" value={form.hasta} onChange={(e) => set({ hasta: e.target.value })} />
           </label>
-          <div className="campo">
+          {!movimientos && <div className="campo">
             <span className="campo-rotulo">Ordenar por</span>
             <Selector
               etiqueta="Ordenar por"
@@ -165,11 +172,11 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
               ]}
               onChange={(v) => set({ orden: v as Formulario["orden"] })}
             />
-          </div>
+          </div>}
         </div>
 
         <button type="button" className="enlace" aria-expanded={masFiltros} aria-controls="mas-filtros" onClick={() => setMasFiltros(!masFiltros)}>
-          {masFiltros ? "Menos filtros" : "Más filtros: marca, color, horas y valor"}
+          {masFiltros ? "Menos filtros" : movimientos ? "Más filtros: marca y color" : "Más filtros: marca, color, horas y valor"}
           {activos > 0 && ` (${activos} ${activos === 1 ? "activo" : "activos"})`}
         </button>
 
@@ -194,6 +201,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
                 onChange={(v) => set({ color: v })}
               />
             </div>
+            {!movimientos && <>
             <fieldset className="campo rango">
               <legend className="campo-rotulo">{agrupar ? "Horas en total" : "Horas de permanencia"}</legend>
               <div className="rango-campos">
@@ -210,6 +218,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
                 <input inputMode="numeric" aria-label="Valor máximo" placeholder="Máx." value={form.valorMax} onChange={(e) => set({ valorMax: soloDigitos(e.target.value) })} />
               </div>
             </fieldset>
+            </>}
           </div>
         )}
 
@@ -222,7 +231,17 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
       {errorForm && <p className="alerta alerta-error" role="alert">{errorForm}</p>}
       {error && <p className="alerta alerta-error" role="alert">{error}</p>}
 
-      {cargado && filas > 0 && (
+      {movimientos && cargado && filas > 0 && (
+        <dl className="hoy resumen-historial" aria-label="Resumen de los movimientos">
+          <div><dt>Entradas</dt><dd>{movs.filter((m) => m.movimiento === "ENTRADA").length}</dd></div>
+          <div><dt>Salidas</dt><dd>{movs.filter((m) => m.movimiento === "SALIDA").length}</dd></div>
+          <div><dt>Valor cobrado</dt><dd>{pesos(movs.reduce((t, m) => t + (m.valor ?? 0), 0))}</dd></div>
+        </dl>
+      )}
+      {movimientos && movs.length >= 300 && (
+        <p className="tenue">Se muestran los 300 movimientos más recientes y los totales corresponden a ellos. Acote las fechas para ver el resto.</p>
+      )}
+      {!movimientos && cargado && filas > 0 && (
         <dl className="hoy resumen-historial" aria-label="Resumen de los resultados">
           <div><dt>{agrupar ? "Vehículos" : "Salidas"}</dt><dd>{filas}</dd></div>
           {agrupar && <div><dt>Visitas</dt><dd>{grupos.reduce((s, g) => s + g.visitas, 0)}</dd></div>}
@@ -232,7 +251,43 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
       )}
 
       {cargado && filas === 0 ? (
-        <div className="vacio"><p>No hay salidas con estos filtros. Amplíe el rango de fechas o quite algún filtro.</p></div>
+        <div className="vacio"><p>No hay {movimientos ? "movimientos" : "salidas"} con estos filtros. Amplíe el rango de fechas o quite algún filtro.</p></div>
+      ) : movimientos ? (
+        <div className="tabla-contenedor" tabIndex={0}>
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Fecha y hora</th>
+                <th scope="col">Movimiento</th>
+                <th scope="col">Placa</th>
+                <th scope="col">Vehículo</th>
+                <th scope="col">Espacio</th>
+                <th scope="col">Registrado por</th>
+                <th scope="col" className="num">Cobro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movs.map((m) => (
+                <tr key={`${m.movimiento}-${m.id_registro}`}>
+                  <td>{fechaCorta(m.fecha)}</td>
+                  <td>
+                    <span className={`chip ${m.movimiento === "ENTRADA" ? "chip-entrada" : "chip-salida"}`}>{m.movimiento === "ENTRADA" ? "Entrada" : "Salida"}</span>
+                    {m.movimiento === "ENTRADA" && m.estado === "ABIERTO" && <span className="celda-sub tenue">Sigue dentro</span>}
+                    {m.movimiento === "SALIDA" && m.minutos != null && <span className="celda-sub tenue">{duracion(m.minutos)}</span>}
+                  </td>
+                  <td><Placa placa={m.placa} /></td>
+                  <td>
+                    {nombreTipo(m.tipo)}
+                    <span className="celda-sub tenue">{[m.marca, m.color].filter(Boolean).join(", ")}</span>
+                  </td>
+                  <td className="codigo">{m.codigo_espacio}</td>
+                  <td>{m.registrado_por ?? <span className="tenue">—</span>}</td>
+                  <td className="num">{m.valor != null ? pesos(m.valor) : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : agrupar ? (
         <div className="tabla-contenedor" tabIndex={0}>
           <table className="tabla">

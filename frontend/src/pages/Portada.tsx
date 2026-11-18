@@ -347,7 +347,9 @@ function Tarifas({ tipos, sedes, idSede, onSede }: { tipos: TipoVehiculo[]; sede
           <div className="calculadora-total" aria-live="polite">
             <span className="calculadora-precio">{pesos(cobro.total)}</span>
             <span className="tenue">
-              {cobro.topeAplicado
+              {cobro.topeLegalAplicado
+                ? `Tope legal del Decreto 026: ${pesos(t.tope_minuto ?? 0)} por minuto`
+                : cobro.topeAplicado
                 ? `Se cobra el valor del día: ${pesos(t.valor_dia)}`
                 : `${cobro.horas} ${cobro.horas === 1 ? "hora" : "horas"} x ${pesos(t.valor_hora)} + ${cobro.fracciones} ${cobro.fracciones === 1 ? "fracción" : "fracciones"} x ${pesos(t.valor_fraccion)}`}
             </span>

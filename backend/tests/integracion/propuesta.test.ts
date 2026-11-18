@@ -64,6 +64,20 @@ describe("topes tarifarios (Decreto 026 de 2026)", () => {
     assert.equal(oro.sello_oro, true);
   });
 
+  test("el cobro de una visita corta se limita al tope legal por minuto", async () => {
+    const r = await estacionamiento.registrarIngreso({ placa: "TOP123", idTipo: 1, idParqueadero: CHAPINERO }, OPERADOR1);
+    const salida = await estacionamiento.registrarSalida(r.id_registro, OPERADOR1, { metodo: "EFECTIVO", recibido: 10000 });
+    // 1 minuto: la tarifa cobraría una fracción ($1.500); la ley permite $230.
+    assert.equal(Number(salida.valor_calculado), 230 * Number(salida.minutos));
+  });
+
+  test("la base rechaza una tarifa activa por encima del tope aunque no pase por el backend", async () => {
+    await assert.rejects(
+      uno("INSERT INTO tarifa (id_parqueadero, id_tipo, valor_hora, valor_fraccion, valor_dia, activa) VALUES ($1, 3, 1000, 100, 5000, true)", [CHAPINERO]),
+      (e: { code?: string }) => e.code === "23514"
+    );
+  });
+
   test("revisarTarifas aplica el tope de Sello Oro", () => {
     const tarifa = [{ idTipo: 1, valor_hora: 15000, valor_fraccion: 3700, valor_dia: 60000 }];
     assert.ok(Object.keys(topes.revisarTarifas(tarifa, topes.TOPES_DECRETO_026, false)).length === 1);

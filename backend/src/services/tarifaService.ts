@@ -8,6 +8,10 @@
  *      horas completas x valor_hora
  *    + fracciones de 15 minutos iniciadas x valor_fraccion
  * 4. El valor del tiempo restante nunca supera el valor_dia.
+ * 5. Decreto Distrital 026 de 2026: el total nunca supera el tope por minuto
+ *    multiplicado por los minutos de permanencia (tope_minuto). Así se cumple
+ *    la ley aunque la tarifa configurada cobre por fracciones de 15 minutos
+ *    o haya quedado por encima del tope.
  *
  * Ejemplo con automóvil (hora 4.000, fracción 1.500, día 30.000):
  *   1 h 20 min = 4.000 + 2 x 1.500 = 7.000
@@ -16,6 +20,8 @@ export interface Tarifa {
   valor_hora: number;
   valor_fraccion: number;
   valor_dia: number;
+  /** Tarifa máxima por minuto de la norma vigente para el tipo y la sede. */
+  tope_minuto?: number | null;
 }
 
 export const MINUTOS_DIA = 1440;
@@ -39,5 +45,7 @@ export function calcularValor(minutos: number, tarifa: Tarifa): number {
   const fracciones = Math.ceil((resto % 60) / MINUTOS_FRACCION);
   const valorResto = Math.min(horas * vh + fracciones * vf, vd);
 
-  return dias * vd + valorResto;
+  const valor = dias * vd + valorResto;
+  const tope = tarifa.tope_minuto == null ? null : Number(tarifa.tope_minuto);
+  return tope != null && Number.isFinite(tope) ? Math.min(valor, tope * minutos) : valor;
 }

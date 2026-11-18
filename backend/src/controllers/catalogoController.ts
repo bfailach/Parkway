@@ -1,3 +1,4 @@
+import { topeMinuto } from "../services/topeTarifarioService";
 import { asyncHandler } from "../utils/asyncHandler";
 import * as catalogoRepository from "../repositories/catalogoRepository";
 import * as horarioRepository from "../repositories/horarioRepository";
@@ -38,7 +39,10 @@ export const getHorario = asyncHandler(async (req, res) => {
 
 export const getTiposVehiculo = asyncHandler(async (req, res) => {
   const id = Number(req.query.idParqueadero);
-  res.json(await catalogoRepository.listarTiposVehiculo(Number.isInteger(id) && id > 0 ? id : undefined));
+  const sede = Number.isInteger(id) && id > 0 ? id : undefined;
+  const tipos = await catalogoRepository.listarTiposVehiculo(sede);
+  // Con sede: cada tipo lleva su tope por minuto, para que los cálculos de la pantalla coincidan con el cobro.
+  res.json(sede ? await Promise.all(tipos.map(async (t: { id_tipo: number }) => ({ ...t, tope_minuto: await topeMinuto(sede, t.id_tipo) }))) : tipos);
 });
 
 /**

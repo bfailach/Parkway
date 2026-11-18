@@ -188,6 +188,8 @@ export interface TipoVehiculo {
   valor_hora: number | null;
   valor_fraccion: number | null;
   valor_dia: number | null;
+  /** Tope legal por minuto (Decreto 026 de 2026), cuando se pidió con la sede. */
+  tope_minuto?: number | null;
 }
 
 export interface ResumenTipo {
@@ -243,6 +245,8 @@ export interface Registro {
   valor_hora: number;
   valor_fraccion: number;
   valor_dia: number;
+  /** Tope legal por minuto: el cobro nunca lo supera (Decreto 026 de 2026). */
+  tope_minuto?: number | null;
   minutos_transcurridos?: number;
   valor_estimado?: number | null;
   id_reserva?: number | null;
@@ -406,6 +410,22 @@ export interface QrSede {
   url: string;
   svg: string;
   expira: string;
+}
+
+/** Entrada o salida de un vehículo, para el historial de movimientos. */
+export interface Movimiento {
+  id_registro: number;
+  movimiento: "ENTRADA" | "SALIDA";
+  fecha: string;
+  placa: string;
+  codigo_espacio: string;
+  tipo: string;
+  marca: string | null;
+  color: string | null;
+  registrado_por: string | null;
+  valor: number | null;
+  minutos: number | null;
+  estado: string;
 }
 
 /** Movimiento de una sede para los avisos del personal. */
@@ -777,6 +797,8 @@ export const api = {
     request<Registro[]>("GET", `/estacionamiento/historial?${qs(f as unknown as Record<string, string | number | undefined>)}`),
   historialPorVehiculo: (f: FiltrosHistorial) =>
     request<HistorialVehiculo[]>("GET", `/estacionamiento/historial?${qs({ ...(f as unknown as Record<string, string | number | undefined>), agrupar: "vehiculo" })}`),
+  movimientos: (f: FiltrosHistorial) =>
+    request<Movimiento[]>("GET", `/estacionamiento/historial?${qs({ ...(f as unknown as Record<string, string | number | undefined>), agrupar: "movimientos" })}`),
   reservasSede: (idParqueadero: number) => request<ReservaSede[]>("GET", `/estacionamiento/reservas?${qs({ idParqueadero })}`),
   bitacora: (f: { idUsuario?: string; tipo?: string; entidad?: string; idEntidad?: string; estado?: string; desde?: string; hasta?: string }) =>
     request<{ filas: FilaBitacora[]; tipos: string[]; entidades: string[]; usuarios: { id_usuario: number; nombre: string; rol: Rol }[] }>(

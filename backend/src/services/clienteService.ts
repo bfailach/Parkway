@@ -10,6 +10,7 @@ import { normalizarPlaca, TIPOS_VEHICULO } from "../validators/ingresoValidator"
 import * as usuarioRepository from "../repositories/usuarioRepository";
 import * as horarioService from "./horarioService";
 import { calcularMinutos, calcularValor } from "./tarifaService";
+import { conTope } from "./topeTarifarioService";
 import { badRequest, conflict, forbidden, notFound } from "../errors/AppError";
 
 /**
@@ -169,7 +170,7 @@ export async function miEstado(idCliente: number) {
   await reservaRepository.expirarVencidas();
   const ahora = new Date();
   const [dentro, reservas] = await Promise.all([
-    registroRepository.delCliente(idCliente, "ABIERTO"),
+    registroRepository.delCliente(idCliente, "ABIERTO").then(conTope), // con el tope legal por minuto
     reservaRepository.activasDelCliente(idCliente),
   ]);
   return {

@@ -473,6 +473,8 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                   {tipos.map((t) => {
                     const n = totales[t.id_tipo];
                     const tar = f.tarifas[t.id_tipo] ?? TARIFA_SUGERIDA[t.id_tipo];
+                    // Decreto 026 de 2026: no se puede escribir un valor por encima del máximo legal.
+                    const maximos = topes.datos?.find((x) => x.id_tipo === t.id_tipo && x.sello_oro === f.selloOro)?.maximos;
                     const campoTarifa = (k: "valor_hora" | "valor_fraccion" | "valor_dia", etiqueta: string) => (
                       <td>
                         <input
@@ -480,7 +482,12 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                           aria-label={`${etiqueta} ${nombreTipo(t.nombre)}`}
                           value={tar[k]}
                           disabled={n === 0}
-                          onChange={(e) => set({ tarifas: { ...f.tarifas, [t.id_tipo]: { ...tar, [k]: e.target.value.replace(/\D/g, "").slice(0, 7) } } })}
+                          onChange={(e) => {
+                            const digitos = e.target.value.replace(/\D/g, "").slice(0, 7);
+                            const valor = maximos && digitos !== "" && Number(digitos) > maximos[k] ? String(maximos[k]) : digitos;
+                            set({ tarifas: { ...f.tarifas, [t.id_tipo]: { ...tar, [k]: valor } } });
+                          }}
+                          max={maximos?.[k]}
                           aria-invalid={!!err(`tarifas.${t.id_tipo}.${k}`)}
                           title={err(`tarifas.${t.id_tipo}.${k}`)}
                         />

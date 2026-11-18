@@ -7,6 +7,7 @@ import * as pagoService from "./pagoService";
 import { transactionManager } from "../transactions/transactionManager";
 import { DatosIngreso } from "../validators/ingresoValidator";
 import { calcularMinutos, calcularValor } from "./tarifaService";
+import { conTope, topeMinuto } from "./topeTarifarioService";
 import { badRequest, conflict, notFound } from "../errors/AppError";
 import { UsuarioToken } from "../middlewares/auth";
 import { verificarAcceso } from "./accesoService";
@@ -79,7 +80,8 @@ export async function totalesDelDia(idParqueadero: number) {
 export async function vehiculosActivos(idParqueadero: number, placa?: string) {
   await validarSede(idParqueadero);
   const ahora = new Date();
-  const filas = await registroRepository.listarActivos(idParqueadero, placa?.toUpperCase());
+  // Decreto 026 de 2026: cada fila lleva su tope por minuto, que limita el valor.
+  const filas = await conTope(await registroRepository.listarActivos(idParqueadero, placa?.toUpperCase()));
   return filas.map((r) => {
     const minutos = calcularMinutos(new Date(r.fecha_ingreso), ahora);
     const valor_estimado = r.valor_hora != null ? calcularValor(minutos, r) : null;
@@ -102,6 +104,8 @@ export async function historial(f: FiltrosHistorialEntrada) {
   if (f.valorMin != null && f.valorMax != null && f.valorMin > f.valorMax) throw badRequest("El valor mínimo supera al máximo");
   if (f.orden && !["fecha", "valor", "tiempo"].includes(f.orden)) throw badRequest("Orden inválido");
   const filtros = { ...f, placa: f.placa ? normalizarPlaca(f.placa) : undefined, limite: 300 };
+  // agrupar=movimientos: entradas y salidas en orden de hora (los rangos de tiempo y valor no aplican).
+  if (f.agrupar === "movimientos") return registroRepository.listarMovimientos(filtros);
   return f.agrupar === "vehiculo" ? registroRepository.historialPorVehiculo(filtros) : registroRepository.listarHistorial(filtros);
 }
 
@@ -243,7 +247,8 @@ export async function registrarSalida(idRegistro: number, usuario: UsuarioToken,
 
       const fechaSalida = new Date(r.ahora);
       const minutos = calcularMinutos(new Date(r.fecha_ingreso), fechaSalida);
-      const valor = calcularValor(minutos, r);
+      // Decreto 026 de 2026: el cobro nunca supera el tope por minuto × los minutos.
+      const valor = calcularValor(minutos, { ...r, tope_minuto: await topeMinuto(r.id_parqueadero, r.id_tipo) });
 
       const cerrado = await registroRepository.cerrar(client, { idRegistro, idOperador, fechaSalida, minutos, valor });
       await espacioRepository.actualizarEstado(client, r.id_espacio, "LIBRE");

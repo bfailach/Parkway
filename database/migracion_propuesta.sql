@@ -66,3 +66,37 @@ CREATE INDEX IF NOT EXISTS ix_consentimiento_usuario
 
 COMMENT ON TABLE consentimiento_datos IS
   'Historial de autorizaciones de tratamiento de datos (Ley 1581 de 2012). La fila más reciente por finalidad es la vigente.';
+
+-- ---------------------------------------------------------------------
+-- 3. Ninguna tarifa activa puede superar el tope, por ninguna vía
+-- El backend ya lo revisa al guardar una sede (422); esta regla lo hace
+-- cumplir también en la base, aunque la tarifa se escriba por SQL o por otro
+-- servicio. Desactivar una tarifa vieja (activa = false) siempre se permite.
+-- Además, el cobro de cada visita se limita a tope × minutos en el backend.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_tarifa_dentro_del_tope() RETURNS trigger AS $$
+DECLARE
+    v_tope  NUMERIC;
+    v_sello BOOLEAN;
+BEGIN
+    IF NOT NEW.activa THEN
+        RETURN NEW;
+    END IF;
+    SELECT COALESCE(p.sello_oro, false) INTO v_sello FROM parqueadero p WHERE p.id_parqueadero = NEW.id_parqueadero;
+    SELECT t.valor_minuto INTO v_tope
+      FROM tope_tarifario t
+     WHERE t.id_tipo = NEW.id_tipo AND t.sello_oro = COALESCE(v_sello, false) AND t.vigente_desde <= CURRENT_DATE
+     ORDER BY t.vigente_desde DESC
+     LIMIT 1;
+    IF v_tope IS NOT NULL AND (NEW.valor_hora > v_tope * 60 OR NEW.valor_fraccion > v_tope * 15 OR NEW.valor_dia > v_tope * 1440) THEN
+        RAISE EXCEPTION 'La tarifa supera el tope de $% por minuto del Decreto 026 de 2026', v_tope::int
+              USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_tarifa_tope ON tarifa;
+CREATE TRIGGER tr_tarifa_tope
+    BEFORE INSERT OR UPDATE ON tarifa
+    FOR EACH ROW EXECUTE FUNCTION fn_tarifa_dentro_del_tope();

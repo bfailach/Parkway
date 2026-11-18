@@ -1347,3 +1347,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 /* Tarjeta genérica: recuadro del QR del operador, entrada con QR y aviso de autorización. */
 .tarjeta { background: var(--superficie); border-radius: 8px; padding: 20px 22px; }
 .qr-sede.tarjeta { max-width: 520px; }
+/* Historial de entradas y salidas */
+.chip-entrada { background: var(--ok-fondo); color: var(--ok-texto); }
+.chip-salida { background: var(--superficie-3); color: var(--tinta); }
+.cobro-tope { font-size: 0.875rem; margin: 6px 0 0; }

@@ -27,10 +27,11 @@ export async function crearIngreso(
 /** Bloquea el registro y trae la tarifa y el espacio asociados. */
 export async function bloquearConTarifa(client: PoolClient, idRegistro: number) {
   const { rows } = await client.query(
-    `SELECT r.*, e.codigo AS codigo_espacio, e.id_parqueadero,
+    `SELECT r.*, e.codigo AS codigo_espacio, e.id_parqueadero, v.id_tipo,
             t.valor_hora, t.valor_fraccion, t.valor_dia, now() AS ahora
        FROM registro_estacionamiento r
        JOIN espacio e ON e.id_espacio = r.id_espacio
+       JOIN vehiculo v ON v.placa = r.placa
        LEFT JOIN tarifa t ON t.id_tarifa = r.id_tarifa
       WHERE r.id_registro = $1
       FOR UPDATE OF r`,
@@ -215,6 +216,53 @@ export async function delCliente(idCliente: number, estado: "ABIERTO" | "CERRADO
       ORDER BY COALESCE(r.fecha_salida, r.fecha_ingreso) DESC
       LIMIT $3`,
     [idCliente, estado, limite]
+  );
+  return rows;
+}
+
+/**
+ * Entradas y salidas de una sede en orden de hora (más reciente primero).
+ * Cada visita aporta su entrada y, si ya terminó, su salida. Usa los mismos
+ * filtros de placa, tipo, marca, color y fechas del historial.
+ */
+export async function listarMovimientos(f: FiltrosHistorial) {
+  const params: unknown[] = [];
+  const base = (fecha: string) => {
+    const w = [`e.id_parqueadero = $${params.push(f.idParqueadero)}`];
+    if (f.placa) w.push(`r.placa LIKE '%' || $${params.push(f.placa)} || '%'`);
+    if (f.idTipo) w.push(`v.id_tipo = $${params.push(f.idTipo)}`);
+    if (f.marca) w.push(`v.marca ILIKE '%' || $${params.push(f.marca)} || '%'`);
+    if (f.color) w.push(`v.color ILIKE '%' || $${params.push(f.color)} || '%'`);
+    if (f.desde) w.push(`${fecha} >= $${params.push(f.desde)}::date`);
+    if (f.hasta) w.push(`${fecha} < $${params.push(f.hasta)}::date + 1`);
+    return w.join(" AND ");
+  };
+  const unir = `
+      FROM registro_estacionamiento r
+      JOIN espacio e        ON e.id_espacio = r.id_espacio
+      JOIN vehiculo v       ON v.placa = r.placa
+      JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo`;
+  const entradas = base("r.fecha_ingreso");
+  const salidas = base("r.fecha_salida");
+  const { rows } = await pool.query(
+    `SELECT * FROM (
+       SELECT r.id_registro, 'ENTRADA' AS movimiento, r.fecha_ingreso AS fecha, r.placa, e.codigo AS codigo_espacio,
+              tv.nombre AS tipo, v.marca, v.color,
+              CASE WHEN oi.rol = 'CLIENTE' THEN 'Autoservicio (QR)' ELSE oi.nombre END AS registrado_por,
+              NULL::float AS valor, NULL::int AS minutos, r.estado
+         ${unir}
+         JOIN usuario oi ON oi.id_usuario = r.id_operador_ingreso
+        WHERE ${entradas}
+       UNION ALL
+       SELECT r.id_registro, 'SALIDA', r.fecha_salida, r.placa, e.codigo, tv.nombre, v.marca, v.color,
+              os.nombre, r.valor_calculado::float, r.minutos, r.estado
+         ${unir}
+         LEFT JOIN usuario os ON os.id_usuario = r.id_operador_salida
+        WHERE r.estado = 'CERRADO' AND ${salidas}
+     ) m
+     ORDER BY fecha DESC, movimiento
+     LIMIT $${params.push(f.limite ?? 300)}`,
+    params
   );
   return rows;
 }

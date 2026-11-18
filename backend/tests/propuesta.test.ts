@@ -56,3 +56,13 @@ test("QR: el pase es de un solo cliente y una sede", () => {
   assert.throws(() => verificarPase(pase, 11), /no es válido/);
   assert.throws(() => verificarPase(firmarQr(4), 10), /no es válido/); // un QR no sirve como pase
 });
+
+test("cobro: nunca supera el tope legal por minuto × minutos", async () => {
+  const { calcularValor } = await import("../src/services/tarifaService");
+  const auto = { valor_hora: 4000, valor_fraccion: 1500, valor_dia: 30000 };
+  assert.equal(calcularValor(5, auto), 1500); // sin tope: una fracción completa
+  assert.equal(calcularValor(5, { ...auto, tope_minuto: 230 }), 1150); // con tope: 5 × 230
+  assert.equal(calcularValor(80, { ...auto, tope_minuto: 230 }), 7000); // 1 h 20 min: la tarifa ya es menor que 18.400
+  const vieja = { valor_hora: 1000, valor_fraccion: 400, valor_dia: 6000, tope_minuto: 10 }; // bicicleta sobre el tope
+  assert.equal(calcularValor(60, vieja), 600);
+});

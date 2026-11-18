@@ -141,3 +141,43 @@ export async function tarifasFueraDeTope() {
     .map((f) => ({ ...f, problema: Object.values(revisarTarifas([{ ...f, idTipo: f.id_tipo }], topes, f.sello_oro))[0] }))
     .filter((f) => f.problema);
 }
+
+// ---------------------------------------------------------------------
+// Tope por minuto para el cobro (con caché: los topes cambian por decreto)
+// ---------------------------------------------------------------------
+let cacheTopes: { topes: Tope[]; en: number } | null = null;
+const cacheSello = new Map<number, { sello: boolean; en: number }>();
+
+async function topesVigentes(): Promise<Tope[]> {
+  if (!cacheTopes || Date.now() - cacheTopes.en > 10 * 60_000) cacheTopes = { topes: await listarTopes(), en: Date.now() };
+  return cacheTopes.topes;
+}
+
+async function selloOroDe(idParqueadero: number): Promise<boolean> {
+  const c = cacheSello.get(idParqueadero);
+  if (c && Date.now() - c.en < 60_000) return c.sello;
+  // to_jsonb: funciona aunque la base no tenga la columna (sin migración = sin Sello Oro).
+  const { rows } = await pool.query(
+    `SELECT COALESCE((to_jsonb(p)->>'sello_oro')::boolean, false) AS sello FROM parqueadero p WHERE id_parqueadero = $1`,
+    [idParqueadero]
+  );
+  const sello = Boolean(rows[0]?.sello);
+  cacheSello.set(idParqueadero, { sello, en: Date.now() });
+  return sello;
+}
+
+/** Olvida el Sello Oro guardado en caché de una sede (al editarla). */
+export function olvidarSello(idParqueadero: number) {
+  cacheSello.delete(idParqueadero);
+}
+
+/** Tope por minuto vigente para un tipo de vehículo en una sede. */
+export async function topeMinuto(idParqueadero: number, idTipo: number): Promise<number | null> {
+  const [topes, sello] = await Promise.all([topesVigentes(), selloOroDe(idParqueadero)]);
+  return topes.find((t) => t.id_tipo === Number(idTipo) && t.sello_oro === sello)?.valor_minuto ?? null;
+}
+
+/** Agrega tope_minuto a cada fila (con id_parqueadero e id_tipo) para calcular el cobro. */
+export async function conTope<T extends { id_parqueadero: number; id_tipo: number }>(filas: T[]): Promise<(T & { tope_minuto: number | null })[]> {
+  return Promise.all(filas.map(async (f) => ({ ...f, tope_minuto: await topeMinuto(f.id_parqueadero, f.id_tipo) })));
+}
