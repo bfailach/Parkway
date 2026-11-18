@@ -1,0 +1,9 @@
+stateDiagram-v2
+  [*] --> Pendiente: INSERT en la misma transacción del negocio
+  Pendiente --> Publicado: broker confirma (publisher confirm)
+  Pendiente --> Pendiente: broker caído o circuito ABIERTO · reintento en la siguiente vuelta (1 s)
+  Publicado --> Procesado: consumidor inserta evento_recibido y hace ack
+  Publicado --> Duplicado: id_evento ya existía → ack sin efecto
+  Publicado --> DLQ: mensaje inválido → nack sin reencolar
+  Procesado --> [*]
+  Duplicado --> [*]

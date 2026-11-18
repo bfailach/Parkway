@@ -1,0 +1,33 @@
+flowchart TB
+  subgraph Clientes["Clientes (navegador / PWA)"]
+    C1["Cliente<br/>React + Three.js"]
+    C2["Operador"]
+    C3["Administrador"]
+  end
+  G["Gateway Nginx :8080<br/>round robin · relevo · límite de solicitudes"]
+  subgraph Nodos["Réplicas de la API (Node.js + Express)"]
+    A1["api1 :3000<br/>REST + WebSocket"]
+    A2["api2 :3000<br/>REST + WebSocket"]
+  end
+  subgraph Ev["Microservicio de eventos (2 réplicas)"]
+    E1["eventos :4000"]
+    E2["eventos :4000"]
+  end
+  R[("Redis 7<br/>candados · caché · líder")]
+  MQ[["RabbitMQ 3.13<br/>exchange parkway.eventos<br/>cola eventos.proyeccion + DLQ"]]
+  P[("PostgreSQL 16 primario<br/>parkway + parkway_eventos")]
+  PR[("PostgreSQL 16 réplica<br/>streaming")]
+  IA["Servicio de IA<br/>Python · Prophet"]
+  GO["Google Identity Services"]
+  C1 & C2 & C3 -- "HTTP / WebSocket" --> G
+  C1 -. "ID token" .-> GO
+  G --> A1 & A2
+  G -- "/eventos/*" --> E1 & E2
+  A1 & A2 -- "SQL · LISTEN/NOTIFY" --> P
+  A1 & A2 -- "SET NX PX · caché" --> R
+  A1 & A2 -- "outbox → publisher confirms" --> MQ
+  MQ -- "consumidores en competencia" --> E1 & E2
+  E1 & E2 -- "proyección idempotente" --> P
+  E1 & E2 -. "JWKS (llave pública)" .-> G
+  P == "WAL streaming" ==> PR
+  IA -- "lee registros · guarda pronóstico" --> P

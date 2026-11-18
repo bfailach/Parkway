@@ -1,0 +1,6 @@
+stateDiagram-v2
+  [*] --> CERRADO
+  CERRADO --> ABIERTO: umbral de fallos seguidos (Redis 3, RabbitMQ 2)
+  ABIERTO --> SEMIABIERTO: pasa el tiempo de espera (Redis 10 s, RabbitMQ 5 s)
+  SEMIABIERTO --> CERRADO: la llamada de prueba funciona
+  SEMIABIERTO --> ABIERTO: la llamada de prueba falla

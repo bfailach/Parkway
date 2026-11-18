@@ -1,0 +1,23 @@
+flowchart LR
+  subgraph Host["Equipo con Docker (docker compose · red interna)"]
+    direction LR
+    GW["gateway<br/>nginx:1.27-alpine<br/>8080→80"]
+    API1["api1<br/>imagen Dockerfile raíz"]
+    API2["api2<br/>imagen Dockerfile raíz"]
+    EV["eventos ×2<br/>servicios/eventos"]
+    PG[("postgres-primario<br/>postgres:16-alpine<br/>vol. datos-primario")]
+    PGR[("postgres-replica<br/>postgres:16-alpine<br/>vol. datos-replica")]
+    RD[("redis<br/>redis:7-alpine")]
+    RB[["rabbitmq<br/>3.13-management<br/>15672 consola"]]
+    IA["ia<br/>Python"]
+    GW --> API1 & API2 & EV
+    API1 & API2 --> PG & RD & RB
+    EV --> PG & RB
+    PG --> PGR
+    IA --> PG
+  end
+  subgraph Nube["Render (un solo nodo)"]
+    W["Servicio web Node.js<br/>parkway-jz0g.onrender.com"]
+    DB[("PostgreSQL gestionado")]
+    W --> DB
+  end

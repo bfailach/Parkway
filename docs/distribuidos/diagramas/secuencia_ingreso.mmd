@@ -1,0 +1,30 @@
+sequenceDiagram
+  autonumber
+  actor O as Operador
+  participant G as Gateway Nginx
+  participant A as api1 / api2
+  participant R as Redis
+  participant P as PostgreSQL primario
+  participant PB as Publicador outbox
+  participant MQ as RabbitMQ
+  participant E as Servicio eventos
+  O->>G: POST /api/estacionamiento/ingreso (JWT ES256)
+  G->>A: proxy (round robin)
+  A->>R: SET candado:placa NX PX 10000
+  R-->>A: OK
+  A->>P: BEGIN
+  A->>P: SELECT espacio … FOR UPDATE SKIP LOCKED
+  A->>P: INSERT registro_estacionamiento · UPDATE espacio = OCUPADO
+  A->>P: INSERT transaccion (bitácora) · INSERT evento_outbox
+  A->>P: COMMIT (pg_notify parkway_*)
+  A->>R: liberar candado (Lua) · invalidar caché de la sede
+  A-->>G: 201 Created
+  G-->>O: espacio asignado
+  P-->>A: NOTIFY → WebSocket a pantallas abiertas
+  PB->>P: lee eventos pendientes
+  PB->>MQ: publish parkway.eventos (persistente)
+  MQ-->>PB: confirm (ack)
+  PB->>P: marca publicado
+  MQ->>E: entrega a una réplica (prefetch 10)
+  E->>P: INSERT evento_recibido ON CONFLICT DO NOTHING · resumen_sede_dia
+  E-->>MQ: ack

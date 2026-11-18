@@ -46,6 +46,8 @@ otro entorno deben cambiarse.
 | `JWT_SECRET` | `solo-para-tokens-antiguos` | Solo para validar tokens HS256 emitidos antes del cambio |
 | `QR_MINUTOS` | `2` | Vigencia del QR de entrada; la pantalla del operador lo renueva sola |
 | `PUBLIC_URL` | (la del gateway) | Dirección pública que se pone en el enlace del QR |
+| `GOOGLE_CLIENT_ID` | Client ID del proyecto | Activa el botón *Continuar con Google*; vacío lo oculta |
+| `MIGRAR_AL_INICIAR` | `true` | Aplica `migracion_distribuida.sql` y `migracion_propuesta.sql` al arrancar, una vez por versión |
 
 Variables del backend que activan la parte distribuida (ya vienen en el
 `docker-compose.yml`). Sin ellas el backend funciona como un solo nodo:
@@ -120,7 +122,8 @@ docker compose exec postgres-replica  psql -U postgres -d parkway -c "select pg_
 Desde la carpeta `backend`, con Node.js 22 (`npm ci` la primera vez):
 
 ```bash
-npm test                                   # 70 pruebas unitarias
+npm test                                   # 78 pruebas unitarias
+npm run test:integracion                   # 63 pruebas de integración (PostgreSQL local, base parkway_test)
 API_URL=http://localhost:8080/api npx tsx scripts/pruebaConcurrencia.ts   # 50 ingresos sobre 10 espacios
 API_URL=http://localhost:8080/api npx tsx scripts/pruebaCarga.ts 100 60   # 100 usuarios, 60 s
 # 11 escenarios distribuidos. Requiere haber corrido antes la de concurrencia.
@@ -149,12 +152,14 @@ ejecútelas dentro de la red de Docker o suba temporalmente el límite en
 
 ## 8. Base de datos existente (sin Docker)
 
-Si la base ya existe (por ejemplo, la de Render), ejecute una vez las
-migraciones. Solo agregan tablas y una columna; no cambian datos existentes:
+Si la base ya existe (por ejemplo, la de Render), el backend aplica las
+migraciones solo al arrancar: guarda la huella de cada archivo en la tabla
+`migracion_aplicada` y usa un candado de PostgreSQL para que dos réplicas no
+lo hagan a la vez. Para aplicarlas a mano (solo agregan tablas y columnas):
 
 ```bash
 psql "$DATABASE_URL" -f database/migracion_distribuida.sql   # outbox de eventos
-psql "$DATABASE_URL" -f database/migracion_propuesta.sql     # topes tarifarios y autorización de datos
+psql "$DATABASE_URL" -f database/migracion_propuesta.sql     # topes, autorizaciones, verificación QR, reclamos, Google
 ```
 
 Las tarifas de bicicleta de una base creada antes de este cambio ($1.000 la
@@ -176,4 +181,5 @@ docker compose down -v     # detiene y borra los volúmenes (la base vuelve a ca
 | El gateway no inicia: `host not found in upstream api1` | El gateway arrancó antes que las réplicas. `docker compose up -d gateway`. |
 | `firmaTokens: HS256` en `/api/salud/distribuida` | La llave no se montó. Revise que `despliegue/secretos/jwt_es256.pem` exista y sea legible. |
 | La réplica reinicia en bucle | El primario no había terminado de cargar. `docker compose restart postgres-replica`. Si persiste: `docker compose down -v` y subir de nuevo. |
+| `origin_mismatch` al entrar con Google | El origen no está en *Orígenes autorizados de JavaScript* del Client ID en Google Cloud. Agregue la URL exacta (por ejemplo `http://localhost:8080`). |
 | Puerto 8080 ocupado | Cambie `"8080:80"` por otro puerto en `docker-compose.yml`. |

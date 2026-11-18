@@ -6,469 +6,469 @@ TAP version 13
 # Subtest: lee todos los filtros del documento: usuario, tipo, entidad, estado y fecha
 ok 1 - lee todos los filtros del documento: usuario, tipo, entidad, estado y fecha
   ---
-  duration_ms: 1.014407
+  duration_ms: 2.256898
   type: 'test'
   ...
 # Subtest: los filtros vacíos se ignoran
 ok 2 - los filtros vacíos se ignoran
   ---
-  duration_ms: 0.245002
+  duration_ms: 0.174218
   type: 'test'
   ...
 # Subtest: rechaza valores inválidos y fechas al revés
 ok 3 - rechaza valores inválidos y fechas al revés
   ---
-  duration_ms: 0.19981
+  duration_ms: 0.217565
   type: 'test'
   ...
 # Subtest: acepta una cuenta válida y normaliza los datos
 ok 4 - acepta una cuenta válida y normaliza los datos
   ---
-  duration_ms: 1.48853
+  duration_ms: 4.23096
   type: 'test'
   ...
 # Subtest: exige contraseña con letras y números de al menos 8 caracteres
 ok 5 - exige contraseña con letras y números de al menos 8 caracteres
   ---
-  duration_ms: 0.346329
+  duration_ms: 0.237457
   type: 'test'
   ...
 # Subtest: rechaza documento y correo inválidos
 ok 6 - rechaza documento y correo inválidos
   ---
-  duration_ms: 0.206432
+  duration_ms: 0.128154
   type: 'test'
   ...
 # Subtest: valida la placa del vehículo según el tipo
 ok 7 - valida la placa del vehículo según el tipo
   ---
-  duration_ms: 0.326067
+  duration_ms: 0.260725
   type: 'test'
   ...
 # Subtest: las bicicletas no llevan placa ni marca: el código lo asigna el sistema
 ok 8 - las bicicletas no llevan placa ni marca: el código lo asigna el sistema
   ---
-  duration_ms: 0.118911
+  duration_ms: 0.094863
   type: 'test'
   ...
 # Subtest: valida las preferencias de notificación
 ok 9 - valida las preferencias de notificación
   ---
-  duration_ms: 4.383158
+  duration_ms: 0.146508
   type: 'test'
   ...
 # Subtest: circuit breaker: se abre tras los fallos seguidos y responde de inmediato
 ok 10 - circuit breaker: se abre tras los fallos seguidos y responde de inmediato
   ---
-  duration_ms: 1.129227
+  duration_ms: 1.280886
   type: 'test'
   ...
 # Subtest: circuit breaker: pasa a semiabierto y se cierra si la prueba funciona
 ok 11 - circuit breaker: pasa a semiabierto y se cierra si la prueba funciona
   ---
-  duration_ms: 30.893778
+  duration_ms: 30.500682
   type: 'test'
   ...
 # Subtest: circuit breaker: una dependencia lenta agota el tiempo de espera
 ok 12 - circuit breaker: una dependencia lenta agota el tiempo de espera
   ---
-  duration_ms: 29.92506
+  duration_ms: 30.719435
   type: 'test'
   ...
 # Subtest: tokens ES256: se firman con la llave privada y se publican en el JWKS
 ok 13 - tokens ES256: se firman con la llave privada y se publican en el JWKS
   ---
-  duration_ms: 5.781335
+  duration_ms: 6.653014
   type: 'test'
   ...
 # Subtest: la sede está abierta dentro del horario y cerrada fuera de él
 ok 14 - la sede está abierta dentro del horario y cerrada fuera de él
   ---
-  duration_ms: 0.748862
+  duration_ms: 0.772186
   type: 'test'
   ...
 # Subtest: indica la próxima apertura
 ok 15 - indica la próxima apertura
   ---
-  duration_ms: 0.543451
+  duration_ms: 0.176514
   type: 'test'
   ...
 # Subtest: una sede de 24 horas no tiene hora de cierre
 ok 16 - una sede de 24 horas no tiene hora de cierre
   ---
-  duration_ms: 0.376372
+  duration_ms: 0.157308
   type: 'test'
   ...
 # Subtest: el cierre a medianoche continúa en el día siguiente
 ok 17 - el cierre a medianoche continúa en el día siguiente
   ---
-  duration_ms: 0.143667
+  duration_ms: 0.098171
   type: 'test'
   ...
 # Subtest: no se puede reservar con la sede cerrada ni si la reserva pasa del cierre
 ok 18 - no se puede reservar con la sede cerrada ni si la reserva pasa del cierre
   ---
-  duration_ms: 0.544914
+  duration_ms: 0.174921
   type: 'test'
   ...
 # Subtest: calcula el día y la hora en Bogotá
 ok 19 - calcula el día y la hora en Bogotá
   ---
-  duration_ms: 1.288262
+  duration_ms: 1.598327
   type: 'test'
   ...
 # Subtest: efectivo: lo recibido es opcional y acepta puntos de miles
 ok 20 - efectivo: lo recibido es opcional y acepta puntos de miles
   ---
-  duration_ms: 2.081928
+  duration_ms: 1.13323
   type: 'test'
   ...
 # Subtest: tarjeta y transferencia exigen su referencia con el formato correcto
 ok 21 - tarjeta y transferencia exigen su referencia con el formato correcto
   ---
-  duration_ms: 0.387208
+  duration_ms: 0.16821
   type: 'test'
   ...
 # Subtest: rechaza un medio de pago que no existe
 ok 22 - rechaza un medio de pago que no existe
   ---
-  duration_ms: 0.291337
+  duration_ms: 0.148547
   type: 'test'
   ...
 # Subtest: calcula el cambio y detecta cuando no alcanza
 ok 23 - calcula el cambio y detecta cuando no alcanza
   ---
-  duration_ms: 0.213226
+  duration_ms: 0.113509
   type: 'test'
   ...
 # Subtest: numera los comprobantes con el año y seis dígitos
 ok 24 - numera los comprobantes con el año y seis dígitos
   ---
-  duration_ms: 0.188082
+  duration_ms: 0.085985
   type: 'test'
   ...
 # Subtest: la anulación exige un motivo claro
 ok 25 - la anulación exige un motivo claro
   ---
-  duration_ms: 0.192575
+  duration_ms: 0.100961
   type: 'test'
   ...
 # Subtest: la bitácora guarda un mensaje claro cuando se repite una referencia
 ok 26 - la bitácora guarda un mensaje claro cuando se repite una referencia
   ---
-  duration_ms: 0.151535
+  duration_ms: 0.133097
   type: 'test'
   ...
 # Subtest: acepta una sede válida
 ok 27 - acepta una sede válida
   ---
-  duration_ms: 1.265436
+  duration_ms: 3.226025
   type: 'test'
   ...
 # Subtest: exige tarifa para cada tipo con espacios
 ok 28 - exige tarifa para cada tipo con espacios
   ---
-  duration_ms: 0.167517
+  duration_ms: 0.215216
   type: 'test'
   ...
 # Subtest: rechaza horarios y tarifas incoherentes
 ok 29 - rechaza horarios y tarifas incoherentes
   ---
-  duration_ms: 0.138929
+  duration_ms: 0.17058
   type: 'test'
   ...
 # Subtest: una sede necesita espacios y al menos un día de atención
 ok 30 - una sede necesita espacios y al menos un día de atención
   ---
-  duration_ms: 0.211435
+  duration_ms: 0.294111
   type: 'test'
   ...
 # Subtest: una sede de varios pisos valida cada piso
 ok 31 - una sede de varios pisos valida cada piso
   ---
-  duration_ms: 0.183315
+  duration_ms: 0.219842
   type: 'test'
   ...
 # Subtest: limita los espacios a cifras realistas
 ok 32 - limita los espacios a cifras realistas
   ---
-  duration_ms: 0.15171
+  duration_ms: 0.187931
   type: 'test'
   ...
 # Subtest: la mejor hora es la de menos ocupación entre las próximas 12 abiertas
 ok 33 - la mejor hora es la de menos ocupación entre las próximas 12 abiertas
   ---
-  duration_ms: 1.122993
+  duration_ms: 0.762293
   type: 'test'
   ...
 # Subtest: ignora las horas en que la sede está cerrada
 ok 34 - ignora las horas en que la sede está cerrada
   ---
-  duration_ms: 0.230268
+  duration_ms: 0.11147
   type: 'test'
   ...
 # Subtest: sin horas abiertas no sugiere ninguna
 ok 35 - sin horas abiertas no sugiere ninguna
   ---
-  duration_ms: 0.135492
+  duration_ms: 0.079935
   type: 'test'
   ...
 # Subtest: la red corrige la primera hora y la corrección se desvanece
 ok 36 - la red corrige la primera hora y la corrección se desvanece
   ---
-  duration_ms: 0.361901
+  duration_ms: 0.224102
   type: 'test'
   ...
 # Subtest: la corrección nunca sale del rango de 0 a 100 %
 ok 37 - la corrección nunca sale del rango de 0 a 100 %
   ---
-  duration_ms: 0.136507
+  duration_ms: 0.155548
   type: 'test'
   ...
 # Subtest: topes: máximos por tramo para $230 por minuto
 ok 38 - topes: máximos por tramo para $230 por minuto
   ---
-  duration_ms: 2.038821
+  duration_ms: 1.132106
   type: 'test'
   ...
 # Subtest: topes: una tarifa en el límite cumple y una por encima no
 ok 39 - topes: una tarifa en el límite cumple y una por encima no
   ---
-  duration_ms: 5.751675
+  duration_ms: 3.711378
   type: 'test'
   ...
 # Subtest: topes: con Sello Oro las bicicletas no pueden cobrar
 ok 40 - topes: con Sello Oro las bicicletas no pueden cobrar
   ---
-  duration_ms: 0.314456
+  duration_ms: 0.200226
   type: 'test'
   ...
 # Subtest: autorización: la casilla es obligatoria y la opcional por defecto es no
 ok 41 - autorización: la casilla es obligatoria y la opcional por defecto es no
   ---
-  duration_ms: 1.030652
+  duration_ms: 0.48552
   type: 'test'
   ...
 # Subtest: QR: el token lleva la sede, vence y no acepta alteraciones
 ok 42 - QR: el token lleva la sede, vence y no acepta alteraciones
   ---
-  duration_ms: 5.511583
+  duration_ms: 3.199251
   type: 'test'
   ...
 # Subtest: aviso de actividad: solo pasa la forma esperada
 ok 43 - aviso de actividad: solo pasa la forma esperada
   ---
-  duration_ms: 0.468765
+  duration_ms: 0.82767
   type: 'test'
   ...
 # Subtest: QR: el pase es de un solo cliente y una sede
 ok 44 - QR: el pase es de un solo cliente y una sede
   ---
-  duration_ms: 4.561639
+  duration_ms: 2.657096
   type: 'test'
   ...
 # Subtest: cobro: nunca supera el tope legal por minuto × minutos
 ok 45 - cobro: nunca supera el tope legal por minuto × minutos
   ---
-  duration_ms: 2.353394
+  duration_ms: 1.218162
   type: 'test'
   ...
 # Subtest: la red tiene 65 parámetros (6×8 + 8 + 8 + 1)
 ok 46 - la red tiene 65 parámetros (6×8 + 8 + 8 + 1)
   ---
-  duration_ms: 0.971294
+  duration_ms: 0.826245
   type: 'test'
   ...
 # Subtest: la salida siempre está entre 0 y 1
 ok 47 - la salida siempre está entre 0 y 1
   ---
-  duration_ms: 0.504241
+  duration_ms: 0.387985
   type: 'test'
   ...
 # Subtest: las entradas se escalan al rango de 0 a 1
 ok 48 - las entradas se escalan al rango de 0 a 1
   ---
-  duration_ms: 0.963149
+  duration_ms: 0.801669
   type: 'test'
   ...
 # Subtest: un martes hábil a las 3 p. m. predice más ocupación que un domingo a las 3 a. m.
 ok 49 - un martes hábil a las 3 p. m. predice más ocupación que un domingo a las 3 a. m.
   ---
-  duration_ms: 0.304963
+  duration_ms: 0.239208
   type: 'test'
   ...
 # Subtest: calcula los festivos de Colombia con la Ley Emiliani
 ok 50 - calcula los festivos de Colombia con la Ley Emiliani
   ---
-  duration_ms: 0.864514
+  duration_ms: 1.016446
   type: 'test'
   ...
 # Subtest: niveles de alerta
 ok 51 - niveles de alerta
   ---
-  duration_ms: 0.199289
+  duration_ms: 0.18158
   type: 'test'
   ...
 # Subtest: lee los filtros del reporte y agrupa por día por defecto
 ok 52 - lee los filtros del reporte y agrupa por día por defecto
   ---
-  duration_ms: 2.012211
+  duration_ms: 1.259284
   type: 'test'
   ...
 # Subtest: rechaza periodos al revés, de más de un año o sin fechas
 ok 53 - rechaza periodos al revés, de más de un año o sin fechas
   ---
-  duration_ms: 0.480725
+  duration_ms: 0.238977
   type: 'test'
   ...
 # Subtest: el CSV usa punto y coma, coma decimal y BOM para Excel en español
 ok 54 - el CSV usa punto y coma, coma decimal y BOM para Excel en español
   ---
-  duration_ms: 0.545654
+  duration_ms: 0.256999
   type: 'test'
   ...
 # Subtest: el CSV neutraliza fórmulas y deja vacíos los valores nulos
 ok 55 - el CSV neutraliza fórmulas y deja vacíos los valores nulos
   ---
-  duration_ms: 0.352703
+  duration_ms: 0.170708
   type: 'test'
   ...
 # Subtest: agrupa la ocupación por hora y separa días laborales de fines de semana y festivos
 ok 56 - agrupa la ocupación por hora y separa días laborales de fines de semana y festivos
   ---
-  duration_ms: 1.181837
+  duration_ms: 0.818315
   type: 'test'
   ...
 # Subtest: nombra los periodos en español
 ok 57 - nombra los periodos en español
   ---
-  duration_ms: 0.211109
+  duration_ms: 0.122154
   type: 'test'
   ...
 # Subtest: cobra una fracción por los primeros minutos
 ok 58 - cobra una fracción por los primeros minutos
   ---
-  duration_ms: 0.701697
+  duration_ms: 0.559184
   type: 'test'
   ...
 # Subtest: cobra horas completas más fracciones iniciadas
 ok 59 - cobra horas completas más fracciones iniciadas
   ---
-  duration_ms: 0.102563
+  duration_ms: 0.100798
   type: 'test'
   ...
 # Subtest: el valor de un día no supera el valor_dia
 ok 60 - el valor de un día no supera el valor_dia
   ---
-  duration_ms: 0.070525
+  duration_ms: 0.073552
   type: 'test'
   ...
 # Subtest: suma días completos y el tiempo restante
 ok 61 - suma días completos y el tiempo restante
   ---
-  duration_ms: 0.124645
+  duration_ms: 0.11344
   type: 'test'
   ...
 # Subtest: calcularMinutos redondea hacia arriba y nunca devuelve 0
 ok 62 - calcularMinutos redondea hacia arriba y nunca devuelve 0
   ---
-  duration_ms: 0.123563
+  duration_ms: 0.108223
   type: 'test'
   ...
 # Subtest: lee el número de sede del aviso del trigger
 ok 63 - lee el número de sede del aviso del trigger
   ---
-  duration_ms: 1.18501
+  duration_ms: 0.564947
   type: 'test'
   ...
 # Subtest: junta los avisos seguidos y entrega cada sede una vez
 ok 64 - junta los avisos seguidos y entrega cada sede una vez
   ---
-  duration_ms: 83.14859
+  duration_ms: 81.269254
   type: 'test'
   ...
 # Subtest: acepta un operador válido y normaliza los datos
 ok 65 - acepta un operador válido y normaliza los datos
   ---
-  duration_ms: 1.75293
+  duration_ms: 1.349343
   type: 'test'
   ...
 # Subtest: el cliente no lleva turno ni sedes
 ok 66 - el cliente no lleva turno ni sedes
   ---
-  duration_ms: 0.216289
+  duration_ms: 0.203621
   type: 'test'
   ...
 # Subtest: el personal necesita turno y el rol debe existir
 ok 67 - el personal necesita turno y el rol debe existir
   ---
-  duration_ms: 0.349113
+  duration_ms: 0.154892
   type: 'test'
   ...
 # Subtest: la contraseña es obligatoria al crear y opcional al editar
 ok 68 - la contraseña es obligatoria al crear y opcional al editar
   ---
-  duration_ms: 0.274883
+  duration_ms: 0.149122
   type: 'test'
   ...
 # Subtest: rechaza estado, documento y sedes inválidos
 ok 69 - rechaza estado, documento y sedes inválidos
   ---
-  duration_ms: 0.125322
+  duration_ms: 0.126766
   type: 'test'
   ...
 # Subtest: el administrador no puede quitarse el rol ni desactivarse
 ok 70 - el administrador no puede quitarse el rol ni desactivarse
   ---
-  duration_ms: 0.414612
+  duration_ms: 0.232207
   type: 'test'
   ...
 # Subtest: debe quedar al menos un administrador activo
 ok 71 - debe quedar al menos un administrador activo
   ---
-  duration_ms: 0.205627
+  duration_ms: 0.148307
   type: 'test'
   ...
 # Subtest: normaliza la placa
 ok 72 - normaliza la placa
   ---
-  duration_ms: 0.771262
+  duration_ms: 0.915554
   type: 'test'
   ...
 # Subtest: acepta placas válidas por tipo
 ok 73 - acepta placas válidas por tipo
   ---
-  duration_ms: 0.547772
+  duration_ms: 0.493239
   type: 'test'
   ...
 # Subtest: rechaza placas con formato incorrecto
 ok 74 - rechaza placas con formato incorrecto
   ---
-  duration_ms: 0.268692
+  duration_ms: 0.249034
   type: 'test'
   ...
 # Subtest: exige los campos obligatorios
 ok 75 - exige los campos obligatorios
   ---
-  duration_ms: 0.130231
+  duration_ms: 0.178848
   type: 'test'
   ...
 # Subtest: limita la longitud de marca y color
 ok 76 - limita la longitud de marca y color
   ---
-  duration_ms: 0.143338
+  duration_ms: 0.256464
   type: 'test'
   ...
 # Subtest: una bicicleta sin registro puede entrar con un código nuevo
 ok 77 - una bicicleta sin registro puede entrar con un código nuevo
   ---
-  duration_ms: 0.079902
+  duration_ms: 0.12936
   type: 'test'
   ...
 # Subtest: el ingreso de una bicicleta ignora la marca
 ok 78 - el ingreso de una bicicleta ignora la marca
   ---
-  duration_ms: 0.106115
+  duration_ms: 0.154044
   type: 'test'
   ...
 1..78
@@ -479,4 +479,4 @@ ok 78 - el ingreso de una bicicleta ignora la marca
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 2808.775732
+# duration_ms 2421.716642
