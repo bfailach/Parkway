@@ -37,9 +37,5 @@ router.get("/qr-ingreso", ...personal, asyncHandler<AuthenticatedRequest>(async 
 router.get("/actividad", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
   res.json(await actividad.dePersonal(req.usuario!, Number(req.query.idParqueadero), req.query.desde));
 }));
-// Ingresos con QR recientes de la sede
-router.get("/ingresos-qr", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
-  res.json(await qr.ingresosRecientes(req.usuario!, Number(req.query.idParqueadero), req.query.desde as string | undefined));
-}));
 
 export default router;

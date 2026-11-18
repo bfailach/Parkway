@@ -578,7 +578,6 @@ Parkway/
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra la salida con su pago y comprobante. Cuerpo: `{"metodo":"EFECTIVO","recibido":10000}` o `{"metodo":"TARJETA","referencia":"482913"}` |
 | GET | `/api/estacionamiento/qr-ingreso?idParqueadero=1` | Personal | QR firmado de la sede para la entrada en autoservicio (enlace, imagen SVG y vencimiento) |
 | GET | `/api/estacionamiento/actividad?idParqueadero=1&desde=…` | Personal | Movimientos recientes de la sede hechos por otros (ingresos, salidas, reservas, vencimientos, anulaciones, espacios), para los avisos |
-| GET | `/api/estacionamiento/ingresos-qr?idParqueadero=1&desde=…` | Personal | Ingresos con QR recientes de la sede, para los avisos del operador |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
 | GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
 | GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar (con la sede y el espacio donde está cada uno) y registrar vehículos propios |

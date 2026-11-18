@@ -2,7 +2,6 @@ import { createHash } from "crypto";
 import jwt from "jsonwebtoken";
 import QRCode from "qrcode";
 import { badRequest, conflict, forbidden, notFound } from "../errors/AppError";
-import { pool } from "../db/pool";
 import { JWT_SECRET, UsuarioToken } from "../middlewares/auth";
 import * as catalogoRepository from "../repositories/catalogoRepository";
 import * as vehiculoRepository from "../repositories/vehiculoRepository";
@@ -115,29 +114,3 @@ export async function ingresar(cliente: UsuarioToken, body: Record<string, unkno
   );
 }
 
-/**
- * Ingresos con QR recientes de una sede, para avisar al operador.
- * El WebSocket solo dice "hubo un ingreso con QR en la sede N"; los datos
- * (placa, espacio, cliente) salen de aquí, con sesión y acceso a la sede.
- */
-export async function ingresosRecientes(usuario: UsuarioToken, idParqueadero: number, desde?: string) {
-  if (!Number.isInteger(idParqueadero) || idParqueadero <= 0) throw badRequest("Seleccione la sede");
-  await verificarAcceso(usuario, idParqueadero);
-  const inicio = desde && !Number.isNaN(Date.parse(desde)) ? new Date(desde) : new Date(Date.now() - 12 * 3_600_000);
-  const { rows } = await pool.query(
-    `SELECT r.id_registro, r.placa, e.codigo AS codigo_espacio, tv.nombre AS tipo, u.nombre AS cliente,
-            r.estado, t.fecha_fin AS fecha
-       FROM transaccion t
-       JOIN registro_estacionamiento r ON r.id_registro::text = t.id_entidad
-       JOIN espacio e ON e.id_espacio = r.id_espacio
-       JOIN vehiculo v ON v.placa = r.placa
-       JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo
-       LEFT JOIN usuario u ON u.id_usuario = t.id_usuario
-      WHERE t.tipo_operacion = 'INGRESO' AND t.estado = 'CONFIRMADA' AND t.detalle->>'origen' = 'QR'
-        AND e.id_parqueadero = $1 AND t.fecha_fin > $2
-      ORDER BY t.fecha_fin DESC
-      LIMIT 20`,
-    [idParqueadero, inicio]
-  );
-  return rows;
-}

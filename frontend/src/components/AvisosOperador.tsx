@@ -308,7 +308,8 @@ export function AvisosOperador({ idUsuario, admin, sedes, onVer }: Props) {
   return (
     <div className="avisos" role="status" aria-live="polite">
       {avisos.map((a) => (
-        <div key={a.id} className={`aviso${a.importante ? " aviso-importante" : ""}`}>
+        // Los importantes se anuncian de inmediato a los lectores de pantalla (role="alert").
+        <div key={a.id} className={`aviso${a.importante ? " aviso-importante" : ""}`} role={a.importante ? "alert" : undefined}>
           <div>
             <strong>{a.titulo}</strong>
             <p>{a.texto}</p>

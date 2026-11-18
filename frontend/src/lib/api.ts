@@ -408,16 +408,6 @@ export interface QrSede {
   expira: string;
 }
 
-export interface IngresoQr {
-  id_registro: number;
-  placa: string;
-  codigo_espacio: string;
-  tipo: string;
-  cliente: string | null;
-  estado: string;
-  fecha: string;
-}
-
 /** Movimiento de una sede para los avisos del personal. */
 export interface ActividadPersonal {
   id: number;
@@ -729,8 +719,6 @@ export const api = {
   qrIngreso: (idParqueadero: number) => request<QrSede>("GET", `/estacionamiento/qr-ingreso?idParqueadero=${idParqueadero}`),
   actividad: (idParqueadero: number, desde: string) =>
     request<ActividadPersonal[]>("GET", `/estacionamiento/actividad?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
-  ingresosQr: (idParqueadero: number, desde: string) =>
-    request<IngresoQr[]>("GET", `/estacionamiento/ingresos-qr?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
   cliente: {
     actividad: (desde: string) => request<ActividadCliente[]>("GET", `/cliente/actividad?desde=${encodeURIComponent(desde)}`),
     infoQr: (token: string) => request<InfoQr>("GET", `/cliente/ingreso-qr/${encodeURIComponent(token)}`),

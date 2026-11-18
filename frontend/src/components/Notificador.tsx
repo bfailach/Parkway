@@ -13,6 +13,9 @@ import { escucharAvisos } from "../lib/tiempoReal";
  * La configuración la guarda el cliente en "Notificaciones".
  */
 export const EVENTO_PREFERENCIAS = "parkway:preferencias";
+
+/** Operaciones que pueden cambiar lo que ve el cliente (su vehículo, su reserva o su pago). */
+const OPERACIONES_CLIENTE = new Set(["INGRESO", "SALIDA", "RESERVA", "CANCELAR_RESERVA", "EXPIRACION", "ANULAR_PAGO", "COBRO_NUEVO"]);
 export const EVENTO_AVISO = "parkway:aviso";
 
 interface Aviso {
@@ -158,13 +161,16 @@ export function Notificador() {
     revisar();
     const id = window.setInterval(revisar, 20000);
     // RF12: la entrada y la salida se avisan en el momento, sin esperar la revisión periódica.
+    // Solo se revisa con las operaciones que pueden tocar al cliente (no con cada cambio de
+    // espacio de cualquier sede), y los avisos seguidos se juntan en una sola consulta.
     let pendiente: number | null = null;
-    const quitarAvisos = escucharAvisos(() => {
-      if (pendiente !== null) return;
+    const quitarAvisos = escucharAvisos((a) => {
+      const relevante = a.tipo === "reconectado" || (a.tipo === "actividad" && OPERACIONES_CLIENTE.has(a.operacion));
+      if (!relevante || pendiente !== null) return;
       pendiente = window.setTimeout(() => {
         pendiente = null;
         revisar();
-      }, 300);
+      }, 500);
     });
     return () => {
       vivo = false;
