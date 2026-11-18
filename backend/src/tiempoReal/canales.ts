@@ -1,12 +1,24 @@
-/** Canal de PostgreSQL para avisos al personal (por ahora, ingresos con QR). */
+/**
+ * Canal de PostgreSQL para avisos de actividad:
+ * { "tipo": "actividad", "sede": 1, "operacion": "INGRESO" }.
+ */
 export const CANAL_AVISOS = "parkway_avisos";
 
-/** Lee un aviso del canal parkway_avisos. Solo deja pasar tipos conocidos con su sede. */
-export function leerAvisoPersonal(payload: string | undefined): { tipo: "ingreso-qr"; sede: number } | null {
+export interface AvisoActividad {
+  tipo: "actividad";
+  sede: number;
+  operacion: string;
+}
+
+/** Lee un aviso del canal. Solo deja pasar la forma esperada, sin otros campos. */
+export function leerAvisoPersonal(payload: string | undefined): AvisoActividad | null {
   try {
     const m = JSON.parse(payload ?? "");
     const sede = Number(m.sede);
-    return m.tipo === "ingreso-qr" && Number.isInteger(sede) && sede > 0 ? { tipo: "ingreso-qr", sede } : null;
+    const operacion = String(m.operacion ?? "");
+    return m.tipo === "actividad" && Number.isInteger(sede) && sede > 0 && /^[A-Z_]{3,30}$/.test(operacion)
+      ? { tipo: "actividad", sede, operacion }
+      : null;
   } catch {
     return null;
   }

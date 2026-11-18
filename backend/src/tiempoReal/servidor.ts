@@ -21,9 +21,9 @@ import { CANAL_AVISOS, leerAvisoPersonal } from "./canales";
  * Como el aviso viene de PostgreSQL, funciona aunque el servicio corra en
  * varios nodos: todos escuchan la misma base.
  *
- * Por el canal parkway_avisos llegan avisos para el personal, como
- * { "tipo": "ingreso-qr", "sede": 1 } cuando un cliente entra con el QR.
- * Tampoco llevan placas ni nombres: el operador los consulta en la API.
+ * Por el canal parkway_avisos llegan los avisos de actividad, como
+ * { "tipo": "actividad", "sede": 1, "operacion": "INGRESO" }. Tampoco llevan
+ * placas ni nombres: cada pantalla consulta el detalle en la API con su sesión.
  */
 export const CANAL = "parkway_espacios";
 export const RUTA_WS = "/api/tiempo-real";

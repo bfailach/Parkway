@@ -2,6 +2,7 @@ import { PoolClient } from "pg";
 import { pool } from "../db/pool";
 import { mensajeDeError } from "../middlewares/errorHandler";
 import { avisarEventoNuevo, registrarEvento } from "../distribuido/outbox";
+import { avisarActividad } from "../services/actividadService";
 
 /**
  * GestorTransacciones (clase de control)
@@ -56,6 +57,10 @@ export class TransactionManager {
       // transacción (patrón outbox) y se publica en RabbitMQ después del
       // COMMIT. Solo si OUTBOX_HABILITADO=true; si no, no hace nada.
       await registrarEvento(client, { tipo: tipoOperacion, entidad, idEntidad, datos: detalle });
+
+      // Aviso en la plataforma (ingresos, salidas, reservas, cobros...): se
+      // entrega por pg_notify solo cuando la transacción se confirma.
+      await avisarActividad(client, tipoOperacion, entidad, idEntidad);
 
       await client.query("COMMIT");
       client.release();

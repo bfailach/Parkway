@@ -3,6 +3,7 @@ import * as c from "../controllers/estacionamientoController";
 import { AuthenticatedRequest, requiereRol, verificarToken } from "../middlewares/auth";
 import { asyncHandler } from "../utils/asyncHandler";
 import * as qr from "../services/qrService";
+import * as actividad from "../services/actividadService";
 
 const router = Router();
 
@@ -32,7 +33,11 @@ router.get("/qr-ingreso", ...personal, asyncHandler<AuthenticatedRequest>(async 
   const origen = `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.get("host")}`;
   res.json(await qr.generar(req.usuario!, Number(req.query.idParqueadero), origen));
 }));
-// Ingresos con QR recientes de la sede (avisos al operador)
+// Actividad reciente de la sede (avisos al personal)
+router.get("/actividad", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  res.json(await actividad.dePersonal(req.usuario!, Number(req.query.idParqueadero), req.query.desde));
+}));
+// Ingresos con QR recientes de la sede
 router.get("/ingresos-qr", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
   res.json(await qr.ingresosRecientes(req.usuario!, Number(req.query.idParqueadero), req.query.desde as string | undefined));
 }));

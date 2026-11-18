@@ -23,7 +23,7 @@ import { Reportes } from "./pages/admin/Reportes";
 import { Pagos } from "./pages/admin/Pagos";
 import { Notificaciones } from "./pages/cliente/Notificaciones";
 import { Notificador } from "./components/Notificador";
-import { AvisosOperador } from "./components/AvisosOperador";
+import { AvisosOperador, BotonAvisos } from "./components/AvisosOperador";
 import { SenalP } from "./components/SenalP";
 
 type Vista =
@@ -179,6 +179,7 @@ export default function App() {
           <span className="usuario-rol">{NOMBRE_ROL[usuario.rol]}</span>
           <div className="controles">
             <BotonInstalar />
+            {esPersonal && <BotonAvisos idUsuario={usuario.id_usuario} admin={usuario.rol === "ADMINISTRADOR"} />}
             <BotonAccesibilidad />
             <BotonTema />
           </div>
@@ -244,10 +245,13 @@ export default function App() {
       {/* Avisos al personal: ingresos con QR de sus sedes, en tiempo real. */}
       {esPersonal && (
         <AvisosOperador
+          idUsuario={usuario.id_usuario}
+          admin={usuario.rol === "ADMINISTRADOR"}
           sedes={sedes}
-          onVer={(id) => {
+          onVer={(id, destino) => {
             setIdSede(id);
-            setVista("activos");
+            setPrecarga(null);
+            setVista(destino);
           }}
         />
       )}

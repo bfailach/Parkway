@@ -7,6 +7,10 @@ import * as consentimientos from "../../src/services/consentimientoService";
 import * as topes from "../../src/services/topeTarifarioService";
 import * as sedes from "../../src/services/parqueaderoService";
 import * as qr from "../../src/services/qrService";
+import * as actividad from "../../src/services/actividadService";
+import * as estacionamiento from "../../src/services/estacionamientoService";
+import * as pagos from "../../src/services/pagoService";
+import { Client } from "pg";
 import type { UsuarioToken } from "../../src/middlewares/auth";
 
 /**
@@ -138,5 +142,43 @@ describe("entrada con QR", () => {
     // Un token de sesión no sirve como QR.
     const sesion = await auth.iniciarSesion("cliente1@parkway.test", "Cliente123*");
     await fallaCon(qr.ingresar(CLIENTE, { token: sesion.token, placa: "BICI001" }), 400);
+  });
+});
+
+describe("avisos de actividad", () => {
+  test("el ingreso confirmado avisa por pg_notify con la sede y la operación", async () => {
+    const oyente = new Client({ host: process.env.DB_HOST || "localhost", port: Number(process.env.DB_PORT) || 5432, database: process.env.DB_NAME, user: process.env.DB_USER || "postgres", password: process.env.DB_PASSWORD || "postgres" });
+    await oyente.connect();
+    await oyente.query("LISTEN parkway_avisos");
+    const llegada = new Promise<string>((resolver) => oyente.on("notification", (n) => resolver(n.payload ?? "")));
+    const r = await estacionamiento.registrarIngreso({ placa: "AVS123", idTipo: 1, idParqueadero: CHAPINERO }, OPERADOR1);
+    const aviso = JSON.parse(await llegada);
+    await oyente.end();
+    assert.deepEqual(aviso, { tipo: "actividad", sede: CHAPINERO, operacion: "INGRESO" });
+
+    // El operador no recibe sus propias acciones; el administrador sí las ve.
+    const delOperador = await actividad.dePersonal(OPERADOR1, CHAPINERO);
+    assert.ok(!delOperador.some((a) => a.placa === "AVS123"));
+    const delAdmin = await actividad.dePersonal(ADMIN, CHAPINERO);
+    const visto = delAdmin.find((a) => a.placa === "AVS123");
+    assert.equal(visto?.operacion, "INGRESO");
+    assert.equal(visto?.espacio, r.codigo_espacio);
+    // Y ve el ingreso con QR del cliente, marcado como tal.
+    assert.ok(delAdmin.some((a) => a.operacion === "INGRESO" && a.origen === "QR" && a.placa === "ABC123"));
+  });
+
+  test("el cliente se entera si le anulan un pago", async () => {
+    const activo = await uno<{ id_registro: number }>(
+      "SELECT id_registro FROM registro_estacionamiento WHERE placa = 'ABC123' AND estado = 'ABIERTO'"
+    );
+    await estacionamiento.registrarSalida(activo.id_registro, OPERADOR1, { metodo: "EFECTIVO", recibido: 100000 });
+    const pago = await uno<{ id_pago: number }>("SELECT id_pago FROM pago WHERE id_registro = $1", [activo.id_registro]);
+    if (pago) {
+      await pagos.anular(pago.id_pago, { motivo: "Billete falso detectado en el cierre" }, ADMIN.id_usuario);
+      const avisos = await actividad.deCliente(CLIENTE1);
+      const a = avisos.find((x) => x.operacion === "ANULAR_PAGO");
+      assert.equal(a?.placa, "ABC123");
+      assert.match(String(a?.motivo), /Billete falso/);
+    }
   });
 });

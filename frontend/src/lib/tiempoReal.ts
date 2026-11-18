@@ -9,7 +9,10 @@ import { useSyncExternalStore } from "react";
  * conexión se cae, se reintenta con espera creciente y, mientras tanto,
  * useConsulta vuelve a consultar cada pocos segundos.
  */
-export type Aviso = { tipo: "espacios"; sede: number } | { tipo: "ingreso-qr"; sede: number } | { tipo: "reconectado" };
+export type Aviso =
+  | { tipo: "espacios"; sede: number }
+  | { tipo: "actividad"; sede: number; operacion: string } // ingreso, salida, reserva, cobro... confirmados
+  | { tipo: "reconectado" };
 type Oyente = (aviso: Aviso) => void;
 
 const RUTA = "/api/tiempo-real";
@@ -52,7 +55,8 @@ function conectar() {
     try {
       const m = JSON.parse(String(e.data));
       if (m.tipo === "espacios" && Number.isInteger(m.sede)) emitir({ tipo: "espacios", sede: m.sede });
-      else if (m.tipo === "ingreso-qr" && Number.isInteger(m.sede)) emitir({ tipo: "ingreso-qr", sede: m.sede });
+      else if (m.tipo === "actividad" && Number.isInteger(m.sede) && typeof m.operacion === "string")
+        emitir({ tipo: "actividad", sede: m.sede, operacion: m.operacion });
       else if (m.tipo === "reconectado") emitir({ tipo: "reconectado" });
     } catch {
       // Mensaje no reconocido: se ignora.

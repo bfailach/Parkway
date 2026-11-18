@@ -398,6 +398,32 @@ export interface IngresoQr {
   fecha: string;
 }
 
+/** Movimiento de una sede para los avisos del personal. */
+export interface ActividadPersonal {
+  id: number;
+  operacion: string;
+  fecha: string;
+  placa: string | null;
+  espacio: string | null;
+  actor: string | null;
+  rol_actor: string | null;
+  origen: string | null;
+  valor: number | null;
+  estado_espacio: string | null;
+  motivo: string | null;
+}
+
+/** Lo que otros hicieron sobre los vehículos y reservas del cliente. */
+export interface ActividadCliente {
+  id: number;
+  operacion: "EXPIRACION" | "ANULAR_PAGO" | "COBRO_NUEVO";
+  fecha: string;
+  placa: string | null;
+  espacio: string | null;
+  sede: string | null;
+  motivo: string | null;
+}
+
 export interface InfoQr {
   sede: number;
   nombre: string;
@@ -679,9 +705,12 @@ export const api = {
     request<Consentimientos>("POST", "/usuarios/me/consentimientos", { finalidad, otorgado }),
   // Entrada con QR: código de la sede para la portería
   qrIngreso: (idParqueadero: number) => request<QrSede>("GET", `/estacionamiento/qr-ingreso?idParqueadero=${idParqueadero}`),
+  actividad: (idParqueadero: number, desde: string) =>
+    request<ActividadPersonal[]>("GET", `/estacionamiento/actividad?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
   ingresosQr: (idParqueadero: number, desde: string) =>
     request<IngresoQr[]>("GET", `/estacionamiento/ingresos-qr?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
   cliente: {
+    actividad: (desde: string) => request<ActividadCliente[]>("GET", `/cliente/actividad?desde=${encodeURIComponent(desde)}`),
     infoQr: (token: string) => request<InfoQr>("GET", `/cliente/ingreso-qr/${encodeURIComponent(token)}`),
     ingresoQr: (token: string, placa: string) => request<Registro>("POST", "/cliente/ingreso-qr", { token, placa }),
     estado: () => request<EstadoCliente>("GET", "/cliente/estado"),

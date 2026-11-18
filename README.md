@@ -472,6 +472,19 @@ API_URL=http://localhost:8080 npx tsx scripts/pruebaDistribuida.ts
 Los resultados de la última corrida están en
 [docs/distribuidos/evidencias](docs/distribuidos/evidencias).
 
+## Avisos en la plataforma
+
+Cada operación importante que se confirma (ingreso, salida, reserva, cancelación,
+reserva vencida, pago anulado, cobro nuevo y cambio de estado de un espacio)
+publica un aviso por `pg_notify`. Llega a todas las réplicas y cada una lo
+reenvía por WebSocket sin datos personales; la pantalla pide el detalle a la
+API con su sesión.
+
+| Quién | Qué recibe |
+|---|---|
+| Operador y administrador | Ingresos con QR, ingresos y salidas de otros, reservas nuevas, canceladas y vencidas, ocupación alta (90 %) y sede llena por tipo de vehículo, pagos anulados, cobros nuevos y espacios fuera de servicio. Las acciones propias no se avisan. Se eligen con la campana de la barra. Los importantes se quedan en pantalla hasta cerrarlos. |
+| Cliente | Entrada y salida de su vehículo, tiempo y valor acumulado, aviso al pasar un monto y antes de que venza la reserva (ya existían), y ahora también reserva vencida, pago anulado y cobro nuevo. |
+
 ## Funciones de la propuesta
 
 | Función | Cómo funciona |
@@ -539,7 +552,7 @@ Parkway/
 | Método | Ruta | Acceso | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/health` | Público | Estado del servicio |
-| WS | `/api/tiempo-real` | Público | Avisos `{"tipo":"espacios","sede":1}` cuando cambian los espacios de una sede y `{"tipo":"ingreso-qr","sede":1}` cuando un cliente entra con el QR |
+| WS | `/api/tiempo-real` | Público | Avisos `{"tipo":"espacios","sede":1}` cuando cambian los espacios de una sede y `{"tipo":"actividad","sede":1,"operacion":"INGRESO"}` cuando se confirma una operación importante (sin placas ni nombres) |
 | POST | `/api/auth/login` | Público | Inicia sesión y devuelve el token |
 | POST | `/api/auth/registro` | Público | Crea una cuenta de cliente e inicia la sesión |
 | GET | `/api/auth/me` | Sesión | Usuario de la sesión |
@@ -564,6 +577,7 @@ Parkway/
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra la salida con su pago y comprobante. Cuerpo: `{"metodo":"EFECTIVO","recibido":10000}` o `{"metodo":"TARJETA","referencia":"482913"}` |
 | GET | `/api/estacionamiento/qr-ingreso?idParqueadero=1` | Personal | QR firmado de la sede para la entrada en autoservicio (enlace, imagen SVG y vencimiento) |
+| GET | `/api/estacionamiento/actividad?idParqueadero=1&desde=…` | Personal | Movimientos recientes de la sede hechos por otros (ingresos, salidas, reservas, vencimientos, anulaciones, espacios), para los avisos |
 | GET | `/api/estacionamiento/ingresos-qr?idParqueadero=1&desde=…` | Personal | Ingresos con QR recientes de la sede, para los avisos del operador |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
 | GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
@@ -572,6 +586,7 @@ Parkway/
 | GET, POST | `/api/cliente/reservas` | Cliente | Consultar y crear reservas |
 | POST | `/api/cliente/reservas/:idReserva/cancelar` | Cliente | Cancelar una reserva activa |
 | GET, PUT | `/api/cliente/preferencias` | Cliente | Configuración de las notificaciones |
+| GET | `/api/cliente/actividad?desde=…` | Cliente | Reservas vencidas, pagos anulados y cobros nuevos sobre sus vehículos |
 | GET | `/api/cliente/ingreso-qr/:token` | Cliente | Sede del QR escaneado y vehículos con los que puede entrar |
 | POST | `/api/cliente/ingreso-qr` | Cliente | Registra su propio ingreso con el QR. Cuerpo: `{"token":"…","placa":"ABC123"}` |
 | GET | `/api/topes-tarifarios` | Público | Tarifa máxima por minuto del Decreto 026 de 2026 y máximos por hora, fracción y día |

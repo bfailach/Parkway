@@ -6,8 +6,9 @@ import { escucharAvisos } from "../lib/tiempoReal";
 
 /**
  * Avisos del cliente: tiempo y valor acumulado de su vehículo, aviso al
- * pasar un monto, aviso antes de que venza la reserva y aviso al entrar o
- * salir. Cada aviso aparece en la página y, si el cliente lo autorizó y la
+ * pasar un monto, aviso antes de que venza la reserva, aviso al entrar o
+ * salir, y lo que otros hagan sobre sus reservas y pagos (reserva vencida,
+ * pago anulado, nuevo cobro). Cada aviso aparece en la página y, si el cliente lo autorizó y la
  * pestaña no está a la vista, también como notificación del navegador.
  * La configuración la guarda el cliente en "Notificaciones".
  */
@@ -46,6 +47,9 @@ export function Notificador() {
     tramo: new Map<number, number>(), // id_registro -> último tramo avisado
     monto: new Set<number>(),
     reservas: new Set<number>(),
+    // Lo que otros hacen sobre sus reservas y pagos (reserva vencida, pago anulado, nuevo cobro).
+    actividadDesde: new Date().toISOString(),
+    actividadVista: new Set<number>(),
   });
 
   // Cola de avisos en la página
@@ -131,6 +135,23 @@ export function Notificador() {
           avisar(`Tu reserva vence en ${Math.ceil(restante / 60000)} min`, `El espacio ${rs.codigo_espacio} de ${rs.sede} se libera a las ${new Date(rs.fecha_fin).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })}.`);
         }
       });
+      // Reserva vencida, pago anulado o nuevo cobro hechos por otros.
+      try {
+        const lista = (await api.cliente.actividad(m.actividadDesde)).filter((a) => !m.actividadVista.has(a.id)).reverse();
+        for (const a of lista) {
+          m.actividadVista.add(a.id);
+          m.actividadDesde = a.fecha;
+          if (!activos) continue;
+          if (a.operacion === "EXPIRACION")
+            avisar("Tu reserva venció", `No alcanzaste a llegar con ${a.placa}; el espacio ${a.espacio} de ${a.sede} quedó libre. Puedes reservar otra vez.`);
+          else if (a.operacion === "ANULAR_PAGO")
+            avisar(`Se anuló un pago de ${a.placa}`, `${a.motivo ? `Motivo: ${a.motivo}. ` : ""}Revisa tu historial; el valor puede cobrarse de nuevo.`);
+          else if (a.operacion === "COBRO_NUEVO")
+            avisar(`Nuevo cobro para ${a.placa}`, `Se registró otra vez el cobro de tu visita en ${a.sede}. El detalle está en tu historial.`);
+        }
+      } catch {
+        /* se revisa de nuevo en la siguiente vuelta */
+      }
       m.iniciado = true;
     }
 

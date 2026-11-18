@@ -47,8 +47,14 @@ export async function expirarVencidas(): Promise<number> {
      RETURNING 1
      )`
          : ""
-     }
-     SELECT (SELECT count(*) FROM vencidas)::int AS n, (SELECT count(*) FROM liberados) AS l, (SELECT count(*) FROM bitacora) AS b`,
+     },
+     -- Aviso en la plataforma por cada sede con reservas vencidas.
+     avisos AS (
+        SELECT pg_notify('parkway_avisos', json_build_object('tipo', 'actividad', 'sede', e.id_parqueadero, 'operacion', 'EXPIRACION')::text)
+          FROM (SELECT DISTINCT e.id_parqueadero FROM vencidas v JOIN espacio e ON e.id_espacio = v.id_espacio) e
+     )
+     SELECT (SELECT count(*) FROM vencidas)::int AS n, (SELECT count(*) FROM liberados) AS l, (SELECT count(*) FROM bitacora) AS b,
+            (SELECT count(*) FROM avisos) AS a`,
     distribuido.outbox ? [NODO_ID] : []
   );
   return rows[0]?.n ?? 0;

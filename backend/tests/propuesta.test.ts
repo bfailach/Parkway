@@ -42,9 +42,10 @@ test("QR: el token lleva la sede, vence y no acepta alteraciones", () => {
   assert.throws(() => verificarQr(`${h}.${otraSede}.${f}`), /no es válido/);
 });
 
-test("aviso al personal: solo pasan ingresos con QR con una sede válida", () => {
-  assert.deepEqual(leerAvisoPersonal('{"tipo":"ingreso-qr","sede":3}'), { tipo: "ingreso-qr", sede: 3 });
-  assert.equal(leerAvisoPersonal('{"tipo":"ingreso-qr","sede":0}'), null);
-  assert.equal(leerAvisoPersonal('{"tipo":"otro","sede":3}'), null);
+test("aviso de actividad: solo pasa la forma esperada", () => {
+  assert.deepEqual(leerAvisoPersonal('{"tipo":"actividad","sede":3,"operacion":"INGRESO"}'), { tipo: "actividad", sede: 3, operacion: "INGRESO" });
+  assert.equal(leerAvisoPersonal('{"tipo":"actividad","sede":0,"operacion":"INGRESO"}'), null);
+  assert.equal(leerAvisoPersonal('{"tipo":"actividad","sede":3,"operacion":"<script>"}'), null);
+  assert.equal(leerAvisoPersonal('{"tipo":"otro","sede":3,"operacion":"INGRESO"}'), null);
   assert.equal(leerAvisoPersonal("no es json"), null);
 });
