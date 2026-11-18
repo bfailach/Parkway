@@ -21,6 +21,12 @@ import { iniciarPublicador } from "./distribuido/outbox";
 import { cerrarRabbit, conectarRabbit } from "./distribuido/rabbitmq";
 // eslint-disable-next-line import/first
 import { cerrarRedis, conectarRedis, soyLider } from "./distribuido/redis";
+// eslint-disable-next-line import/first
+import { aplicarMigraciones } from "./db/migraciones";
+
+// Tablas nuevas de la arquitectura distribuida y de la propuesta en una base
+// anterior (por ejemplo, Render): se aplican solas, una vez por versión del script.
+aplicarMigraciones().catch((e) => console.error("No se pudieron aplicar las migraciones", e)); // eslint-disable-line no-console
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
