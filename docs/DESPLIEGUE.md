@@ -98,9 +98,9 @@ plan gratuito de Render tarda unos 30 segundos en responder la primera vez.
 
 ## 3. Probar
 
-Abre la URL del servicio, por ejemplo `https://parkway.onrender.com`, y entra
+Abre la URL del servicio, por ejemplo `https://parkway-jz0g.onrender.com`, y entra
 con `operador1@parkway.test` / `Operador123*`. Para comprobar solo la API:
-`https://parkway.onrender.com/api/health`.
+`https://parkway-jz0g.onrender.com/api/health`.
 
 Cada `git push` a `main` vuelve a desplegar la aplicación automáticamente.
 
