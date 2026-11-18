@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api, QrSede as Qr } from "../lib/api";
+import { ActividadPersonal, api, QrSede as Qr } from "../lib/api";
+import { escucharAvisos } from "../lib/tiempoReal";
 
 /**
  * QR de entrada de la sede (autoservicio). El operador lo muestra en la
@@ -9,6 +10,10 @@ import { api, QrSede as Qr } from "../lib/api";
  * sola antes de que venza, así que una foto del código no sirve para
  * registrar el ingreso desde otro lugar más tarde. Por eso no se imprime;
  * se deja a la vista en una pantalla o tableta de la portería.
+ *
+ * Cuando un cliente registra su ingreso con el código, el QR se oculta y
+ * aparece la confirmación (placa, cliente, espacio y hora); el operador lo
+ * vuelve a mostrar para el siguiente cliente. El aviso general también llega.
  */
 export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
   const [qr, setQr] = useState<Qr | null>(null);
@@ -16,7 +21,9 @@ export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [restante, setRestante] = useState(0);
+  const [confirmado, setConfirmado] = useState<ActividadPersonal | null>(null);
   const caja = useRef<HTMLElement>(null);
+  const mostradoDesde = useRef<string>(new Date().toISOString());
 
   async function pedir() {
     setCargando(true);
@@ -43,18 +50,59 @@ export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
     };
   }, [visible, qr]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Mientras el QR está a la vista, un ingreso con QR en esta sede lo oculta y muestra la confirmación.
+  useEffect(() => {
+    if (!visible) return;
+    let vivo = true;
+    const quitar = escucharAvisos(async (a) => {
+      if (a.tipo !== "actividad" || a.operacion !== "INGRESO" || a.sede !== idSede) return;
+      try {
+        const lista = await api.actividad(idSede, mostradoDesde.current);
+        const qr = lista.find((x) => x.operacion === "INGRESO" && x.origen === "QR");
+        if (qr && vivo) {
+          if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
+          setConfirmado(qr);
+          setVisible(false);
+          setQr(null);
+        }
+      } catch {
+        /* el aviso general sigue llegando aunque esta consulta falle */
+      }
+    });
+    return () => {
+      vivo = false;
+      quitar();
+    };
+  }, [visible, idSede]);
+
+  const mostrar = () => {
+    mostradoDesde.current = new Date().toISOString();
+    setConfirmado(null);
+    setVisible(true);
+    pedir();
+  };
+
   if (!visible) {
     return (
       <div className="qr-sede">
-        <button
-          className="boton"
-          onClick={() => {
-            setVisible(true);
-            pedir();
-          }}
-        >
-          Mostrar QR de entrada
-        </button>
+        {confirmado && (
+          <div className="tarjeta qr-confirmacion" role="status" aria-live="polite">
+            <p className="qr-confirmacion-titulo">Ingreso con QR registrado</p>
+            <p>
+              <b>{confirmado.placa}</b> · {confirmado.actor ?? "Cliente"} · espacio <b>{confirmado.espacio}</b> ·{" "}
+              {new Date(confirmado.fecha).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })}
+            </p>
+            <div className="acciones">
+              <button className="boton boton-primario" onClick={mostrar}>Mostrar QR para el siguiente cliente</button>
+              <button className="boton" onClick={() => setConfirmado(null)}>Cerrar</button>
+            </div>
+          </div>
+        )}
+        {!confirmado && (
+          <button className="boton" onClick={mostrar}>
+            Mostrar QR de entrada
+          </button>
+        )}
       </div>
     );
   }

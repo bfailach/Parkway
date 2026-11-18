@@ -1351,3 +1351,6 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .chip-entrada { background: var(--ok-fondo); color: var(--ok-texto); }
 .chip-salida { background: var(--superficie-3); color: var(--tinta); }
 .cobro-tope { font-size: 0.875rem; margin: 6px 0 0; }
+.qr-confirmacion { max-width: 520px; display: grid; gap: 8px; }
+.qr-confirmacion p { margin: 0; }
+.qr-confirmacion-titulo { color: var(--ok-texto); font-weight: 700; font-size: 1.05rem; }
