@@ -1393,7 +1393,15 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .ingreso-google { margin-top: 16px; display: grid; gap: 12px; }
 .separador-o { display: flex; align-items: center; gap: 12px; color: var(--tinta-3); font-size: 0.875rem; }
 .separador-o::before, .separador-o::after { content: ""; flex: 1; height: 1px; background: var(--borde, rgba(255, 255, 255, 0.12)); }
-.google-boton { min-height: 44px; display: flex; justify-content: center; }
+.google-boton { position: relative; }
+.google-visual { width: 100%; gap: 12px; pointer-events: none; transition: background-color 0.15s, box-shadow 0.15s; }
+.google-boton:hover .google-visual { background: var(--superficie-4); }
+.google-boton:focus-within .google-visual { box-shadow: 0 0 0 3px var(--acento); }
+.google-boton.enviando .google-visual { opacity: 0.7; }
+.google-logo { width: 20px; height: 20px; flex: none; }
+/* Botón oficial de Google, invisible y escalado encima del botón propio */
+.google-capa { position: absolute; inset: 0 auto auto 0; transform-origin: 0 0; opacity: 0.01; overflow: hidden; }
+.google-capa iframe { display: block; margin: 0 !important; }
 .google-autorizacion { display: grid; gap: 14px; margin-top: 16px; padding: 18px; background: var(--superficie-2); border-radius: var(--radio); }
 .google-autorizacion p { margin: 0; }
 .google-cancelar { justify-self: center; }
