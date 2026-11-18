@@ -129,7 +129,7 @@ function Rig({ control, plazas, dist }: { control: MutableRefObject<ControlEscen
     const { cam, look, off } = tmp;
     const vertical = size.width / size.height < 0.9;
     const ajuste = Math.min(1.8, Math.max(1, 1.25 / (size.width / size.height))); // aleja la cámara en pantallas angostas
-    const p = c.modo === "historia" ? c.progreso : c.modo === "portada" ? 0 : 1;
+    const p = c.modo === "historia" ? c.progreso : c.modo === "portada" || c.modo === "centrada" ? 0 : 1;
     const [cx, cy, cz] = dist.centro;
     const E = dist.extension;
 
@@ -146,13 +146,16 @@ function Rig({ control, plazas, dist }: { control: MutableRefObject<ControlEscen
     const rx = reducido ? 0 : c.raton.x;
     const ry = reducido ? 0 : c.raton.y;
 
-    if (c.modo === "portada") {
+    if (c.modo === "portada" || c.modo === "centrada") {
       // Vuelo lento alrededor de la maqueta.
       const ang = (vertical ? 2.2 : 2.35) + (reducido ? 0 : Math.sin(t * 0.07) * 0.22) + rx * 0.12;
-      const r = E * (vertical ? 1.45 : 1.3) * ajuste;
-      cam.set(cx + Math.cos(ang) * r, cy + E * (0.62 - ry * 0.06), cz + Math.sin(ang) * r);
-      // En pantalla ancha la maqueta queda a la derecha del título.
-      look.set(cx - (vertical ? 0 : E * 0.26), cy * 0.6, cz - (vertical ? -E * 0.12 : E * 0.26));
+      // En el modo centrado la cámara se aleja más en lienzos angostos para que la maqueta quepa entera.
+      const lejos = c.modo === "centrada" ? Math.min(2.6, Math.max(1.25, 1.85 / (size.width / size.height))) : ajuste;
+      const r = E * (vertical ? 1.45 : 1.3) * lejos;
+      cam.set(cx + Math.cos(ang) * r, cy + E * (0.62 - ry * 0.06) * (c.modo === "centrada" ? lejos : 1), cz + Math.sin(ang) * r);
+      if (c.modo === "centrada") look.set(cx, cy * 0.6, cz); // maqueta completa en el centro
+      // En la portada, en pantalla ancha, la maqueta queda a la derecha del título.
+      else look.set(cx - (vertical ? 0 : E * 0.26), cy * 0.6, cz - (vertical ? -E * 0.12 : E * 0.26));
     } else if (c.modo === "historia") {
       off.set(Math.sin(angulo), 0, Math.cos(angulo)); // adelante del carro
       if (p < 0.24) {

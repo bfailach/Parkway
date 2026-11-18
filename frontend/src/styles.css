@@ -435,6 +435,11 @@ a { color: inherit; }
    LOGIN
    ===================================================================== */
 .login { min-height: 100svh; position: relative; display: grid; grid-template-columns: 1fr minmax(380px, 520px); }
+/* En escritorio la maqueta ocupa solo la columna izquierda, para que se vea
+   completa y centrada en lugar de quedar a medias detrás del formulario. */
+@media (min-width: 901px) {
+  .login > .escena-fondo { right: clamp(380px, 40.625vw, 520px); }
+}
 .login-panel { grid-column: 2; position: relative; z-index: 1; background: var(--superficie); display: flex; flex-direction: column; padding: 24px clamp(24px, 4vw, 56px) 40px; }
 .login-volver { align-self: flex-start; }
 .login-arriba { display: flex; justify-content: space-between; align-items: center; gap: 12px; }

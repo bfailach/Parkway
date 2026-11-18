@@ -22,7 +22,7 @@ export function Login({ onIngresar, onVolver }: { onIngresar: (u: Usuario) => vo
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [plano, setPlano] = useState<EspacioMapa[]>([]);
-  const control = useRef(crearControl("portada"));
+  const control = useRef(crearControl("centrada"));
   const webgl = useMemo(soportaWebGL, []);
 
   useEffect(() => {

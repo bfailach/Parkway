@@ -5,7 +5,8 @@ import { Plaza } from "./layout";
  * aparte, sin Three.js, para que la página cargue rápido y la escena se
  * descargue después en su propio archivo.
  */
-export type ModoEscena = "portada" | "historia" | "vivo" | "panel";
+// "centrada": vuelo de la portada con la maqueta en el centro del lienzo (pantalla de ingreso).
+export type ModoEscena = "portada" | "centrada" | "historia" | "vivo" | "panel";
 
 export interface ControlEscena {
   modo: ModoEscena;
