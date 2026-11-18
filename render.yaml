@@ -25,6 +25,9 @@ services:
         value: 8h
       - key: RESERVA_MINUTOS
         value: "30"
+      # Inicio de sesión con Google (Client ID público de Google Cloud; sin él no aparece el botón)
+      - key: GOOGLE_CLIENT_ID
+        value: 270292693025-avotc9bv4qduslan3blmh31bpau2u3lq.apps.googleusercontent.com
 
 databases:
   - name: parkway-db

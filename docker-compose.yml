@@ -32,6 +32,7 @@ x-api: &api
     JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_es256
     JWT_EXPIRES_IN: 8h
     RESERVA_MINUTOS: "30"
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-270292693025-avotc9bv4qduslan3blmh31bpau2u3lq.apps.googleusercontent.com}
     REDIS_URL: redis://redis:6379
     RABBITMQ_URL: amqp://${RABBITMQ_USER:-parkway}:${RABBITMQ_PASSWORD:-parkway-local}@rabbitmq:5672
     OUTBOX_HABILITADO: "true"

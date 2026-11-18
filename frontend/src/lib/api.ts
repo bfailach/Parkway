@@ -809,6 +809,10 @@ export const api = {
     request<{ token: string; usuario: Usuario }>("POST", "/auth/login", { correo, contrasena }),
   me: () => request<Usuario>("GET", "/auth/me"),
   registro: (datos: DatosCuenta) => request<{ token: string; usuario: Usuario }>("POST", "/auth/registro", datos),
+  // Inicio de sesión con Google: el Client ID es público y viene del servidor (GOOGLE_CLIENT_ID).
+  configuracionGoogle: () => request<{ clientId: string | null }>("GET", "/auth/google/configuracion"),
+  google: (d: { credencial: string; aceptaTratamiento?: boolean; aceptaComunicaciones?: boolean }) =>
+    request<{ token: string; usuario: Usuario }>("POST", "/auth/google", d),
   // Ley 1581 de 2012: aviso de privacidad y autorizaciones del usuario
   politicaDatos: () => request<PoliticaDatos>("GET", "/politica-datos"),
   consentimientos: () => request<Consentimientos>("GET", "/usuarios/me/consentimientos"),

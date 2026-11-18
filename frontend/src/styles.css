@@ -1388,3 +1388,12 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .correccion .fila-campos { align-items: start; }
 .dialogo:has(.correccion) { width: min(540px, 100% - 32px); }
 .reclamo p > .chip-sm:first-child { margin-left: 0; }
+
+/* Inicio de sesión con Google */
+.ingreso-google { margin-top: 16px; display: grid; gap: 12px; }
+.separador-o { display: flex; align-items: center; gap: 12px; color: var(--tinta-3); font-size: 0.875rem; }
+.separador-o::before, .separador-o::after { content: ""; flex: 1; height: 1px; background: var(--borde, rgba(255, 255, 255, 0.12)); }
+.google-boton { min-height: 44px; display: flex; justify-content: center; }
+.google-autorizacion { display: grid; gap: 14px; margin-top: 16px; padding: 18px; background: var(--superficie-2); border-radius: var(--radio); }
+.google-autorizacion p { margin: 0; }
+.google-cancelar { justify-self: center; }

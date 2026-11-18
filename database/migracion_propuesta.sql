@@ -143,3 +143,11 @@ CREATE INDEX IF NOT EXISTS ix_reclamo_cliente ON reclamo (id_cliente, fecha_crea
 
 COMMENT ON TABLE reclamo IS
   'Reclamos de los clientes sobre el cobro de una visita. La corrección del cobro queda en la bitácora (CORREGIR_COBRO).';
+
+-- ---------------------------------------------------------------------
+-- 6. Inicio de sesión con Google
+-- Identificador de la cuenta de Google (claim "sub" del token de Google).
+-- Se guarda al primer inicio con Google; una cuenta con contraseña y el mismo
+-- correo verificado queda vinculada. Parkway no guarda contraseñas de Google.
+-- ---------------------------------------------------------------------
+ALTER TABLE usuario ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64) UNIQUE;

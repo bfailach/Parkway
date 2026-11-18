@@ -7,6 +7,7 @@ import * as usuarioRepository from "../repositories/usuarioRepository";
 import { badRequest, unauthorized, forbidden } from "../errors/AppError";
 import { JWT_SECRET, UsuarioToken } from "../middlewares/auth";
 import { validarCuenta } from "../validators/clienteValidator";
+import * as google from "./googleService";
 
 /** CU01 / RF01 - Iniciar sesión. */
 export async function iniciarSesion(correo: unknown, contrasena: unknown) {
@@ -62,3 +63,11 @@ export async function registrarCliente(body: Record<string, unknown>) {
   }
   return emitirSesion(usuario);
 }
+
+/** Inicio de sesión o creación de cuenta con Google (ver googleService). */
+export function ingresarConGoogle(body: Record<string, unknown>) {
+  return google.ingresarConGoogle(body, emitirSesion) as Promise<ReturnType<typeof emitirSesion>>;
+}
+
+/** Client ID público para el botón de Google; null si no está configurado. */
+export const configuracionGoogle = () => ({ clientId: google.clienteGoogle() });

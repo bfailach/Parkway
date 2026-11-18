@@ -5,6 +5,7 @@ import type { EspacioMapa } from "../lib/api";
 import { BotonAccesibilidad, BotonTema } from "../components/Apariencia";
 import { SenalP } from "../components/SenalP";
 import { AvisoPrivacidad } from "../components/AvisoPrivacidad";
+import { IngresoGoogle } from "../components/IngresoGoogle";
 
 const Escena = lazy(() => import("../three/Escena"));
 
@@ -96,6 +97,8 @@ export function Login({ onIngresar, onVolver }: { onIngresar: (u: Usuario) => vo
           <button className="boton boton-primario boton-ancho" disabled={enviando}>
             {enviando ? "Ingresando..." : "Ingresar"}
           </button>
+
+          <IngresoGoogle onIngresar={onIngresar} />
 
           <p className="login-alterno">
             ¿No tienes cuenta?{" "}
@@ -214,6 +217,7 @@ function CrearCuenta({ onCreada, onIngresar }: { onCreada: (u: Usuario) => void;
       <button className="boton boton-primario boton-ancho" disabled={enviando}>
         {enviando ? "Creando cuenta..." : "Crear cuenta"}
       </button>
+      <IngresoGoogle onIngresar={onCreada} texto="signup_with" />
       <p className="login-alterno">
         ¿Ya tienes cuenta?{" "}
         <button type="button" className="enlace" onClick={onIngresar}>Ingresa</button>
