@@ -123,6 +123,12 @@ describe("entrada con QR", () => {
     );
     assert.equal(b.detalle.origen, "QR");
     await fallaCon(qr.ingresar(CLIENTE, { token, placa: "ABC123" }), 409); // ya está dentro
+
+    // El operador de la sede ve el ingreso en sus avisos.
+    const avisos = await qr.ingresosRecientes(OPERADOR1, CHAPINERO);
+    assert.equal(avisos[0].id_registro, r.id_registro);
+    assert.equal(avisos[0].placa, "ABC123");
+    assert.equal(avisos[0].cliente, "Juan Cliente");
   });
 
   test("rechaza vehículos ajenos y códigos alterados", async () => {

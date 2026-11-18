@@ -23,6 +23,7 @@ import { Reportes } from "./pages/admin/Reportes";
 import { Pagos } from "./pages/admin/Pagos";
 import { Notificaciones } from "./pages/cliente/Notificaciones";
 import { Notificador } from "./components/Notificador";
+import { AvisosOperador } from "./components/AvisosOperador";
 import { SenalP } from "./components/SenalP";
 
 type Vista =
@@ -240,6 +241,16 @@ export default function App() {
         {!esPersonal && vistaActual === "notificaciones" && <Notificaciones />}
       </main>
       {!esPersonal && <Notificador />}
+      {/* Avisos al personal: ingresos con QR de sus sedes, en tiempo real. */}
+      {esPersonal && (
+        <AvisosOperador
+          sedes={sedes}
+          onVer={(id) => {
+            setIdSede(id);
+            setVista("activos");
+          }}
+        />
+      )}
     </div>
   );
 }

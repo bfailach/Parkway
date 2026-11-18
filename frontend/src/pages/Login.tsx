@@ -198,7 +198,7 @@ function CrearCuenta({ onCreada, onIngresar }: { onCreada: (u: Usuario) => void;
         {campo("contrasena", "Contraseña", { type: "password", autoComplete: "new-password" })}
         {campo("confirmar", "Repetir contraseña", { type: "password", autoComplete: "new-password" })}
       </div>
-      <details className="aviso">
+      <details className="aviso-privacidad">
         <summary>Aviso de privacidad</summary>
         <AvisoPrivacidad />
       </details>

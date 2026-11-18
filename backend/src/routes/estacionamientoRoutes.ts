@@ -32,5 +32,9 @@ router.get("/qr-ingreso", ...personal, asyncHandler<AuthenticatedRequest>(async 
   const origen = `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.get("host")}`;
   res.json(await qr.generar(req.usuario!, Number(req.query.idParqueadero), origen));
 }));
+// Ingresos con QR recientes de la sede (avisos al operador)
+router.get("/ingresos-qr", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  res.json(await qr.ingresosRecientes(req.usuario!, Number(req.query.idParqueadero), req.query.desde as string | undefined));
+}));
 
 export default router;

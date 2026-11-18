@@ -58,7 +58,7 @@ export function Privacidad() {
           <span className="interruptor-pista" aria-hidden="true" />
         </label>
       )}
-      <details className="aviso">
+      <details className="aviso-privacidad">
         <summary>Ver el aviso de privacidad</summary>
         <AvisoPrivacidad />
       </details>

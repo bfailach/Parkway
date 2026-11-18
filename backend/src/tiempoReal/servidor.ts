@@ -3,6 +3,7 @@ import { PoolClient } from "pg";
 import { WebSocket, WebSocketServer } from "ws";
 import { pool } from "../db/pool";
 import { invalidarSede } from "../distribuido/redis";
+import { CANAL_AVISOS, leerAvisoPersonal } from "./canales";
 
 /**
  * Actualización en tiempo real (RF12).
@@ -19,6 +20,10 @@ import { invalidarSede } from "../distribuido/redis";
  * sesión: los datos con placas siguen saliendo de la API con su token.
  * Como el aviso viene de PostgreSQL, funciona aunque el servicio corra en
  * varios nodos: todos escuchan la misma base.
+ *
+ * Por el canal parkway_avisos llegan avisos para el personal, como
+ * { "tipo": "ingreso-qr", "sede": 1 } cuando un cliente entra con el QR.
+ * Tampoco llevan placas ni nombres: el operador los consulta en la API.
  */
 export const CANAL = "parkway_espacios";
 export const RUTA_WS = "/api/tiempo-real";
@@ -98,6 +103,11 @@ export function iniciarTiempoReal(server: Server) {
     try {
       cliente = await pool.connect();
       cliente.on("notification", (n) => {
+        if (n.channel === CANAL_AVISOS) {
+          const aviso = leerAvisoPersonal(n.payload);
+          if (aviso) enviar(aviso);
+          return;
+        }
         const sede = n.channel === CANAL ? leerAviso(n.payload) : null;
         if (sede) {
           // Sistemas distribuidos: borra la caché de la sede en Redis antes
@@ -107,6 +117,7 @@ export function iniciarTiempoReal(server: Server) {
       });
       cliente.on("error", reintentar);
       await cliente.query(`LISTEN ${CANAL}`);
+      await cliente.query(`LISTEN ${CANAL_AVISOS}`);
       const { rows } = await cliente.query(`SELECT 1 FROM pg_trigger WHERE tgname = 'tr_espacio_tiempo_real'`);
       if (!rows.length) {
         log("Falta el trigger en la base. Ejecute database/migracion_tiempo_real.sql; mientras tanto las pantallas consultan cada pocos segundos.");

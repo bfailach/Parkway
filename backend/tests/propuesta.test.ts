@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { maximosPorTramo, revisarTarifas, TOPES_DECRETO_026 } from "../src/services/topeTarifarioService";
 import { leerAutorizacion } from "../src/services/consentimientoService";
 import { firmarQr, verificarQr } from "../src/services/qrService";
+import { leerAvisoPersonal } from "../src/tiempoReal/canales";
 
 /** Pruebas unitarias de las funciones de la propuesta (sin base de datos). */
 
@@ -39,4 +40,11 @@ test("QR: el token lleva la sede, vence y no acepta alteraciones", () => {
   const [h, p, f] = token.split(".");
   const otraSede = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(p, "base64url").toString()), sede: 8 })).toString("base64url");
   assert.throws(() => verificarQr(`${h}.${otraSede}.${f}`), /no es válido/);
+});
+
+test("aviso al personal: solo pasan ingresos con QR con una sede válida", () => {
+  assert.deepEqual(leerAvisoPersonal('{"tipo":"ingreso-qr","sede":3}'), { tipo: "ingreso-qr", sede: 3 });
+  assert.equal(leerAvisoPersonal('{"tipo":"ingreso-qr","sede":0}'), null);
+  assert.equal(leerAvisoPersonal('{"tipo":"otro","sede":3}'), null);
+  assert.equal(leerAvisoPersonal("no es json"), null);
 });

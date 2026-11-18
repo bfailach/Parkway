@@ -7,380 +7,380 @@ TAP version 13
     # Subtest: crea una sede con pisos, tarifas, horario y operadores
     ok 1 - crea una sede con pisos, tarifas, horario y operadores
       ---
-      duration_ms: 34.453287
+      duration_ms: 43.497124
       type: 'test'
       ...
     # Subtest: edita la sede: agrega espacios y cambia la tarifa
     ok 2 - edita la sede: agrega espacios y cambia la tarifa
       ---
-      duration_ms: 15.254312
+      duration_ms: 24.484508
       type: 'test'
       ...
     # Subtest: no deja quitar espacios ocupados ni marcar fuera de servicio uno ocupado
     ok 3 - no deja quitar espacios ocupados ni marcar fuera de servicio uno ocupado
       ---
-      duration_ms: 31.644004
+      duration_ms: 24.3607
       type: 'test'
       ...
     # Subtest: marca un espacio fuera de servicio y lo vuelve a habilitar
     ok 4 - marca un espacio fuera de servicio y lo vuelve a habilitar
       ---
-      duration_ms: 10.586968
+      duration_ms: 5.894576
       type: 'test'
       ...
     1..4
 ok 1 - sedes
   ---
-  duration_ms: 492.715483
+  duration_ms: 473.710149
   type: 'suite'
   ...
 # Subtest: usuarios
     # Subtest: crea un operador con sus sedes y filtra la lista
     ok 1 - crea un operador con sus sedes y filtra la lista
       ---
-      duration_ms: 254.193325
+      duration_ms: 225.498157
       type: 'test'
       ...
     # Subtest: al pasarlo a cliente pierde las sedes; la contraseña cambia solo si se envía
     ok 2 - al pasarlo a cliente pierde las sedes; la contraseña cambia solo si se envía
       ---
-      duration_ms: 66.980345
+      duration_ms: 79.929189
       type: 'test'
       ...
     # Subtest: inactivar a un cliente cancela su reserva y libera el espacio
     ok 3 - inactivar a un cliente cancela su reserva y libera el espacio
       ---
-      duration_ms: 13.131126
+      duration_ms: 12.321299
       type: 'test'
       ...
     # Subtest: el administrador no se desactiva y siempre queda uno activo
     ok 4 - el administrador no se desactiva y siempre queda uno activo
       ---
-      duration_ms: 89.778712
+      duration_ms: 88.937002
       type: 'test'
       ...
     1..4
 ok 2 - usuarios
   ---
-  duration_ms: 424.688731
+  duration_ms: 407.263394
   type: 'suite'
   ...
 # Subtest: reportes
     # Subtest: con movimiento del día, los tres reportes cuadran con los pagos
     ok 1 - con movimiento del día, los tres reportes cuadran con los pagos
       ---
-      duration_ms: 87.905142
+      duration_ms: 59.825156
       type: 'test'
       ...
     1..1
 ok 3 - reportes
   ---
-  duration_ms: 88.089319
+  duration_ms: 60.049619
   type: 'suite'
   ...
 # Subtest: horario, predicción y pronóstico
     # Subtest: el horario y la predicción de la red responden para cada sede
     ok 1 - el horario y la predicción de la red responden para cada sede
       ---
-      duration_ms: 26.757394
+      duration_ms: 30.733608
       type: 'test'
       ...
     # Subtest: sin pronóstico calculado lo dice; con pronóstico lo corrige con la red
     ok 2 - sin pronóstico calculado lo dice; con pronóstico lo corrige con la red
       ---
-      duration_ms: 6.904681
+      duration_ms: 6.839485
       type: 'test'
       ...
     1..2
 ok 4 - horario, predicción y pronóstico
   ---
-  duration_ms: 33.840616
+  duration_ms: 37.783196
   type: 'suite'
   ...
 # Subtest: cuenta
     # Subtest: crea la cuenta e inicia la sesión
     ok 1 - crea la cuenta e inicia la sesión
       ---
-      duration_ms: 230.304262
+      duration_ms: 248.46786
       type: 'test'
       ...
     # Subtest: rechaza contraseñas incorrectas y usuarios inactivos
     ok 2 - rechaza contraseñas incorrectas y usuarios inactivos
       ---
-      duration_ms: 147.563453
+      duration_ms: 131.672654
       type: 'test'
       ...
     1..2
 ok 5 - cuenta
   ---
-  duration_ms: 721.985625
+  duration_ms: 741.323392
   type: 'suite'
   ...
 # Subtest: vehículos
     # Subtest: registra un carro y una bicicleta con su código
     ok 1 - registra un carro y una bicicleta con su código
       ---
-      duration_ms: 14.1122
+      duration_ms: 15.754442
       type: 'test'
       ...
     # Subtest: quita un vehículo propio y no uno ajeno
     ok 2 - quita un vehículo propio y no uno ajeno
       ---
-      duration_ms: 5.641763
+      duration_ms: 5.737217
       type: 'test'
       ...
     1..2
 ok 6 - vehículos
   ---
-  duration_ms: 20.09743
+  duration_ms: 21.74806
   type: 'suite'
   ...
 # Subtest: reservas
     # Subtest: reserva aparta un espacio y lo marca RESERVADO
     ok 1 - reserva aparta un espacio y lo marca RESERVADO
       ---
-      duration_ms: 15.439701
+      duration_ms: 18.746624
       type: 'test'
       ...
     # Subtest: el estado del cliente muestra la reserva
     ok 2 - el estado del cliente muestra la reserva
       ---
-      duration_ms: 14.439206
+      duration_ms: 10.736128
       type: 'test'
       ...
     # Subtest: al llegar, el vehículo entra al espacio reservado y la reserva se cumple
     ok 3 - al llegar, el vehículo entra al espacio reservado y la reserva se cumple
       ---
-      duration_ms: 37.325362
+      duration_ms: 33.777645
       type: 'test'
       ...
     # Subtest: cancelar libera el espacio
     ok 4 - cancelar libera el espacio
       ---
-      duration_ms: 17.466995
+      duration_ms: 10.018532
       type: 'test'
       ...
     # Subtest: una reserva vencida expira y libera el espacio
     ok 5 - una reserva vencida expira y libera el espacio
       ---
-      duration_ms: 11.190686
+      duration_ms: 8.393765
       type: 'test'
       ...
     # Subtest: no se reserva con la sede cerrada
     ok 6 - no se reserva con la sede cerrada
       ---
-      duration_ms: 5.048706
+      duration_ms: 3.595582
       type: 'test'
       ...
     1..6
 ok 7 - reservas
   ---
-  duration_ms: 101.749406
+  duration_ms: 85.942921
   type: 'suite'
   ...
 # Subtest: notificaciones
     # Subtest: guarda y lee las preferencias, con valores por defecto
     ok 1 - guarda y lee las preferencias, con valores por defecto
       ---
-      duration_ms: 4.753079
+      duration_ms: 2.775138
       type: 'test'
       ...
     1..1
 ok 8 - notificaciones
   ---
-  duration_ms: 4.976334
+  duration_ms: 2.912509
   type: 'suite'
   ...
 # Subtest: ingreso
     # Subtest: asigna el primer espacio libre del piso 1 y ocupa el espacio
     ok 1 - asigna el primer espacio libre del piso 1 y ocupa el espacio
       ---
-      duration_ms: 21.579974
+      duration_ms: 28.301045
       type: 'test'
       ...
     # Subtest: rechaza un segundo ingreso de la misma placa
     ok 2 - rechaza un segundo ingreso de la misma placa
       ---
-      duration_ms: 4.213417
+      duration_ms: 7.289676
       type: 'test'
       ...
     # Subtest: rechaza un tipo de vehículo distinto al registrado
     ok 3 - rechaza un tipo de vehículo distinto al registrado
       ---
-      duration_ms: 2.882438
+      duration_ms: 5.381708
       type: 'test'
       ...
     # Subtest: un operador solo trabaja en las sedes asignadas
     ok 4 - un operador solo trabaja en las sedes asignadas
       ---
-      duration_ms: 7.335203
+      duration_ms: 7.813017
       type: 'test'
       ...
     # Subtest: una bicicleta sin registro recibe un código nuevo
     ok 5 - una bicicleta sin registro recibe un código nuevo
       ---
-      duration_ms: 13.280634
+      duration_ms: 18.684417
       type: 'test'
       ...
     # Subtest: sin espacios libres responde 409
     ok 6 - sin espacios libres responde 409
       ---
-      duration_ms: 44.624667
+      duration_ms: 45.351859
       type: 'test'
       ...
     # Subtest: la sede debe existir
     ok 7 - la sede debe existir
       ---
-      duration_ms: 1.740067
+      duration_ms: 1.072797
       type: 'test'
       ...
     1..7
 ok 9 - ingreso
   ---
-  duration_ms: 488.207817
+  duration_ms: 496.396211
   type: 'suite'
   ...
 # Subtest: consultas del personal
     # Subtest: resumen, disponibilidad, plano y vehículos dentro
     ok 1 - resumen, disponibilidad, plano y vehículos dentro
       ---
-      duration_ms: 14.958245
+      duration_ms: 15.719276
       type: 'test'
       ...
     1..1
 ok 10 - consultas del personal
   ---
-  duration_ms: 15.321895
+  duration_ms: 16.154104
   type: 'suite'
   ...
 # Subtest: salida con pago
     # Subtest: efectivo: cierra el registro, libera el espacio y emite el comprobante con el cambio
     ok 1 - efectivo: cierra el registro, libera el espacio y emite el comprobante con el cambio
       ---
-      duration_ms: 11.640385
+      duration_ms: 14.249789
       type: 'test'
       ...
     # Subtest: no deja dar dos veces la salida
     ok 2 - no deja dar dos veces la salida
       ---
-      duration_ms: 4.953683
+      duration_ms: 4.67427
       type: 'test'
       ...
     # Subtest: si el efectivo no alcanza, no cierra nada
     ok 3 - si el efectivo no alcanza, no cierra nada
       ---
-      duration_ms: 16.526896
+      duration_ms: 18.988655
       type: 'test'
       ...
     # Subtest: tarjeta: la misma aprobación no se registra dos veces
     ok 4 - tarjeta: la misma aprobación no se registra dos veces
       ---
-      duration_ms: 20.085597
+      duration_ms: 21.234805
       type: 'test'
       ...
     # Subtest: exige el medio de pago
     ok 5 - exige el medio de pago
       ---
-      duration_ms: 2.492894
+      duration_ms: 2.153395
       type: 'test'
       ...
     # Subtest: anular deja el pago ANULADO con su motivo y permite cobrar de nuevo
     ok 6 - anular deja el pago ANULADO con su motivo y permite cobrar de nuevo
       ---
-      duration_ms: 21.264563
+      duration_ms: 20.014827
       type: 'test'
       ...
     # Subtest: no se cobra de nuevo una visita que sigue dentro
     ok 7 - no se cobra de nuevo una visita que sigue dentro
       ---
-      duration_ms: 5.577316
+      duration_ms: 7.283613
       type: 'test'
       ...
     # Subtest: el cierre de caja cuenta solo los pagos aprobados
     ok 8 - el cierre de caja cuenta solo los pagos aprobados
       ---
-      duration_ms: 9.241759
+      duration_ms: 8.373243
       type: 'test'
       ...
     # Subtest: totales del día e historial muestran el comprobante
     ok 9 - totales del día e historial muestran el comprobante
       ---
-      duration_ms: 9.940457
+      duration_ms: 8.150164
       type: 'test'
       ...
     1..9
 ok 11 - salida con pago
   ---
-  duration_ms: 102.2883
+  duration_ms: 105.704965
   type: 'suite'
   ...
 # Subtest: topes tarifarios (Decreto 026 de 2026)
     # Subtest: lista los seis topes vigentes y las tarifas de prueba los cumplen
     ok 1 - lista los seis topes vigentes y las tarifas de prueba los cumplen
       ---
-      duration_ms: 12.307625
+      duration_ms: 7.828917
       type: 'test'
       ...
     # Subtest: rechaza con 422 una sede cuya tarifa supera el tope y no deja nada a medias
     ok 2 - rechaza con 422 una sede cuya tarifa supera el tope y no deja nada a medias
       ---
-      duration_ms: 39.537008
+      duration_ms: 30.325366
       type: 'test'
       ...
     # Subtest: revisarTarifas aplica el tope de Sello Oro
     ok 3 - revisarTarifas aplica el tope de Sello Oro
       ---
-      duration_ms: 0.304043
+      duration_ms: 0.315603
       type: 'test'
       ...
     1..3
 ok 12 - topes tarifarios (Decreto 026 de 2026)
   ---
-  duration_ms: 443.242249
+  duration_ms: 407.526085
   type: 'suite'
   ...
 # Subtest: autorización de datos (Ley 1581 de 2012)
     # Subtest: sin la autorización no se crea la cuenta
     ok 1 - sin la autorización no se crea la cuenta
       ---
-      duration_ms: 2.758268
+      duration_ms: 1.823865
       type: 'test'
       ...
     # Subtest: guarda la autorización con la cuenta y permite revocar solo la opcional
     ok 2 - guarda la autorización con la cuenta y permite revocar solo la opcional
       ---
-      duration_ms: 92.746384
+      duration_ms: 93.529846
       type: 'test'
       ...
     1..2
 ok 13 - autorización de datos (Ley 1581 de 2012)
   ---
-  duration_ms: 95.821707
+  duration_ms: 95.579881
   type: 'suite'
   ...
 # Subtest: entrada con QR
     # Subtest: el operador genera el QR solo de sus sedes
     ok 1 - el operador genera el QR solo de sus sedes
       ---
-      duration_ms: 24.061726
+      duration_ms: 27.19424
       type: 'test'
       ...
     # Subtest: el cliente ingresa con su vehículo escaneando el QR
     ok 2 - el cliente ingresa con su vehículo escaneando el QR
       ---
-      duration_ms: 25.671186
+      duration_ms: 26.882433
       type: 'test'
       ...
     # Subtest: rechaza vehículos ajenos y códigos alterados
     ok 3 - rechaza vehículos ajenos y códigos alterados
       ---
-      duration_ms: 78.114523
+      duration_ms: 72.550605
       type: 'test'
       ...
     1..3
 ok 14 - entrada con QR
   ---
-  duration_ms: 128.655272
+  duration_ms: 127.247563
   type: 'suite'
   ...
 1..14
@@ -391,4 +391,4 @@ ok 14 - entrada con QR
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 4177.781433
+# duration_ms 4228.985429

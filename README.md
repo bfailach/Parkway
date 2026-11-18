@@ -478,7 +478,7 @@ Los resultados de la última corrida están en
 |---|---|
 | Topes tarifarios (Decreto 026 de 2026) | Al crear o editar una sede, ninguna tarifa puede superar el tope por minuto aplicado a su tramo: la hora hasta 60 veces el tope, la fracción de 15 minutos hasta 15 veces y el día hasta 1.440 veces. Si lo supera, la transacción se revierte con 422. Topes: automóvil $230 ($253 con Sello Oro), motocicleta $161 ($177) y bicicleta $10 ($0). |
 | Autorización de datos (Ley 1581 de 2012) | La cuenta de cliente solo se crea con la casilla de autorización marcada, y la autorización se guarda en la misma transacción. Las comunicaciones son opcionales y se pueden revocar desde *Notificaciones*. Cada decisión queda en `consentimiento_datos` con la versión de la política. |
-| Entrada con QR | El operador muestra el QR de la sede (*Registrar ingreso*, botón *Mostrar QR de entrada*). El cliente lo escanea con la cámara, inicia sesión, elige su vehículo y entra. Usa la misma transacción del operador; el flujo por placa no cambia. El QR vale 24 horas (`QR_HORAS`). |
+| Entrada con QR | El operador muestra el QR de la sede (*Registrar ingreso*, botón *Mostrar QR de entrada*). El cliente lo escanea con la cámara, inicia sesión, elige su vehículo y entra. Usa la misma transacción del operador; el flujo por placa no cambia. Al confirmarse, el operador de la sede recibe un aviso en la plataforma con la placa, el cliente y el espacio, sin tener que buscarlo. El QR vale 24 horas (`QR_HORAS`). |
 
 En una base existente, estas funciones necesitan una migración:
 `psql $DB -f database/migracion_propuesta.sql`.
@@ -539,7 +539,7 @@ Parkway/
 | Método | Ruta | Acceso | Descripción |
 | --- | --- | --- | --- |
 | GET | `/api/health` | Público | Estado del servicio |
-| WS | `/api/tiempo-real` | Público | Avisos `{"tipo":"espacios","sede":1}` cuando cambian los espacios de una sede |
+| WS | `/api/tiempo-real` | Público | Avisos `{"tipo":"espacios","sede":1}` cuando cambian los espacios de una sede y `{"tipo":"ingreso-qr","sede":1}` cuando un cliente entra con el QR |
 | POST | `/api/auth/login` | Público | Inicia sesión y devuelve el token |
 | POST | `/api/auth/registro` | Público | Crea una cuenta de cliente e inicia la sesión |
 | GET | `/api/auth/me` | Sesión | Usuario de la sesión |
@@ -564,6 +564,7 @@ Parkway/
 | POST | `/api/estacionamiento/ingreso` | Personal | Registra un ingreso |
 | POST | `/api/estacionamiento/salida/:idRegistro` | Personal | Registra la salida con su pago y comprobante. Cuerpo: `{"metodo":"EFECTIVO","recibido":10000}` o `{"metodo":"TARJETA","referencia":"482913"}` |
 | GET | `/api/estacionamiento/qr-ingreso?idParqueadero=1` | Personal | QR firmado de la sede para la entrada en autoservicio (enlace, imagen SVG y vencimiento) |
+| GET | `/api/estacionamiento/ingresos-qr?idParqueadero=1&desde=…` | Personal | Ingresos con QR recientes de la sede, para los avisos del operador |
 | GET | `/api/cliente/estado` | Cliente | Reserva activa y vehículos dentro con valor acumulado |
 | GET | `/api/cliente/historial` | Cliente | Visitas cerradas |
 | GET, POST | `/api/cliente/vehiculos` | Cliente | Consultar (con la sede y el espacio donde está cada uno) y registrar vehículos propios |

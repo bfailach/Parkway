@@ -13,6 +13,7 @@ import { verificarAcceso } from "./accesoService";
 import { FiltrosHistorial } from "../repositories/registroRepository";
 import { normalizarPlaca, TIPOS_VEHICULO } from "../validators/ingresoValidator";
 import { conCandado, enCache } from "../distribuido/redis";
+import { CANAL_AVISOS } from "../tiempoReal/canales";
 
 /**
  * Servicio de Estacionamiento (capa de lógica de negocio).
@@ -209,6 +210,13 @@ export async function registrarIngreso(datos: DatosIngreso, usuario: UsuarioToke
         idReserva,
       });
       await espacioRepository.actualizarEstado(client, espacio.id_espacio, "OCUPADO");
+
+      // Entrada con QR: aviso a los operadores de la sede. pg_notify se
+      // entrega solo si la transacción se confirma, y llega a todas las
+      // réplicas porque todas escuchan la misma base.
+      if (opciones.origen === "QR") {
+        await client.query(`SELECT pg_notify('${CANAL_AVISOS}', $1)`, [JSON.stringify({ tipo: "ingreso-qr", sede: datos.idParqueadero })]);
+      }
 
       return { ...nuevo, codigo_espacio: espacio.codigo };
     },

@@ -388,6 +388,16 @@ export interface QrSede {
   expira: string;
 }
 
+export interface IngresoQr {
+  id_registro: number;
+  placa: string;
+  codigo_espacio: string;
+  tipo: string;
+  cliente: string | null;
+  estado: string;
+  fecha: string;
+}
+
 export interface InfoQr {
   sede: number;
   nombre: string;
@@ -669,6 +679,8 @@ export const api = {
     request<Consentimientos>("POST", "/usuarios/me/consentimientos", { finalidad, otorgado }),
   // Entrada con QR: código de la sede para la portería
   qrIngreso: (idParqueadero: number) => request<QrSede>("GET", `/estacionamiento/qr-ingreso?idParqueadero=${idParqueadero}`),
+  ingresosQr: (idParqueadero: number, desde: string) =>
+    request<IngresoQr[]>("GET", `/estacionamiento/ingresos-qr?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
   cliente: {
     infoQr: (token: string) => request<InfoQr>("GET", `/cliente/ingreso-qr/${encodeURIComponent(token)}`),
     ingresoQr: (token: string, placa: string) => request<Registro>("POST", "/cliente/ingreso-qr", { token, placa }),
