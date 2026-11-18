@@ -59,7 +59,8 @@ const SELECT_DETALLE = `
          r.valor_calculado::float AS valor_calculado, r.estado,
          e.codigo AS codigo_espacio, e.id_parqueadero,
          tv.id_tipo, tv.nombre AS tipo, v.marca, v.color,
-         oi.nombre AS operador_ingreso, os.nombre AS operador_salida,
+         -- Entrada con QR: el cliente registró su propio ingreso.
+         CASE WHEN oi.rol = 'CLIENTE' THEN 'Autoservicio (QR)' ELSE oi.nombre END AS operador_ingreso, os.nombre AS operador_salida,
          t.valor_hora::float AS valor_hora, t.valor_fraccion::float AS valor_fraccion,
          t.valor_dia::float AS valor_dia,
          r.id_reserva, p.nombre AS sede,

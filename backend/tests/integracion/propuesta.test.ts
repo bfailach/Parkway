@@ -55,6 +55,13 @@ describe("topes tarifarios (Decreto 026 de 2026)", () => {
     sede.tarifas[0].valor_hora = 13800;
     const creada = await sedes.crear(sede, ADMIN.id_usuario);
     assert.ok(creada.id_parqueadero > 0);
+
+    // Con Sello Oro el tope sube a $253: 15.000 la hora pasa (máximo 15.180).
+    sede.nombre = "Sede Sello Oro";
+    sede.tarifas[0].valor_hora = 15000;
+    await fallaCon(sedes.crear(sede, ADMIN.id_usuario), 422);
+    const oro = await sedes.crear({ ...sede, selloOro: true }, ADMIN.id_usuario);
+    assert.equal(oro.sello_oro, true);
   });
 
   test("revisarTarifas aplica el tope de Sello Oro", () => {
@@ -119,9 +126,11 @@ describe("entrada con QR", () => {
     assert.equal(info.sede, CHAPINERO);
     assert.ok(info.vehiculos.some((v: { placa: string }) => v.placa === "ABC123"));
 
-    const r = await qr.ingresar(CLIENTE, { token, placa: "abc-123" });
+    assert.ok(info.pase, "al escanear a tiempo recibe un pase");
+    const r = await qr.ingresar(CLIENTE, { pase: info.pase, placa: "abc-123" });
     assert.equal(r.placa, "ABC123");
     assert.equal(r.estado, "ABIERTO");
+    assert.equal(r.operador_ingreso, "Autoservicio (QR)");
     const b = await uno<{ detalle: { origen: string } }>(
       "SELECT detalle FROM transaccion WHERE tipo_operacion = 'INGRESO' ORDER BY id_transaccion DESC LIMIT 1"
     );

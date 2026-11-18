@@ -20,6 +20,7 @@ const Escena = lazy(() => import("../../three/Escena"));
 export function Sedes({ tipos, onCambio }: { tipos: TipoVehiculo[]; onCambio: () => void }) {
   const sedes = useConsulta(() => api.admin.sedes(), []);
   const operadores = useConsulta(() => api.admin.operadores(), []);
+  const fueraDeTope = useConsulta(() => api.admin.revisionTopes().catch(() => []), []);
   const [editando, setEditando] = useState<number | "nueva" | null>(null);
 
   if (editando !== null) {
@@ -33,6 +34,7 @@ export function Sedes({ tipos, onCambio }: { tipos: TipoVehiculo[]; onCambio: ()
           if (cambio) {
             sedes.recargar();
             operadores.recargar();
+            fueraDeTope.recargar();
             onCambio();
           }
         }}
@@ -52,6 +54,18 @@ export function Sedes({ tipos, onCambio }: { tipos: TipoVehiculo[]; onCambio: ()
         <button className="boton boton-primario" onClick={() => setEditando("nueva")}>Nueva sede</button>
       </header>
       {sedes.error && <p className="alerta alerta-error" role="alert">{sedes.error}</p>}
+      {(fueraDeTope.datos ?? []).length > 0 && (
+        <div className="alerta alerta-error" role="alert">
+          <strong>Tarifas por encima del tope del Decreto 026 de 2026.</strong> Edite la sede y bájelas; mientras tanto no se podrán guardar otros cambios en ella.
+          <ul className="lista-topes">
+            {fueraDeTope.datos!.map((t) => (
+              <li key={`${t.id_parqueadero}-${t.id_tipo}`}>
+                <button className="enlace" onClick={() => setEditando(t.id_parqueadero)}>{t.sede}</button>: {t.problema}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <ul className="sedes-lista">
         {(sedes.datos ?? []).map((s) => (
           <li key={s.id_parqueadero} className="sede-tarjeta">
@@ -111,12 +125,13 @@ interface Form {
   tarifas: Record<number, { valor_hora: string; valor_fraccion: string; valor_dia: string }>;
   dias: Record<number, DiaForm>;
   operadores: number[];
+  selloOro: boolean;
 }
 
 const TARIFA_SUGERIDA: Record<number, { valor_hora: string; valor_fraccion: string; valor_dia: string }> = {
   1: { valor_hora: "4000", valor_fraccion: "1500", valor_dia: "30000" },
   2: { valor_hora: "2000", valor_fraccion: "800", valor_dia: "15000" },
-  3: { valor_hora: "1000", valor_fraccion: "400", valor_dia: "6000" },
+  3: { valor_hora: "600", valor_fraccion: "150", valor_dia: "6000" }, // dentro del tope de $10 por minuto
 };
 const DIAS = [1, 2, 3, 4, 5, 6, 7];
 
@@ -131,6 +146,7 @@ function formVacio(): Form {
     tarifas: { ...TARIFA_SUGERIDA },
     dias: Object.fromEntries(DIAS.map((d) => [d, { abierto: d <= 6, abre: "06:00", cierra: "22:00", medianoche: false }])),
     operadores: [],
+    selloOro: false,
   };
 }
 
@@ -154,6 +170,7 @@ function formDe(s: SedeAdmin): Form {
       : { abierto: false, abre: "06:00", cierra: "22:00", medianoche: false };
   });
   f.operadores = s.operadores;
+  f.selloOro = !!s.sello_oro;
   return f;
 }
 
@@ -183,6 +200,7 @@ function aDatos(f: Form): DatosSede {
       cierra: f.dias[d].medianoche ? "24:00" : f.dias[d].cierra,
     })),
     operadores: f.operadores,
+    selloOro: f.selloOro,
   };
 }
 
@@ -264,6 +282,7 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
   // La vista previa se actualiza un momento después de dejar de escribir.
   const [previa, setPrevia] = useState<EspacioMapa[]>([]);
   const [pisoPrevia, setPisoPrevia] = useState<number | null>(null);
+  const topes = useConsulta(() => api.topes(), []);
   useEffect(() => {
     if (!form) return;
     const t = window.setTimeout(() => setPrevia(plazasDePrueba(form, sede?.lista_espacios)), 300);
@@ -479,6 +498,21 @@ function EditorSede({ id, tipos, operadores, onSalir }: { id: number | null; tip
                 </tbody>
               </table>
             </div>
+            {/* Decreto 026 de 2026: topes por minuto según la certificación de la sede. */}
+            <label className="casilla casilla-sello">
+              <input type="checkbox" checked={f.selloOro} onChange={(e) => set({ selloOro: e.target.checked })} />
+              <span>Sede con certificación <b>Sello Oro</b> (cambia el tope de las tarifas)</span>
+            </label>
+            {topes.datos && (
+              <p className="campo-ayuda">
+                Máximo permitido por el Decreto 026 de 2026{f.selloOro ? " con Sello Oro" : ""}:{" "}
+                {topes.datos
+                  .filter((t) => t.sello_oro === f.selloOro && totales[t.id_tipo] > 0)
+                  .map((t) => `${pluralTipo(t.tipo).toLowerCase()} ${pesos(t.maximos.valor_hora)} la hora, ${pesos(t.maximos.valor_fraccion)} los 15 min y ${pesos(t.maximos.valor_dia)} el día`)
+                  .join("; ")}
+                .
+              </p>
+            )}
             {Object.entries({ ...errores, ...limites })
               .filter(([k]) => k.startsWith("tarifas.") || (k.startsWith("espacios.") && k !== "espacios"))
               .map(([k, v]) => {

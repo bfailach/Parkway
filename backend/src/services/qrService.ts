@@ -23,9 +23,17 @@ import { normalizarPlaca } from "../validators/ingresoValidator";
  *
  * El token del QR se firma con una llave distinta a la de las sesiones, así
  * que no sirve como token de sesión ni al revés.
+ *
+ * Seguridad: el QR vale solo 2 minutos (QR_MINUTOS) y la pantalla del
+ * operador lo renueva sola. Así una foto del código no sirve para registrar
+ * el ingreso desde otro lugar más tarde. Al escanearlo a tiempo, el cliente
+ * recibe un "pase" de 5 minutos, ligado a su cuenta y a la sede, para elegir
+ * el vehículo y confirmar sin apuro.
  */
 const TIPO = "QR_INGRESO";
-const horas = () => Math.min(Math.max(Number(process.env.QR_HORAS) || 24, 1), 168);
+const TIPO_PASE = "QR_PASE";
+export const minutosQr = () => Math.min(Math.max(Number(process.env.QR_MINUTOS) || 2, 1), 60);
+const MINUTOS_PASE = 5;
 const llave = () => createHash("sha256").update(`parkway-qr:${process.env.QR_SECRET || JWT_SECRET()}`).digest();
 
 export interface SedeQr {
@@ -34,7 +42,7 @@ export interface SedeQr {
 }
 
 export function firmarQr(idParqueadero: number): string {
-  return jwt.sign({ tipo: TIPO, sede: idParqueadero }, llave(), { algorithm: "HS256", expiresIn: `${horas()}h` });
+  return jwt.sign({ tipo: TIPO, sede: idParqueadero }, llave(), { algorithm: "HS256", expiresIn: `${minutosQr()}m` });
 }
 
 /** Verifica el token del QR. Lanza 400 si es inválido o venció. */
@@ -44,7 +52,24 @@ export function verificarQr(token: string): SedeQr {
     if (p.tipo !== TIPO || !Number.isInteger(p.sede)) throw new Error("tipo");
     return { sede: p.sede as number, exp: p.exp };
   } catch (e) {
-    if ((e as Error).name === "TokenExpiredError") throw badRequest("Este código QR ya venció. Pida en la portería el código del día.");
+    if ((e as Error).name === "TokenExpiredError") throw badRequest("Este código QR ya venció. Vuelva a escanear el código de la portería.");
+    throw badRequest("El código QR no es válido para Parkway");
+  }
+}
+
+/** Pase de 5 minutos para un cliente que escaneó a tiempo el QR de una sede. */
+export function firmarPase(idParqueadero: number, idCliente: number): string {
+  return jwt.sign({ tipo: TIPO_PASE, sede: idParqueadero, cli: idCliente }, llave(), { algorithm: "HS256", expiresIn: `${MINUTOS_PASE}m` });
+}
+
+/** Verifica el pase y que sea del mismo cliente. Devuelve la sede. */
+export function verificarPase(pase: string, idCliente: number): number {
+  try {
+    const p = jwt.verify(String(pase), llave(), { algorithms: ["HS256"] }) as { tipo?: string; sede?: number; cli?: number };
+    if (p.tipo !== TIPO_PASE || !Number.isInteger(p.sede) || p.cli !== idCliente) throw new Error("pase");
+    return p.sede as number;
+  } catch (e) {
+    if ((e as Error).name === "TokenExpiredError") throw badRequest("Pasaron más de 5 minutos desde que escaneó el código. Vuelva a escanearlo.");
     throw badRequest("El código QR no es válido para Parkway");
   }
 }
@@ -69,12 +94,14 @@ export async function consultar(token: string, idCliente: number) {
   const s = sedes.find((x: { id_parqueadero: number }) => x.id_parqueadero === sede);
   if (!s) throw notFound("La sede del código QR ya no existe");
   const vehiculos = await vehiculoRepository.listarDelCliente(idCliente);
-  return { sede, nombre: s.nombre, direccion: s.direccion ?? null, expira: new Date(exp * 1000).toISOString(), vehiculos };
+  const pase = firmarPase(sede, idCliente);
+  return { sede, nombre: s.nombre, direccion: s.direccion ?? null, expira: new Date(exp * 1000).toISOString(), vehiculos, pase };
 }
 
 /** Registra el ingreso del cliente con uno de sus vehículos. */
 export async function ingresar(cliente: UsuarioToken, body: Record<string, unknown>) {
-  const { sede } = verificarQr(String(body.token ?? ""));
+  // Con el pase que entregó consultar(); si no viene, con el QR (que debe estar vigente).
+  const sede = body.pase ? verificarPase(String(body.pase), cliente.id_usuario) : verificarQr(String(body.token ?? "")).sede;
   const placa = normalizarPlaca(String(body.placa ?? ""));
   if (!placa) throw badRequest("Elija el vehículo con el que va a ingresar");
   const propios = await vehiculoRepository.listarDelCliente(cliente.id_usuario);

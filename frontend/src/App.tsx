@@ -24,6 +24,7 @@ import { Pagos } from "./pages/admin/Pagos";
 import { Notificaciones } from "./pages/cliente/Notificaciones";
 import { Notificador } from "./components/Notificador";
 import { AvisosOperador, BotonAvisos } from "./components/AvisosOperador";
+import { BannerAutorizacion } from "./components/BannerAutorizacion";
 import { SenalP } from "./components/SenalP";
 
 type Vista =
@@ -199,6 +200,7 @@ export default function App() {
 
       <main className="contenido">
         {errorCarga && <p className="alerta alerta-error" role="alert">{errorCarga}</p>}
+        {usuario.rol === "CLIENTE" && <BannerAutorizacion />}
         {qrPendiente && usuario.rol === "CLIENTE" && <EntradaQr token={qrPendiente} onTerminar={terminarQr} />}
         {qrPendiente && esPersonal && (
           <p className="alerta alerta-error" role="alert">

@@ -29,7 +29,7 @@ export function EntradaQr({ token, onTerminar }: { token: string; onTerminar: ()
     setEnviando(true);
     setError(null);
     try {
-      setHecho(await api.cliente.ingresoQr(token, placa));
+      setHecho(await api.cliente.ingresoQr(info!.pase, placa));
     } catch (e) {
       setError((e as Error).message);
     } finally {

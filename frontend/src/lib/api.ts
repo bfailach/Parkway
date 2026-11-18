@@ -145,6 +145,8 @@ export interface SedeAdmin extends Parqueadero {
   ocupados: number;
   horarios: Horario[];
   tarifas: TarifaSede[];
+  /** Certificación Sello Oro (cambia el tope tarifario del Decreto 026 de 2026). */
+  sello_oro?: boolean;
   operadores: number[];
   lista_espacios?: { id_espacio: number; codigo: string; piso?: number; estado: EspacioMapa["estado"]; id_tipo: number; tipo: string }[];
 }
@@ -160,6 +162,24 @@ export interface DatosSede {
   tarifas: { idTipo: number; valor_hora: number; valor_fraccion: number; valor_dia: number }[];
   horarios: Horario[];
   operadores: number[];
+  selloOro?: boolean;
+}
+
+/** Tope del Decreto 026 de 2026 por tipo de vehículo y certificación. */
+export interface TopeTarifario {
+  id_tipo: number;
+  tipo: string;
+  sello_oro: boolean;
+  valor_minuto: number;
+  norma: string;
+  maximos: { valor_hora: number; valor_fraccion: number; valor_dia: number };
+}
+
+export interface TarifaFueraDeTope {
+  id_parqueadero: number;
+  sede: string;
+  id_tipo: number;
+  problema: string;
 }
 
 export interface TipoVehiculo {
@@ -430,6 +450,8 @@ export interface InfoQr {
   direccion: string | null;
   expira: string;
   vehiculos: VehiculoCliente[];
+  /** Pase de 5 minutos para confirmar el ingreso (el QR solo vale 2 minutos). */
+  pase: string;
 }
 
 export interface TotalesDia {
@@ -712,7 +734,7 @@ export const api = {
   cliente: {
     actividad: (desde: string) => request<ActividadCliente[]>("GET", `/cliente/actividad?desde=${encodeURIComponent(desde)}`),
     infoQr: (token: string) => request<InfoQr>("GET", `/cliente/ingreso-qr/${encodeURIComponent(token)}`),
-    ingresoQr: (token: string, placa: string) => request<Registro>("POST", "/cliente/ingreso-qr", { token, placa }),
+    ingresoQr: (pase: string, placa: string) => request<Registro>("POST", "/cliente/ingreso-qr", { pase, placa }),
     estado: () => request<EstadoCliente>("GET", "/cliente/estado"),
     historial: () => request<(Registro & { sede: string })[]>("GET", "/cliente/historial"),
     vehiculos: () => request<VehiculoCliente[]>("GET", "/cliente/vehiculos"),
@@ -725,7 +747,9 @@ export const api = {
     preferencias: () => request<PreferenciasNotificacion>("GET", "/cliente/preferencias"),
     guardarPreferencias: (p: PreferenciasNotificacion) => request<PreferenciasNotificacion>("PUT", "/cliente/preferencias", p),
   },
+  topes: () => request<TopeTarifario[]>("GET", "/topes-tarifarios"),
   admin: {
+    revisionTopes: () => request<TarifaFueraDeTope[]>("GET", "/topes-tarifarios/revision"),
     sedes: () => request<SedeAdmin[]>("GET", "/admin/parqueaderos"),
     sede: (id: number) => request<SedeAdmin>("GET", `/admin/parqueaderos/${id}`),
     crearSede: (d: DatosSede) => request<SedeAdmin>("POST", "/admin/parqueaderos", d),

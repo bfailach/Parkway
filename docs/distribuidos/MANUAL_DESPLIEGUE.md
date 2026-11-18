@@ -44,7 +44,7 @@ otro entorno deben cambiarse.
 | `REPLICACION_PASSWORD` | `replica-local` | Usuario `replicador` de la réplica |
 | `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `parkway` / `parkway-local` | Acceso a RabbitMQ y a su consola |
 | `JWT_SECRET` | `solo-para-tokens-antiguos` | Solo para validar tokens HS256 emitidos antes del cambio |
-| `QR_HORAS` | `24` | Vigencia del QR de entrada de cada sede |
+| `QR_MINUTOS` | `2` | Vigencia del QR de entrada; la pantalla del operador lo renueva sola |
 | `PUBLIC_URL` | (la del gateway) | Dirección pública que se pone en el enlace del QR |
 
 Variables del backend que activan la parte distribuida (ya vienen en el

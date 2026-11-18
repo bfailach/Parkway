@@ -1,10 +1,10 @@
-Pruebas distribuidas contra http://localhost:8080 (18/11/2026, 8:12:59 a. m.)
+Pruebas distribuidas contra http://localhost:8080 (18/11/2026, 10:47:55 a. m.)
 
 == Integración y concurrencia ==
 CUMPLE     1. El gateway reparte la carga entre las réplicas
-           200 consultas simultáneas: {"api2":100,"api1":100}
+           200 consultas simultáneas: {"api1":100,"api2":100}
 CUMPLE     2. Un mismo token es válido en cualquier réplica (sesión sin estado)
-           20 consultas de perfil con el mismo token: {"api2":10,"api1":10}, todas 200: true
+           20 consultas de perfil con el mismo token: {"api1":10,"api2":10}, todas 200: true
 CUMPLE     3. El servicio de eventos verifica los tokens con la llave pública (JWKS)
            JWKS: 1 llave ES256 kid=JsiU0-H1_aZjpY_n; administrador → 200, cliente → 403, token con el rol alterado → 401
 CUMPLE     4. 20 ingresos simultáneos de la misma placa en dos réplicas: entra uno solo
@@ -12,42 +12,42 @@ CUMPLE     4. 20 ingresos simultáneos de la misma placa en dos réplicas: entra
 CUMPLE     5. La caché de disponibilidad se invalida en todos los nodos tras un ingreso
            libres antes 10; ingreso en api1; la consulta pública mostró 9 a los 4 ms
 CUMPLE     6. Cada operación confirmada llega como evento al servicio de eventos
-           ingreso y salida del registro 12819: SALIDA (procesó eventos1, 12 ms), INGRESO (procesó eventos2, 65 ms); visible a los 16 ms
+           ingreso y salida del registro 14396: SALIDA (procesó eventos2, 13 ms), INGRESO (procesó eventos1, 20 ms); visible a los 20 ms
 
 == Tolerancia a fallos ==
            $ kill -9 $(cat /home/claude/cluster/api1.pid)
            $ cd /home/claude/cluster && ./nodos.sh api 1
 CUMPLE     7. Si una réplica del backend se cae, el sistema sigue atendiendo
-           22806 consultas y ciclos de ingreso/salida; errores 3 (0.01 %). Antes: {"api1":2248,"api2":2232}; con api1 caída: {"api1":86,"api2":12572} (0 errores); tras reiniciarla: {"api1":2843,"api2":2825}
+           32319 consultas y ciclos de ingreso/salida; errores 3 (0.01 %). Antes: {"api2":2138,"api1":2159}; con api1 caída: {"api2":22999,"api1":54} (0 errores); tras reiniciarla: {"api1":2506,"api2":2463}
            $ redis-cli shutdown nosave
            $ redis-server --port 6379 --daemonize yes --save ''
 CUMPLE     8. Sin Redis el sistema opera en modo degradado y se recupera solo
-           con Redis caído: 5/5 ingresos y salidas correctos, circuito ABIERTO; 20 ingresos simultáneos de una placa: 1 aceptado, rechazos {"restricción única de PostgreSQL":16,"regla de negocio (serializado)":3}; Redis de vuelta en uso a los 10121 ms
+           con Redis caído: 5/5 ingresos y salidas correctos, circuito ABIERTO; 20 ingresos simultáneos de una placa: 1 aceptado, rechazos {"regla de negocio (serializado)":15,"restricción única de PostgreSQL":4}; Redis de vuelta en uso a los 10136 ms
            $ rabbitmqctl stop_app
            $ rabbitmqctl start_app
 CUMPLE     9. Sin RabbitMQ las operaciones siguen y ningún evento se pierde
-           con el broker caído: 5/5 ingresos y salidas, 10 eventos esperando en el outbox; al volver, los 10 eventos llegaron al servicio de eventos en 7158 ms y quedaron 0 pendientes (había 200 recientes)
+           con el broker caído: 5/5 ingresos y salidas, 10 eventos esperando en el outbox; al volver, los 10 eventos llegaron al servicio de eventos en 7181 ms y quedaron 0 pendientes (había 200 recientes)
            $ kill $(cat /home/claude/cluster/eventos1.pid) $(cat /home/claude/cluster/eventos2.pid)
            $ cd /home/claude/cluster && ./nodos.sh eventos 1 && ./nodos.sh eventos 2
            $ cd /home/claude/parkway/backend && DB_HOST=localhost RABBITMQ_URL=amqp://guest:guest@localhost:5672 npx tsx scripts/republicarEvento.ts
 CUMPLE     10. Si el servicio de eventos se cae, los eventos esperan en la cola y no se cuentan dos veces
-           servicio de eventos caído (gateway respondió 502); al volver procesó los 6 eventos pendientes en 1054 ms; un evento republicado se descartó como duplicado (procesados 6 → 6, duplicados 0 → 1)
+           servicio de eventos caído (gateway respondió 502); al volver procesó los 6 eventos pendientes en 1059 ms; un evento republicado se descartó como duplicado (procesados 6 → 6, duplicados 0 → 1)
            $ su postgres -c '/usr/lib/postgresql/16/bin/pg_ctl -D /srv/pg/primario stop -m fast'
            $ su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /srv/pg/primario -o '-p 5432 -k /tmp -c wal_level=replica -c max_wal_senders=5 -c listen_addresses=localhost' -l /srv/pg/primario.log start"
 CUMPLE     11. Sin la base de datos la API responde 503 y se recupera sin reiniciar los nodos
-           con el primario caído: consulta pública 503, ingreso 503, salud 503; primer ingreso aceptado 0.2 s después de iniciar la base
+           con el primario caído: consulta pública 503, ingreso 503, salud 503; primer ingreso aceptado 0.1 s después de iniciar la base
 
 Resumen: 11 de 11 escenarios cumplen.
 [
   {
     "escenario": "1. El gateway reparte la carga entre las réplicas",
     "cumple": true,
-    "detalle": "200 consultas simultáneas: {\"api2\":100,\"api1\":100}"
+    "detalle": "200 consultas simultáneas: {\"api1\":100,\"api2\":100}"
   },
   {
     "escenario": "2. Un mismo token es válido en cualquier réplica (sesión sin estado)",
     "cumple": true,
-    "detalle": "20 consultas de perfil con el mismo token: {\"api2\":10,\"api1\":10}, todas 200: true"
+    "detalle": "20 consultas de perfil con el mismo token: {\"api1\":10,\"api2\":10}, todas 200: true"
   },
   {
     "escenario": "3. El servicio de eventos verifica los tokens con la llave pública (JWKS)",
@@ -67,31 +67,31 @@ Resumen: 11 de 11 escenarios cumplen.
   {
     "escenario": "6. Cada operación confirmada llega como evento al servicio de eventos",
     "cumple": true,
-    "detalle": "ingreso y salida del registro 12819: SALIDA (procesó eventos1, 12 ms), INGRESO (procesó eventos2, 65 ms); visible a los 16 ms"
+    "detalle": "ingreso y salida del registro 14396: SALIDA (procesó eventos2, 13 ms), INGRESO (procesó eventos1, 20 ms); visible a los 20 ms"
   },
   {
     "escenario": "7. Si una réplica del backend se cae, el sistema sigue atendiendo",
     "cumple": true,
-    "detalle": "22806 consultas y ciclos de ingreso/salida; errores 3 (0.01 %). Antes: {\"api1\":2248,\"api2\":2232}; con api1 caída: {\"api1\":86,\"api2\":12572} (0 errores); tras reiniciarla: {\"api1\":2843,\"api2\":2825}"
+    "detalle": "32319 consultas y ciclos de ingreso/salida; errores 3 (0.01 %). Antes: {\"api2\":2138,\"api1\":2159}; con api1 caída: {\"api2\":22999,\"api1\":54} (0 errores); tras reiniciarla: {\"api1\":2506,\"api2\":2463}"
   },
   {
     "escenario": "8. Sin Redis el sistema opera en modo degradado y se recupera solo",
     "cumple": true,
-    "detalle": "con Redis caído: 5/5 ingresos y salidas correctos, circuito ABIERTO; 20 ingresos simultáneos de una placa: 1 aceptado, rechazos {\"restricción única de PostgreSQL\":16,\"regla de negocio (serializado)\":3}; Redis de vuelta en uso a los 10121 ms"
+    "detalle": "con Redis caído: 5/5 ingresos y salidas correctos, circuito ABIERTO; 20 ingresos simultáneos de una placa: 1 aceptado, rechazos {\"regla de negocio (serializado)\":15,\"restricción única de PostgreSQL\":4}; Redis de vuelta en uso a los 10136 ms"
   },
   {
     "escenario": "9. Sin RabbitMQ las operaciones siguen y ningún evento se pierde",
     "cumple": true,
-    "detalle": "con el broker caído: 5/5 ingresos y salidas, 10 eventos esperando en el outbox; al volver, los 10 eventos llegaron al servicio de eventos en 7158 ms y quedaron 0 pendientes (había 200 recientes)"
+    "detalle": "con el broker caído: 5/5 ingresos y salidas, 10 eventos esperando en el outbox; al volver, los 10 eventos llegaron al servicio de eventos en 7181 ms y quedaron 0 pendientes (había 200 recientes)"
   },
   {
     "escenario": "10. Si el servicio de eventos se cae, los eventos esperan en la cola y no se cuentan dos veces",
     "cumple": true,
-    "detalle": "servicio de eventos caído (gateway respondió 502); al volver procesó los 6 eventos pendientes en 1054 ms; un evento republicado se descartó como duplicado (procesados 6 → 6, duplicados 0 → 1)"
+    "detalle": "servicio de eventos caído (gateway respondió 502); al volver procesó los 6 eventos pendientes en 1059 ms; un evento republicado se descartó como duplicado (procesados 6 → 6, duplicados 0 → 1)"
   },
   {
     "escenario": "11. Sin la base de datos la API responde 503 y se recupera sin reiniciar los nodos",
     "cumple": true,
-    "detalle": "con el primario caído: consulta pública 503, ingreso 503, salud 503; primer ingreso aceptado 0.2 s después de iniciar la base"
+    "detalle": "con el primario caído: consulta pública 503, ingreso 503, salud 503; primer ingreso aceptado 0.1 s después de iniciar la base"
   }
 ]

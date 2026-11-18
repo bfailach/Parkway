@@ -87,7 +87,7 @@ export function revisarTarifas(tarifas: TarifaSede[], topes: Tope[], selloOro: b
     if (t.valor_fraccion > max.valor_fraccion) fuera.push(`la fracción de 15 min (${pesos(t.valor_fraccion)}, máximo ${pesos(max.valor_fraccion)})`);
     if (t.valor_dia > max.valor_dia) fuera.push(`el día (${pesos(t.valor_dia)}, máximo ${pesos(max.valor_dia)})`);
     if (fuera.length) {
-      errores[`tarifa_${t.idTipo}`] =
+      errores[`tarifas.${t.idTipo}.tope`] =
         `La tarifa de ${NOMBRE[t.idTipo]} supera el tope de ${pesos(tope.valor_minuto)} por minuto del ${tope.norma}` +
         `${selloOro ? " para sedes con Sello Oro" : ""}: ${fuera.join(", ")}.`;
     }

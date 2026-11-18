@@ -28,6 +28,17 @@ async function guardarDetalle(client: PoolClient, id: number, d: DatosParqueader
   if ((await parqueaderoRepository.cantidadOperadoresValidos(client, d.operadores)) !== d.operadores.length) {
     throw badRequest("Revise los campos del formulario", { operadores: "Solo se pueden asignar usuarios con rol de operador" });
   }
+  // Certificación Sello Oro: se guarda antes de revisar los topes, porque cambia el tope.
+  if (typeof d.selloOro === "boolean") {
+    await client.query("SAVEPOINT sello_oro");
+    try {
+      await client.query("UPDATE parqueadero SET sello_oro = $2 WHERE id_parqueadero = $1", [id, d.selloOro]);
+      await client.query("RELEASE SAVEPOINT sello_oro");
+    } catch (e) {
+      await client.query("ROLLBACK TO SAVEPOINT sello_oro");
+      if ((e as { code?: string }).code !== "42703") throw e; // columna sin migrar: se ignora
+    }
+  }
   // Decreto 026 de 2026: ninguna tarifa puede superar el tope por minuto (422).
   await validarTopesDeSede(client, id, d.tarifas);
   for (const t of d.tarifas) await parqueaderoRepository.guardarTarifa(client, id, t);

@@ -11,6 +11,8 @@ export async function listarConConteo() {
   const { rows } = await pool.query(
     `SELECT p.id_parqueadero, p.nombre, p.direccion, p.ciudad,
             p.latitud::float AS latitud, p.longitud::float AS longitud, p.capacidad_total, p.pisos,
+            -- to_jsonb: funciona aunque la base no tenga aún la columna (migracion_propuesta.sql)
+            COALESCE((to_jsonb(p)->>'sello_oro')::boolean, false) AS sello_oro,
             COALESCE(jsonb_object_agg(c.id_tipo, c.total) FILTER (WHERE c.id_tipo IS NOT NULL), '{}') AS espacios,
             (SELECT COALESCE(jsonb_agg(x.por_tipo ORDER BY x.piso), '[]')
                FROM (SELECT piso, jsonb_object_agg(id_tipo, n) AS por_tipo

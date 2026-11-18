@@ -28,6 +28,8 @@ export interface DatosParqueadero {
   tarifas: TarifaSede[];
   horarios: Horario[];
   operadores: number[];
+  /** Certificación Sello Oro (cambia el tope tarifario). Sin valor: no se modifica. */
+  selloOro?: boolean;
 }
 
 type Resultado = { valido: true; datos: DatosParqueadero } | { valido: false; errores: Record<string, string> };
@@ -175,6 +177,7 @@ export function validarParqueadero(body: Record<string, unknown>): Resultado {
       tarifas,
       horarios,
       operadores: [...new Set(operadores)],
+      ...(typeof body.selloOro === "boolean" ? { selloOro: body.selloOro } : {}),
     },
   };
 }
