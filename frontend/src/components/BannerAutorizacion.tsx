@@ -17,7 +17,7 @@ export function BannerAutorizacion() {
   useEffect(() => {
     api
       .consentimientos()
-      .then((c) => setPendiente(c.vigentes.some((v) => v.finalidad === "SERVICIO" && v.otorgado === null)))
+      .then((c) => setPendiente(c.registroDisponible !== false && c.vigentes.some((v) => v.finalidad === "SERVICIO" && v.otorgado === null)))
       .catch(() => undefined); // si la base no tiene la migración, no se muestra
   }, []);
 

@@ -70,6 +70,18 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return res.status(503).json({ error: "El servicio no está disponible en este momento. Intente de nuevo en unos segundos." });
   }
 
+  // Tabla o columna inexistente: la base no tiene aplicada una migración
+  // (por ejemplo, un despliegue nuevo sobre una base anterior). Se explica en
+  // vez de responder un error interno genérico.
+  if (pgError?.code === "42P01" || pgError?.code === "42703") {
+    // eslint-disable-next-line no-console
+    console.error("Falta una migración de la base de datos:", (err as Error).message);
+    return res.status(503).json({
+      error: "Esta función no está disponible todavía: falta aplicar la migración de la base de datos (database/migracion_propuesta.sql).",
+      migracionPendiente: true,
+    });
+  }
+
   // eslint-disable-next-line no-console
   console.error(err);
   return res.status(500).json({ error: "Error interno del servidor" });

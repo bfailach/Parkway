@@ -88,11 +88,20 @@ export async function registrarAlCrearCuenta(client: PoolClient, idUsuario: numb
 
 /** Estado vigente de cada finalidad e historial completo del usuario. */
 export async function misConsentimientos(idUsuario: number) {
-  const { rows } = await pool.query(
-    `SELECT finalidad, otorgado, version_politica, origen, fecha
-       FROM consentimiento_datos WHERE id_usuario = $1 ORDER BY fecha DESC, id_consentimiento DESC`,
-    [idUsuario]
-  );
+  // Sin la migración (tabla consentimiento_datos) la página de privacidad
+  // muestra la política y avisa que las autorizaciones aún no se registran.
+  let rows: { finalidad: string; otorgado: boolean; version_politica: string; origen: string; fecha: string }[] = [];
+  let registroDisponible = true;
+  try {
+    ({ rows } = await pool.query(
+      `SELECT finalidad, otorgado, version_politica, origen, fecha
+         FROM consentimiento_datos WHERE id_usuario = $1 ORDER BY fecha DESC, id_consentimiento DESC`,
+      [idUsuario]
+    ));
+  } catch (e) {
+    if ((e as { code?: string }).code !== "42P01") throw e;
+    registroDisponible = false;
+  }
   const vigentes = FINALIDADES.map((f) => {
     const ultima = rows.find((r) => r.finalidad === f);
     const def = POLITICA.finalidades.find((x) => x.codigo === f)!;
@@ -105,7 +114,7 @@ export async function misConsentimientos(idUsuario: number) {
       versionPolitica: ultima?.version_politica ?? null,
     };
   });
-  return { versionPolitica: VERSION_POLITICA, vigentes, historial: rows };
+  return { versionPolitica: VERSION_POLITICA, vigentes, historial: rows, registroDisponible };
 }
 
 /** Otorga o revoca una finalidad desde el panel. */

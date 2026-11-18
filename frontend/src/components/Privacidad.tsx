@@ -33,7 +33,12 @@ export function Privacidad() {
       <h2 id="privacidad-titulo" className="privacidad-titulo">Privacidad y datos personales</h2>
       <p className="campo-ayuda">Autorizaciones que diste según la Ley 1581 de 2012. La opcional la puedes cambiar cuando quieras.</p>
       {error && <p className="alerta alerta-error" role="alert">{error}</p>}
-      {servicio && (
+      {c?.registroDisponible === false ? (
+        <p className="alerta alerta-datos" role="status">
+          El registro de autorizaciones aún no está activo en este servidor. La política aplica igual; puedes leerla abajo.
+        </p>
+      ) : null}
+      {servicio && c?.registroDisponible !== false && (
         <div className="privacidad-fila">
           <span className="interruptor-texto">
             <strong>Prestación del servicio (necesaria)</strong>
@@ -48,7 +53,7 @@ export function Privacidad() {
           )}
         </div>
       )}
-      {comunicaciones && (
+      {comunicaciones && c?.registroDisponible !== false && (
         <label className="interruptor">
           <span className="interruptor-texto">
             <strong>Comunicaciones sobre sedes y novedades (opcional)</strong>

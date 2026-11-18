@@ -407,6 +407,8 @@ export interface Consentimientos {
   versionPolitica: string;
   vigentes: { finalidad: string; obligatoria: boolean; descripcion: string; otorgado: boolean | null; fecha: string | null }[];
   historial: { finalidad: string; otorgado: boolean; version_politica: string; origen: string; fecha: string }[];
+  /** false si la base aún no tiene la migración de autorizaciones. */
+  registroDisponible?: boolean;
 }
 
 export interface QrSede {
