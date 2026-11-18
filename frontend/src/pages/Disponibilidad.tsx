@@ -9,6 +9,7 @@ import { Odometro } from "../components/Odometro";
 import { PrediccionOcupacion } from "../components/PrediccionOcupacion";
 import { PronosticoDia } from "../components/PronosticoDia";
 import { SalidaDialogo } from "../components/SalidaDialogo";
+import { BuscadorVehiculo } from "../components/BuscadorVehiculo";
 import { contarPisos, FiltroPisos } from "../components/FiltroPisos";
 import { crearControl, soportaWebGL } from "../three/control";
 import { Plaza } from "../three/layout";
@@ -120,6 +121,16 @@ export function Disponibilidad({ sede, esPersonal }: { sede: Parqueadero; esPers
         <div className="bloque-cabeza">
           <h2 className="bloque-titulo" id="titulo-mapa">Plano de la sede</h2>
           <div className="bloque-controles">
+          {esPersonal && mapa.datos && (
+            <BuscadorVehiculo
+              espacios={mapa.datos}
+              onElegir={(e) => {
+                // Muestra el piso del vehículo, lo resalta y abre su ficha (tiempo, valor y salida).
+                if (pisos > 1) setPiso(e.piso ?? 1);
+                setIdSeleccion(e.id_espacio);
+              }}
+            />
+          )}
           <FiltroPisos pisos={pisos} valor={piso} onChange={(p) => setPiso(p)} />
           {webgl && (
             <div className="conmutador" role="tablist" aria-label="Tipo de vista">

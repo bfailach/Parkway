@@ -10,6 +10,7 @@ import { Placa } from "../../components/Placa";
 import { crearControl, soportaWebGL } from "../../three/control";
 import { contarPisos } from "../../components/FiltroPisos";
 import { Selector } from "../../components/Selector";
+import { EscanerQr } from "../../components/EscanerQr";
 
 const Escena = lazy(() => import("../../three/Escena"));
 
@@ -62,6 +63,8 @@ export function MiParqueo({
           <h1 className="pagina-titulo">Mi parqueo</h1>
           <p className="pagina-sub">Tus reservas y tus vehículos dentro del parqueadero, en tiempo real.</p>
         </div>
+        {/* Entrada con QR sin salir de Parkway */}
+        <EscanerQr />
       </header>
 
       {estado.error && <p className="alerta alerta-error" role="alert">{estado.error}</p>}
