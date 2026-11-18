@@ -176,7 +176,7 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
                   <td className="celda-acciones">
                     {p.estado === "APROBADO" && (
                       <>
-                        <button className="boton boton-texto boton-sm" title="El operador registró otra placa u otro tipo" onClick={() => { setAviso(null); setCorrigiendo({ idRegistro: p.id_registro, placa: p.placa, tipo: p.tipo, valor: p.monto }); }}>Corregir cobro</button>
+                        <button className="boton boton-texto boton-sm" title="El operador registró otra placa u otro tipo" onClick={() => { setAviso(null); setCorrigiendo({ idRegistro: p.id_registro, placa: p.placa, tipo: p.tipo, valor: p.monto }); }}>Corregir</button>
                         <button className="boton boton-texto boton-sm" onClick={() => { setAviso(null); setAnulando(p); }}>Anular</button>
                       </>
                     )}
@@ -194,7 +194,7 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
 
       <Dialogo abierto={corrigiendo !== null} titulo="Corregir cobro" onCerrar={() => setCorrigiendo(null)}>
         {corrigiendo && (
-          <CorreccionVehiculo modo="cobro" registro={corrigiendo} idReclamo={corrigiendo.idReclamo} onListo={(m) => { setCorrigiendo(null); hecho(m); }} />
+          <CorreccionVehiculo modo="cobro" onCancelar={() => setCorrigiendo(null)} registro={corrigiendo} idReclamo={corrigiendo.idReclamo} onListo={(m) => { setCorrigiendo(null); hecho(m); }} />
         )}
       </Dialogo>
       <ResponderDialogo reclamo={respondiendo} onCerrar={() => setRespondiendo(null)} onHecho={(m) => { setRespondiendo(null); hecho(m); }} />

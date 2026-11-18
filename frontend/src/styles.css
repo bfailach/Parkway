@@ -618,8 +618,11 @@ button.plaza-boton { cursor: pointer; }
 .tabla tfoot th, .tabla tfoot td { font-weight: 700; background: var(--superficie-2); }
 .tabla .num { text-align: right; }
 .tabla .codigo { font-family: var(--display); font-weight: 800; font-size: 1.25rem; }
-.tabla .accion { text-align: right; }
-.tabla .accion .boton { padding: 7px 12px; font-size: 0.875rem; }
+.tabla .accion { text-align: right; white-space: nowrap; }
+.tabla .accion .boton + .boton { margin-left: 4px; }
+.tabla .accion, .tabla .celda-acciones { padding-left: 6px; padding-right: 12px; }
+.tabla .accion .boton-texto, .tabla .celda-acciones .boton-texto { padding-inline: 8px; }
+.tabla .accion .boton { padding: 7px 10px; font-size: 0.875rem; }
 .tabla .tenue { color: var(--tinta-3); }
 
 .filtros { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin-bottom: 18px; }
@@ -631,9 +634,15 @@ button.plaza-boton { cursor: pointer; }
   border: 0; border-radius: 6px; padding: 28px; width: min(460px, 100% - 32px);
   background: var(--superficie); color: var(--tinta); box-shadow: 0 40px 80px var(--sombra);
 }
+.dialogo { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+/* Botones de un formulario o de una verificación fuera de un diálogo */
+.acciones { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .dialogo::backdrop { background: rgba(var(--velo), 0.72); backdrop-filter: blur(3px); }
 .dialogo[open] { animation: aparecer 0.22s var(--curva); }
-.dialogo-titulo { font-size: 2.25rem; margin-bottom: 20px; text-transform: uppercase; font-weight: 900; }
+.dialogo-cabeza { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.dialogo-titulo { font-size: 2.25rem; margin: 0; text-transform: uppercase; font-weight: 900; line-height: 1; }
+.dialogo-cerrar { margin: -6px -10px 0 0; background: transparent; color: var(--tinta-2); }
+.dialogo-cerrar:hover { color: var(--tinta); }
 .dialogo-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .confirmacion { background: var(--superficie-2); border-radius: var(--radio); padding: 22px; display: grid; gap: 6px; justify-items: center; }
 .confirmacion .tiquete-datos { width: 100%; }
@@ -960,8 +969,9 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .campo-buscar-usuario { flex: 1 1 220px; max-width: 360px; min-width: 200px; }
 .tabla-usuarios td { vertical-align: middle; }
 .celda-secundaria { display: block; font-size: 0.875rem; margin-top: 2px; }
-.celda-acciones { text-align: right; }
+.celda-acciones { text-align: right; white-space: nowrap; }
 .celda-acciones .boton + .boton { margin-left: 4px; }
+.reclamo .celda-acciones { display: flex; gap: 6px; }
 .dialogo:has(.form-usuario) { width: min(580px, 100% - 32px); max-height: calc(100vh - 32px); }
 .form-usuario fieldset.campo { margin-bottom: 20px; }
 .form-usuario legend.campo-rotulo { margin-bottom: 7px; padding: 0; }
@@ -1057,7 +1067,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .caja .caja-total { background: var(--acento-suave); }
 .campo-motivo textarea { width: 100%; padding: 12px 14px; border: 1.5px solid var(--superficie-3); border-radius: var(--radio); background: var(--superficie-2); color: var(--tinta); font: inherit; resize: vertical; }
 .campo-motivo { margin-top: 16px; }
-.motivo-anulacion { display: block; font-size: 0.8125rem; color: var(--tinta-3); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.motivo-anulacion { display: block; font-size: 0.8125rem; color: var(--tinta-3); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 /* Aplicación instalable (PWA) */
 .aviso-conexion { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; padding: 12px 16px;
   padding-bottom: max(12px, env(safe-area-inset-bottom)); background: var(--alerta); color: #1a1300;
@@ -1339,7 +1349,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .lista-topes { margin: 8px 0 0 18px; padding: 0; }
 .lista-topes li { margin: 4px 0; }
 .casilla-sello { margin: 14px 0 6px; }
-.banner-autorizacion { max-width: 760px; margin: 0 0 24px; display: grid; gap: 12px; }
+.banner-autorizacion { max-width: 760px; margin: 0 0 36px; display: grid; gap: 12px; }
 .banner-autorizacion h2 { margin: 0; font-size: 1.2rem; }
 .banner-autorizacion p { margin: 0; color: var(--tinta-2); }
 .banner-autorizacion .acciones { display: flex; gap: 8px; }
@@ -1367,4 +1377,14 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .reclamos-lista { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
 .reclamo { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
 .reclamo-motivo { margin: 0.35rem 0 0; }
-.correccion .fila-campos { margin-top: 0.5rem; }
+.correccion-actual {
+  display: grid; gap: 8px; padding: 14px 16px; margin-bottom: 20px;
+  background: var(--superficie-2); border-radius: var(--radio);
+}
+.correccion-rotulo { color: var(--tinta-2); font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.correccion-actual-datos { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.correccion .alerta { margin: 0; }
+.correccion .campo { margin-bottom: 16px; }
+.correccion .fila-campos { align-items: start; }
+.dialogo:has(.correccion) { width: min(540px, 100% - 32px); }
+.reclamo p > .chip-sm:first-child { margin-left: 0; }

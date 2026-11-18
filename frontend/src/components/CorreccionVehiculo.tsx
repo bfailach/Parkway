@@ -36,11 +36,13 @@ export function CorreccionVehiculo({
   registro,
   idReclamo,
   onListo,
+  onCancelar,
 }: {
   modo: "ingreso" | "cobro";
   registro: RegistroACorregir;
   idReclamo?: number;
   onListo: (mensaje: string) => void;
+  onCancelar?: () => void;
 }) {
   const tipoActual = ID_TIPO[registro.tipo] ?? 1;
   const [idTipo, setIdTipo] = useState(tipoActual === 1 ? 2 : 1);
@@ -52,6 +54,8 @@ export function CorreccionVehiculo({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errores, setErrores] = useState<Record<string, string>>({});
+  // El error de formato se muestra al salir del campo, no mientras se escribe.
+  const [placaTocada, setPlacaTocada] = useState(false);
 
   const formato = FORMATO_PLACA[idTipo];
   const placaNorm = normalizarPlaca(placa);
@@ -98,10 +102,14 @@ export function CorreccionVehiculo({
 
   return (
     <div className="correccion">
-      <p className="tenue">
-        Registrado como <Placa placa={registro.placa} /> · {TIPOS.find((t) => t.id === tipoActual)?.nombre.toLowerCase()}
-        {registro.valor != null ? ` · cobrado ${pesos(registro.valor)}` : ""}
-      </p>
+      <div className="correccion-actual">
+        <span className="correccion-rotulo">Registrado como</span>
+        <div className="correccion-actual-datos">
+          <Placa placa={registro.placa} />
+          <span>{TIPOS.find((t) => t.id === tipoActual)?.nombre}</span>
+          {registro.valor != null && <span className="tenue">Cobrado {pesos(registro.valor)}</span>}
+        </div>
+      </div>
 
       <div className="fila-campos">
         <div className="campo">
@@ -113,17 +121,17 @@ export function CorreccionVehiculo({
             onChange={(v) => setIdTipo(Number(v))}
           />
         </div>
-        <label className="campo campo-placa">
+        <label className="campo">
           <span className="campo-rotulo">{idTipo === 3 ? "Código correcto" : "Placa correcta"}</span>
           <input
             value={placa}
             maxLength={formato.max + 2}
             placeholder={formato.ejemplo}
-            autoFocus
             onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-            aria-invalid={Boolean(placaNorm && !placaValida) || Boolean(errores.placa)}
+            onBlur={() => setPlacaTocada(true)}
+            aria-invalid={Boolean(placaTocada && placaNorm && !placaValida) || Boolean(errores.placa)}
           />
-          {(errores.placa || (placaNorm && !placaValida)) && (
+          {(errores.placa || (placaTocada && placaNorm && !placaValida)) && (
             <span className="campo-error">{errores.placa ?? `Formato: ${formato.ejemplo}`}</span>
           )}
         </label>
@@ -158,7 +166,7 @@ export function CorreccionVehiculo({
         </span>
       </label>
 
-      {modo === "cobro" && simulacion && (
+      {modo === "cobro" && simulacion && placaValida && !sinCambios && (
         <p className={`alerta ${simulacion.permitido ? "alerta-ok" : "alerta-error"}`} role="status">
           {simulacion.permitido
             ? `Con este tipo la visita (${simulacion.minutos} min) cuesta ${pesos(simulacion.valor)}. Devolución: ${pesos(simulacion.devolucion)}.`
@@ -167,7 +175,8 @@ export function CorreccionVehiculo({
       )}
 
       {error && <p className="alerta alerta-error" role="alert">{error}</p>}
-      <div className="acciones">
+      <div className="dialogo-acciones">
+        {onCancelar && <button type="button" className="boton boton-texto" onClick={onCancelar}>Cancelar</button>}
         <button className="boton boton-primario" disabled={!listo || enviando} onClick={enviar}>
           {enviando ? "Guardando..." : modo === "ingreso" ? "Corregir ingreso" : "Corregir cobro"}
         </button>

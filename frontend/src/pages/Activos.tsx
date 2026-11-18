@@ -82,9 +82,9 @@ export function Activos({ sede }: { sede: Parqueadero }) {
                   <td className="num">{pesos(r.valor_estimado)}</td>
                   <td className="accion">
                     {r.por_qr && !r.qr_verificado && (
-                      <button className="boton" onClick={() => setVerificando(r)}>Verificar</button>
+                      <button className="boton boton-primario" onClick={() => setVerificando(r)}>Verificar</button>
                     )}
-                    <button className="boton" title="Corregir placa o tipo si se registró mal" onClick={() => { setAviso(null); setCorrigiendo(r); }}>Corregir</button>
+                    <button className="boton boton-texto" title="Corregir placa o tipo si se registró mal" onClick={() => { setAviso(null); setCorrigiendo(r); }}>Corregir</button>
                     <button className="boton boton-secundario" onClick={() => setSeleccion(r)}>Registrar salida</button>
                   </td>
                 </tr>
@@ -121,6 +121,7 @@ export function Activos({ sede }: { sede: Parqueadero }) {
         {corrigiendo && (
           <CorreccionVehiculo
             modo="ingreso"
+            onCancelar={() => setCorrigiendo(null)}
             registro={{ idRegistro: corrigiendo.id_registro, placa: corrigiendo.placa, tipo: corrigiendo.tipo }}
             onListo={(mensaje) => {
               setCorrigiendo(null);

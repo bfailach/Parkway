@@ -74,9 +74,10 @@ export function MiHistorial() {
                       ) : (
                         <button
                           className="boton boton-texto boton-sm"
+                          title="Reportar un problema con el cobro de esta visita"
                           onClick={() => { setAviso(null); setReportando({ idRegistro: r.id_registro, descripcion: `${r.placa} en ${r.sede}, ${pesos(r.valor_calculado)}` }); }}
                         >
-                          Reportar un problema
+                          Reportar
                         </button>
                       )}
                     </td>
@@ -199,7 +200,7 @@ function ReclamoDialogo({
   }
 
   return (
-    <Dialogo abierto={datos !== null} titulo="Reportar un problema con el cobro" onCerrar={onCerrar}>
+    <Dialogo abierto={datos !== null} titulo="Reportar un cobro" onCerrar={onCerrar}>
       {datos && (
         <>
           {datos.descripcion && <p>Visita: <strong>{datos.descripcion}</strong></p>}
