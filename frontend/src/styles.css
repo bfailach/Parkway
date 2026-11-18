@@ -1360,3 +1360,11 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .verificacion-vehiculo .tiquete-datos { flex: 1; min-width: 220px; margin: 0; }
 .verificacion-pregunta { font-weight: 600; margin: 0; }
 .chip-pendiente { background: var(--alerta-fondo, rgba(255, 196, 0, 0.15)); color: var(--alerta, #ffc400); }
+
+/* Reclamos sobre cobros (cliente y administrador) */
+.reclamos { margin-block: 1rem 1.5rem; }
+.reclamos-cabeza { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.reclamos-lista { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.reclamo { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.reclamo-motivo { margin: 0.35rem 0 0; }
+.correccion .fila-campos { margin-top: 0.5rem; }

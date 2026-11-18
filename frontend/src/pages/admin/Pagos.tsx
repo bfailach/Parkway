@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { api, ApiError, MetodoPago, Pago, Parqueadero } from "../../lib/api";
+import { api, ApiError, MetodoPago, Pago, Parqueadero, Reclamo } from "../../lib/api";
 import { useConsulta } from "../../lib/useConsulta";
 import { duracion, fechaCorta, pesos } from "../../lib/formato";
 import { Selector } from "../../components/Selector";
 import { Dialogo } from "../../components/Dialogo";
 import { billetesSugeridos } from "../../components/SalidaDialogo";
+import { CorreccionVehiculo, RegistroACorregir } from "../../components/CorreccionVehiculo";
 
 const NOMBRE_METODO: Record<MetodoPago, string> = { EFECTIVO: "Efectivo", TARJETA: "Tarjeta", TRANSFERENCIA: "Transferencia" };
 const hoy = () => {
@@ -24,6 +25,11 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
   const [anulando, setAnulando] = useState<Pago | null>(null);
   const [cobrando, setCobrando] = useState<Pago | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  // Corrección de un cobro (vehículo mal registrado), desde un pago o desde un reclamo.
+  const [corrigiendo, setCorrigiendo] = useState<(RegistroACorregir & { idReclamo?: number }) | null>(null);
+  const [respondiendo, setRespondiendo] = useState<Reclamo | null>(null);
+  const [verTodosReclamos, setVerTodosReclamos] = useState(false);
+  const reclamos = useConsulta(() => api.admin.reclamos(verTodosReclamos ? undefined : "PENDIENTE"), [verTodosReclamos], 30000);
 
   useEffect(() => {
     const t = window.setTimeout(() => setFiltros((f) => (f.q === busqueda.trim() ? f : { ...f, q: busqueda.trim() })), 300);
@@ -42,6 +48,7 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
   function hecho(texto: string) {
     setAviso(texto);
     datos.recargar();
+    reclamos.recargar();
   }
 
   return (
@@ -98,6 +105,45 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
       )}
 
       {aviso && <p className="alerta alerta-ok" role="status">{aviso}</p>}
+
+      {/* Reclamos de los clientes sobre un cobro */}
+      {(reclamos.datos?.length || verTodosReclamos) ? (
+        <section className="reclamos" aria-label="Reclamos de clientes">
+          <div className="reclamos-cabeza">
+            <h2 className="bloque-titulo">Reclamos{!verTodosReclamos && reclamos.datos ? ` pendientes (${reclamos.datos.length})` : ""}</h2>
+            <button className="boton boton-texto boton-sm" onClick={() => setVerTodosReclamos(!verTodosReclamos)}>
+              {verTodosReclamos ? "Ver solo pendientes" : "Ver también los respondidos"}
+            </button>
+          </div>
+          {reclamos.datos?.length === 0 && <p className="tenue">No hay reclamos.</p>}
+          <ul className="reclamos-lista">
+            {reclamos.datos?.map((c) => (
+              <li key={c.id_reclamo} className="tarjeta reclamo">
+                <div>
+                  <strong>{c.cliente}</strong> · {c.placa} · {c.sede} · {pesos(c.valor)} ({duracion(c.minutos)})
+                  <span className="celda-sub tenue">{fechaCorta(c.fecha_creacion)}</span>
+                  <p className="reclamo-motivo">“{c.motivo}”</p>
+                  {c.estado !== "PENDIENTE" && (
+                    <p className="tenue">
+                      <span className={`chip chip-sm ${c.estado === "RESUELTO" ? "chip-cumplida" : "chip-anulado"}`}>{c.estado === "RESUELTO" ? "Resuelto" : "Rechazado"}</span>{" "}
+                      {c.administrador}: {c.respuesta}
+                    </p>
+                  )}
+                </div>
+                {c.estado === "PENDIENTE" && (
+                  <div className="celda-acciones">
+                    <button className="boton boton-secundario boton-sm" onClick={() => { setAviso(null); setCorrigiendo({ idRegistro: c.id_registro, placa: c.placa, tipo: c.tipo, valor: c.valor, idReclamo: c.id_reclamo }); }}>
+                      Corregir cobro
+                    </button>
+                    <button className="boton boton-texto boton-sm" onClick={() => { setAviso(null); setRespondiendo(c); }}>Responder</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {datos.error && <p className="alerta alerta-error" role="alert">{datos.error}</p>}
       {datos.datos && pagos.length === 0 ? (
         <div className="vacio"><p>No hay pagos con estos filtros.</p></div>
@@ -129,7 +175,10 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
                   </td>
                   <td className="celda-acciones">
                     {p.estado === "APROBADO" && (
-                      <button className="boton boton-texto boton-sm" onClick={() => { setAviso(null); setAnulando(p); }}>Anular</button>
+                      <>
+                        <button className="boton boton-texto boton-sm" title="El operador registró otra placa u otro tipo" onClick={() => { setAviso(null); setCorrigiendo({ idRegistro: p.id_registro, placa: p.placa, tipo: p.tipo, valor: p.monto }); }}>Corregir cobro</button>
+                        <button className="boton boton-texto boton-sm" onClick={() => { setAviso(null); setAnulando(p); }}>Anular</button>
+                      </>
                     )}
                     {p.estado === "ANULADO" && p.sin_pago_vigente && (
                       <button className="boton boton-secundario boton-sm" onClick={() => { setAviso(null); setCobrando(p); }}>Cobrar de nuevo</button>
@@ -143,6 +192,12 @@ export function Pagos({ sedes }: { sedes: Parqueadero[] }) {
       )}
       {pagos.length === 500 && <p className="tenue">Se muestran los 500 pagos más recientes; acote los filtros para ver más.</p>}
 
+      <Dialogo abierto={corrigiendo !== null} titulo="Corregir cobro" onCerrar={() => setCorrigiendo(null)}>
+        {corrigiendo && (
+          <CorreccionVehiculo modo="cobro" registro={corrigiendo} idReclamo={corrigiendo.idReclamo} onListo={(m) => { setCorrigiendo(null); hecho(m); }} />
+        )}
+      </Dialogo>
+      <ResponderDialogo reclamo={respondiendo} onCerrar={() => setRespondiendo(null)} onHecho={(m) => { setRespondiendo(null); hecho(m); }} />
       <AnularDialogo pago={anulando} onCerrar={() => setAnulando(null)} onHecho={(p) => { setAnulando(null); hecho(`Anulamos el pago del comprobante ${p.comprobante}. Si hay que cobrarlo, use "Cobrar de nuevo".`); }} />
       <CobrarDialogo pago={cobrando} onCerrar={() => setCobrando(null)} onHecho={(p) => { setCobrando(null); hecho(`Cobramos ${pesos(p.monto)} a ${p.placa} con el comprobante ${p.comprobante}.`); }} />
     </div>
@@ -274,6 +329,68 @@ function CobrarDialogo({ pago, onCerrar, onHecho }: { pago: Pago | null; onCerra
             <button className="boton boton-primario" onClick={confirmar} disabled={enviando || (metodo === "EFECTIVO" && recibidoNum > 0 && recibidoNum < valor)}>
               {enviando ? "Registrando..." : `Cobrar ${pesos(valor)}`}
             </button>
+          </div>
+        </>
+      )}
+    </Dialogo>
+  );
+}
+
+/** Respuesta a un reclamo sin corregir el cobro (por ejemplo, el cobro era correcto). */
+function ResponderDialogo({ reclamo, onCerrar, onHecho }: { reclamo: Reclamo | null; onCerrar: () => void; onHecho: (m: string) => void }) {
+  const [estado, setEstado] = useState<"RESUELTO" | "RECHAZADO">("RECHAZADO");
+  const [respuesta, setRespuesta] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  useEffect(() => {
+    setEstado("RECHAZADO");
+    setRespuesta("");
+    setError(null);
+  }, [reclamo?.id_reclamo]);
+
+  async function confirmar() {
+    if (!reclamo) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      await api.admin.responderReclamo(reclamo.id_reclamo, estado, respuesta.trim());
+      onHecho(`Respondimos el reclamo de ${reclamo.cliente}. Recibirá el aviso.`);
+    } catch (ex) {
+      setError(ex instanceof ApiError ? Object.values(ex.campos)[0] ?? ex.message : "No se pudo responder");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Dialogo abierto={!!reclamo} titulo="Responder reclamo" onCerrar={onCerrar}>
+      {reclamo && (
+        <>
+          <p>
+            <strong>{reclamo.cliente}</strong> sobre {reclamo.placa} ({pesos(reclamo.valor)}): “{reclamo.motivo}”
+          </p>
+          <fieldset className="campo">
+            <legend className="campo-rotulo">Resultado</legend>
+            <div className="segmentos">
+              <label className="segmento">
+                <input type="radio" name="estado-reclamo" checked={estado === "RECHAZADO"} onChange={() => setEstado("RECHAZADO")} />
+                <span>El cobro es correcto</span>
+              </label>
+              <label className="segmento">
+                <input type="radio" name="estado-reclamo" checked={estado === "RESUELTO"} onChange={() => setEstado("RESUELTO")} />
+                <span>Resuelto por otra vía</span>
+              </label>
+            </div>
+          </fieldset>
+          <label className="campo campo-motivo">
+            <span className="campo-rotulo">Respuesta para el cliente</span>
+            <textarea rows={3} maxLength={500} value={respuesta} onChange={(e) => setRespuesta(e.target.value)} autoFocus />
+            <span className="campo-ayuda">Si el vehículo se registró mal, use “Corregir cobro”: se devuelve la diferencia y el reclamo queda resuelto.</span>
+          </label>
+          {error && <p className="alerta alerta-error" role="alert">{error}</p>}
+          <div className="dialogo-acciones">
+            <button className="boton boton-texto" onClick={onCerrar}>Cancelar</button>
+            <button className="boton boton-primario" onClick={confirmar} disabled={enviando || respuesta.trim().length < 5}>{enviando ? "Enviando..." : "Responder"}</button>
           </div>
         </>
       )}

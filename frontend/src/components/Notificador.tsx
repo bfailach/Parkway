@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, EstadoCliente, PreferenciasNotificacion } from "../lib/api";
 import { calcularCobro } from "../lib/tarifa";
-import { duracion, pesos } from "../lib/formato";
+import { duracion, nombreTipo, pesos } from "../lib/formato";
 import { escucharAvisos } from "../lib/tiempoReal";
 
 /**
@@ -15,7 +15,10 @@ import { escucharAvisos } from "../lib/tiempoReal";
 export const EVENTO_PREFERENCIAS = "parkway:preferencias";
 
 /** Operaciones que pueden cambiar lo que ve el cliente (su vehículo, su reserva o su pago). */
-const OPERACIONES_CLIENTE = new Set(["INGRESO", "SALIDA", "RESERVA", "CANCELAR_RESERVA", "EXPIRACION", "ANULAR_PAGO", "COBRO_NUEVO"]);
+const OPERACIONES_CLIENTE = new Set([
+  "INGRESO", "SALIDA", "RESERVA", "CANCELAR_RESERVA", "EXPIRACION", "ANULAR_PAGO", "COBRO_NUEVO",
+  "ANULAR_INGRESO", "CORREGIR_INGRESO", "CORREGIR_COBRO", "RESPONDER_RECLAMO",
+]);
 export const EVENTO_AVISO = "parkway:aviso";
 
 interface Aviso {
@@ -109,6 +112,21 @@ export function Notificador() {
             avisar(`Se anuló el ingreso de ${a.placa}`, `En la portería de ${a.sede} el vehículo no coincidía${a.motivo ? `: ${a.motivo}` : ""}. No se cobró nada.`);
           else if (a.operacion === "COBRO_NUEVO")
             avisar(`Nuevo cobro para ${a.placa}`, `Se registró otra vez el cobro de tu visita en ${a.sede}. El detalle está en tu historial.`);
+          else if (a.operacion === "CORREGIR_INGRESO")
+            avisar(
+              `Se corrigió el ingreso de ${a.placa}`,
+              `Estaba registrado como ${a.placa_anterior !== a.placa ? `${a.placa_anterior}, ` : ""}${a.tipo_anterior}. Ahora es ${a.tipo}${a.valor_hora != null ? `, ${pesos(a.valor_hora)} la hora` : ""}, en el espacio ${a.espacio}.`
+            );
+          else if (a.operacion === "CORREGIR_COBRO")
+            avisar(
+              `Se corrigió el cobro de ${a.placa}`,
+              `La visita en ${a.sede} quedó en ${pesos(a.valor ?? 0)}${a.devolucion ? `. Te devolvemos ${pesos(a.devolucion)}` : ""}.`
+            );
+          else if (a.operacion === "RESPONDER_RECLAMO")
+            avisar(
+              a.resultado === "RECHAZADO" ? "Revisamos tu reclamo" : "Tu reclamo quedó resuelto",
+              a.respuesta ?? "La respuesta está en tu historial."
+            );
         }
       } catch {
         /* se revisa de nuevo en la siguiente vuelta */
@@ -118,7 +136,12 @@ export function Notificador() {
       const actuales = new Map(estado.dentro.map((r) => [r.id_registro, r.placa]));
       if (m.iniciado && activos && p?.alEntrarSalir !== false) {
         estado.dentro.forEach((r) => {
-          if (!m.dentro.has(r.id_registro)) avisar(`${r.placa} entró al parqueadero`, `Está en el espacio ${r.codigo_espacio} de ${r.sede}.`);
+          // Transparencia: el aviso dice con qué tipo y tarifa quedó registrado.
+          if (!m.dentro.has(r.id_registro))
+            avisar(
+              `${r.placa} entró al parqueadero`,
+              `Está en el espacio ${r.codigo_espacio} de ${r.sede}. Registrado como ${nombreTipo(r.tipo).toLowerCase()}${r.valor_hora != null ? `: ${pesos(r.valor_hora)} la hora` : ""}.`
+            );
         });
         for (const [id, placa] of m.dentro) {
           if (actuales.has(id) || anulados.has(id)) continue; // un ingreso anulado ya tuvo su aviso

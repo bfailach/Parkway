@@ -4,6 +4,7 @@ import { AuthenticatedRequest, requiereRol, verificarToken } from "../middleware
 import { asyncHandler } from "../utils/asyncHandler";
 import * as qr from "../services/qrService";
 import * as actividad from "../services/actividadService";
+import * as correccion from "../services/correccionService";
 
 const router = Router();
 
@@ -36,6 +37,10 @@ router.get("/qr-ingreso", ...personal, asyncHandler<AuthenticatedRequest>(async 
 // Verificación del ingreso con QR: { coincide: true } o { coincide: false, motivo }
 router.post("/qr/:idRegistro/verificar", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
   res.json(await qr.verificarIngreso(req.usuario!, Number(req.params.idRegistro), req.body ?? {}));
+}));
+// Corregir placa y tipo de un vehículo que sigue dentro: { placa, idTipo, marca?, color?, motivo }
+router.post("/registros/:idRegistro/corregir", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  res.json(await correccion.corregirIngreso(req.usuario!, Number(req.params.idRegistro), req.body ?? {}));
 }));
 // Actividad reciente de la sede (avisos al personal)
 router.get("/actividad", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {

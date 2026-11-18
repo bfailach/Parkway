@@ -14,7 +14,8 @@ import { Dialogo } from "./Dialogo";
  *   - ingresos y salidas registrados por otros,
  *   - reservas nuevas, canceladas y vencidas,
  *   - ocupación alta y sede llena por tipo de vehículo,
- *   - anulaciones de pago, cobros nuevos y espacios fuera de servicio.
+ *   - anulaciones de pago, cobros nuevos, correcciones de ingreso o de cobro,
+ *     reclamos de clientes y espacios fuera de servicio.
  * Las acciones propias no se avisan. Si la conexión en tiempo real se cae, se
  * consulta cada 20 segundos, y al reconectar se recupera lo que llegó.
  */
@@ -27,7 +28,7 @@ const ETIQUETAS: Record<Categoria, [string, string]> = {
   movimientos: ["Ingresos y salidas de otros", "Los que registran los demás operadores de tus sedes."],
   reservas: ["Reservas", "Nuevas, canceladas y vencidas porque el cliente no llegó."],
   ocupacion: ["Ocupación alta y sede llena", "Cuando un tipo de vehículo pasa del 90 % o se queda sin cupos."],
-  cobros: ["Cobros y espacios", "Pagos anulados, cobros nuevos y espacios fuera de servicio."],
+  cobros: ["Cobros y espacios", "Pagos anulados, cobros corregidos, reclamos y espacios fuera de servicio."],
 };
 
 // ---------------------------------------------------------------------
@@ -97,9 +98,9 @@ const TIPOS: Record<string, string> = { AUTOMOVIL: "automóviles", MOTOCICLETA: 
 
 function categoria(a: ActividadPersonal): Categoria | null {
   if ((a.operacion === "INGRESO" && a.origen === "QR") || a.operacion === "ANULAR_INGRESO") return "qr";
-  if (a.operacion === "INGRESO" || a.operacion === "SALIDA") return "movimientos";
+  if (a.operacion === "INGRESO" || a.operacion === "SALIDA" || a.operacion === "CORREGIR_INGRESO") return "movimientos";
   if (["RESERVA", "CANCELAR_RESERVA", "EXPIRACION"].includes(a.operacion)) return "reservas";
-  if (["ANULAR_PAGO", "COBRO_NUEVO", "ESTADO_ESPACIO"].includes(a.operacion)) return "cobros";
+  if (["ANULAR_PAGO", "COBRO_NUEVO", "ESTADO_ESPACIO", "CORREGIR_COBRO", "RECLAMO", "RESPONDER_RECLAMO"].includes(a.operacion)) return "cobros";
   return null;
 }
 
@@ -131,6 +132,26 @@ function redactar(a: ActividadPersonal, sede: string, idSede: number): Aviso | n
       return { ...base, titulo: `Pago anulado · ${placa}`, texto: `${quien(a)} anuló un pago${a.valor != null ? ` de ${pesos(a.valor)}` : ""} en ${sede}${a.motivo ? `: ${a.motivo}` : "."}`, importante: true, ver: "historial" };
     case "COBRO_NUEVO":
       return { ...base, titulo: `Nuevo cobro · ${placa}`, texto: `${quien(a)} registró de nuevo el cobro de una visita en ${sede}.`, importante: false, ver: "historial" };
+    case "CORREGIR_INGRESO":
+      return {
+        ...base,
+        titulo: `Ingreso corregido · ${placa}`,
+        texto: `${quien(a)} lo corrigió en ${sede}: antes ${a.placa_anterior !== placa ? `${a.placa_anterior}, ` : ""}${a.tipo_anterior}. Ahora en el espacio ${a.espacio}${a.motivo ? ` (${a.motivo})` : ""}.`,
+        importante: false,
+        ver: "activos",
+      };
+    case "CORREGIR_COBRO":
+      return {
+        ...base,
+        titulo: `Cobro corregido · ${placa}`,
+        texto: `${quien(a)} corrigió el cobro de una visita en ${sede}${a.devolucion ? `: devolución de ${pesos(a.devolucion)}` : ""}${a.motivo ? ` (${a.motivo})` : ""}.`,
+        importante: true,
+        ver: "historial",
+      };
+    case "RECLAMO":
+      return { ...base, titulo: `Reclamo de un cliente · ${placa}`, texto: `${quien(a)} reportó un problema con el cobro en ${sede}${a.motivo ? `: “${a.motivo}”` : "."}`, importante: true, ver: "historial" };
+    case "RESPONDER_RECLAMO":
+      return { ...base, titulo: `Reclamo respondido · ${placa}`, texto: `${quien(a)} respondió el reclamo de una visita en ${sede}.`, importante: false, ver: "historial" };
     case "ESTADO_ESPACIO": {
       const fuera = a.estado_espacio === "FUERA_DE_SERVICIO";
       return { ...base, titulo: `Espacio ${a.espacio} ${fuera ? "fuera de servicio" : "habilitado"}`, texto: `${quien(a)} lo cambió en ${sede}.`, importante: fuera, ver: "disponibilidad" };

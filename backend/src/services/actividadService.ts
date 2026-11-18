@@ -28,6 +28,10 @@ export const OPERACIONES_AVISABLES = [
   "COBRO_NUEVO",
   "ESTADO_ESPACIO",
   "ANULAR_INGRESO",
+  "CORREGIR_INGRESO",
+  "CORREGIR_COBRO",
+  "RECLAMO",
+  "RESPONDER_RECLAMO",
 ] as const;
 
 const AVISABLES = new Set<string>(OPERACIONES_AVISABLES);
@@ -74,7 +78,9 @@ export async function dePersonal(usuario: UsuarioToken, idParqueadero: number, d
             t.detalle->>'origen' AS origen,
             NULLIF(t.detalle->>'valor', '')::float AS valor,
             t.detalle->>'estado' AS estado_espacio,
-            t.detalle->>'motivo' AS motivo
+            t.detalle->>'motivo' AS motivo,
+            t.detalle->>'placa_anterior' AS placa_anterior, t.detalle->>'tipo_anterior' AS tipo_anterior,
+            NULLIF(t.detalle->>'devolucion', '')::float AS devolucion
        FROM transaccion t
        ${UNIR_SEDE}
        LEFT JOIN usuario u ON u.id_usuario = t.id_usuario
@@ -93,8 +99,8 @@ export async function dePersonal(usuario: UsuarioToken, idParqueadero: number, d
 
 /**
  * Lo que otras personas o el sistema hicieron sobre los vehículos y reservas
- * del cliente: reserva vencida, pago anulado, nuevo cobro e ingreso con QR
- * anulado en portería. (La entrada y la
+ * del cliente: reserva vencida, pago anulado, nuevo cobro, ingreso con QR
+ * anulado en portería, ingreso o cobro corregido y respuesta a un reclamo. (La entrada y la
  * salida ya las detecta el aviso del cliente con su estado.)
  */
 export async function deCliente(idCliente: number, desde?: unknown) {
@@ -104,7 +110,13 @@ export async function deCliente(idCliente: number, desde?: unknown) {
             COALESCE(rs.placa, rp.placa, r.placa) AS placa,
             COALESCE(es.codigo, ep.codigo, er.codigo) AS espacio,
             p.nombre AS sede,
-            NULLIF(t.detalle->>'motivo', '') AS motivo
+            NULLIF(t.detalle->>'motivo', '') AS motivo,
+            t.detalle->>'placa_anterior' AS placa_anterior,
+            t.detalle->>'tipo' AS tipo, t.detalle->>'tipo_anterior' AS tipo_anterior,
+            NULLIF(t.detalle->>'valor_hora', '')::float AS valor_hora,
+            NULLIF(t.detalle->>'valor', '')::float AS valor,
+            NULLIF(t.detalle->>'devolucion', '')::float AS devolucion,
+            t.detalle->>'resultado' AS resultado, t.detalle->>'respuesta' AS respuesta
        FROM transaccion t
        ${UNIR_SEDE}
        LEFT JOIN vehiculo v ON v.placa = COALESCE(rp.placa, r.placa)
@@ -112,7 +124,10 @@ export async function deCliente(idCliente: number, desde?: unknown) {
       WHERE t.estado = 'CONFIRMADA' AND t.fecha_fin > $2
         AND (
               (t.tipo_operacion = 'EXPIRACION' AND rs.id_cliente = $1)
-           OR (t.tipo_operacion IN ('ANULAR_PAGO', 'COBRO_NUEVO', 'ANULAR_INGRESO') AND v.id_cliente = $1)
+           OR (t.tipo_operacion IN ('ANULAR_PAGO', 'COBRO_NUEVO', 'ANULAR_INGRESO', 'CORREGIR_INGRESO', 'CORREGIR_COBRO', 'RESPONDER_RECLAMO')
+               AND v.id_cliente = $1)
+           -- Reclamos: quien reclamó se entera aunque la visita estuviera a otra placa.
+           OR (t.tipo_operacion IN ('CORREGIR_COBRO', 'RESPONDER_RECLAMO') AND t.detalle->>'cliente' = $1::text)
         )
       ORDER BY t.fecha_fin DESC
       LIMIT 20`,

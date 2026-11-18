@@ -114,3 +114,32 @@ ALTER TABLE registro_estacionamiento ADD COLUMN IF NOT EXISTS fecha_verificacion
 ALTER TABLE registro_estacionamiento DROP CONSTRAINT IF EXISTS registro_estacionamiento_estado_check;
 ALTER TABLE registro_estacionamiento ADD CONSTRAINT registro_estacionamiento_estado_check
     CHECK (estado IN ('ABIERTO', 'CERRADO', 'ANULADO'));
+
+-- ---------------------------------------------------------------------
+-- 5. Reclamos del cliente sobre un cobro
+-- Si el operador registró mal el vehículo (otra placa u otro tipo) y el
+-- cobro salió más alto, el cliente lo reporta desde su historial. El
+-- administrador lo revisa: corrige el cobro (se anula el pago, se emite uno
+-- nuevo por el valor correcto y la devolución queda en la bitácora) o lo
+-- rechaza con una respuesta. Solo puede haber un reclamo pendiente por visita.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reclamo (
+    id_reclamo       SERIAL PRIMARY KEY,
+    id_registro      INT          NOT NULL REFERENCES registro_estacionamiento (id_registro),
+    id_cliente       INT          NOT NULL REFERENCES usuario (id_usuario),
+    motivo           VARCHAR(500) NOT NULL CHECK (length(trim(motivo)) >= 10),
+    estado           VARCHAR(12)  NOT NULL DEFAULT 'PENDIENTE'
+                     CHECK (estado IN ('PENDIENTE', 'RESUELTO', 'RECHAZADO')),
+    respuesta        VARCHAR(500),
+    id_administrador INT          REFERENCES usuario (id_usuario),
+    fecha_creacion   TIMESTAMP    NOT NULL DEFAULT now(),
+    fecha_respuesta  TIMESTAMP,
+    CONSTRAINT ck_reclamo_respondido CHECK (estado = 'PENDIENTE' OR (respuesta IS NOT NULL AND fecha_respuesta IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reclamo_pendiente
+    ON reclamo (id_registro) WHERE estado = 'PENDIENTE';
+CREATE INDEX IF NOT EXISTS ix_reclamo_cliente ON reclamo (id_cliente, fecha_creacion DESC);
+
+COMMENT ON TABLE reclamo IS
+  'Reclamos de los clientes sobre el cobro de una visita. La corrección del cobro queda en la bitácora (CORREGIR_COBRO).';

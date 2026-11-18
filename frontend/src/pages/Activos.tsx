@@ -6,6 +6,7 @@ import { Placa } from "../components/Placa";
 import { SalidaDialogo } from "../components/SalidaDialogo";
 import { Dialogo } from "../components/Dialogo";
 import { VerificacionQr } from "../components/VerificacionQr";
+import { CorreccionVehiculo } from "../components/CorreccionVehiculo";
 
 /**
  * Vehículos dentro del parqueadero y registro de salida (RF07).
@@ -16,6 +17,8 @@ export function Activos({ sede }: { sede: Parqueadero }) {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<Registro | null>(null);
   const [verificando, setVerificando] = useState<Registro | null>(null);
+  const [corrigiendo, setCorrigiendo] = useState<Registro | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const activos = useConsulta(() => api.activos(sede.id_parqueadero, filtro || undefined), [sede.id_parqueadero, filtro], 15000, { sede: sede.id_parqueadero });
   const lista = activos.datos ?? [];
@@ -41,6 +44,7 @@ export function Activos({ sede }: { sede: Parqueadero }) {
       </header>
 
       {activos.error && <p className="alerta alerta-error" role="alert">{activos.error}</p>}
+      {aviso && <p className="alerta alerta-ok" role="status">{aviso}</p>}
 
       {activos.datos && lista.length === 0 ? (
         <div className="vacio">
@@ -80,6 +84,7 @@ export function Activos({ sede }: { sede: Parqueadero }) {
                     {r.por_qr && !r.qr_verificado && (
                       <button className="boton" onClick={() => setVerificando(r)}>Verificar</button>
                     )}
+                    <button className="boton" title="Corregir placa o tipo si se registró mal" onClick={() => { setAviso(null); setCorrigiendo(r); }}>Corregir</button>
                     <button className="boton boton-secundario" onClick={() => setSeleccion(r)}>Registrar salida</button>
                   </td>
                 </tr>
@@ -105,6 +110,21 @@ export function Activos({ sede }: { sede: Parqueadero }) {
             }}
             onListo={() => {
               setVerificando(null);
+              activos.recargar();
+            }}
+          />
+        )}
+      </Dialogo>
+
+      {/* Placa o tipo mal registrados: se corrige antes de la salida para cobrar la tarifa correcta */}
+      <Dialogo abierto={corrigiendo !== null} titulo="Corregir vehículo" onCerrar={() => setCorrigiendo(null)}>
+        {corrigiendo && (
+          <CorreccionVehiculo
+            modo="ingreso"
+            registro={{ idRegistro: corrigiendo.id_registro, placa: corrigiendo.placa, tipo: corrigiendo.tipo }}
+            onListo={(mensaje) => {
+              setCorrigiendo(null);
+              setAviso(mensaje);
               activos.recargar();
             }}
           />

@@ -4,6 +4,7 @@ import { AuthenticatedRequest, requiereRol, verificarToken } from "../middleware
 import { asyncHandler } from "../utils/asyncHandler";
 import * as qr from "../services/qrService";
 import * as actividad from "../services/actividadService";
+import * as correccion from "../services/correccionService";
 
 /** Rutas del cliente autenticado. Cada consulta se limita a sus propios datos. */
 const router = Router();
@@ -29,6 +30,13 @@ router.get("/ingreso-qr/:token", asyncHandler<AuthenticatedRequest>(async (req, 
 }));
 router.post("/ingreso-qr", asyncHandler<AuthenticatedRequest>(async (req, res) => {
   res.status(201).json(await qr.ingresar(req.usuario!, req.body ?? {}));
+}));
+// Reclamos sobre el cobro de una visita
+router.get("/reclamos", asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  res.json(await correccion.misReclamos(req.usuario!.id_usuario));
+}));
+router.post("/reclamos", asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  res.status(201).json(await correccion.crearReclamo(req.usuario!.id_usuario, req.body ?? {}));
 }));
 
 export default router;

@@ -454,18 +454,81 @@ export interface ActividadPersonal {
   valor: number | null;
   estado_espacio: string | null;
   motivo: string | null;
+  /** Corrección de ingreso o de cobro: lo que estaba registrado antes. */
+  placa_anterior?: string | null;
+  tipo_anterior?: string | null;
+  devolucion?: number | null;
 }
 
 /** Lo que otros hicieron sobre los vehículos y reservas del cliente. */
 export interface ActividadCliente {
   id: number;
-  operacion: "EXPIRACION" | "ANULAR_PAGO" | "COBRO_NUEVO" | "ANULAR_INGRESO";
+  operacion: "EXPIRACION" | "ANULAR_PAGO" | "COBRO_NUEVO" | "ANULAR_INGRESO" | "CORREGIR_INGRESO" | "CORREGIR_COBRO" | "RESPONDER_RECLAMO";
   id_entidad: string | null;
   fecha: string;
   placa: string | null;
   espacio: string | null;
   sede: string | null;
   motivo: string | null;
+  placa_anterior?: string | null;
+  tipo?: string | null;
+  tipo_anterior?: string | null;
+  valor_hora?: number | null;
+  valor?: number | null;
+  devolucion?: number | null;
+  /** Respuesta a un reclamo: RESUELTO o RECHAZADO. */
+  resultado?: "RESUELTO" | "RECHAZADO" | null;
+  respuesta?: string | null;
+}
+
+/** Placa y tipo correctos de un vehículo mal registrado. */
+export interface DatosCorreccion {
+  placa: string;
+  idTipo: number;
+  marca?: string;
+  color?: string;
+  motivo: string;
+}
+
+export interface Reclamo {
+  id_reclamo: number;
+  id_registro: number;
+  motivo: string;
+  estado: "PENDIENTE" | "RESUELTO" | "RECHAZADO";
+  respuesta: string | null;
+  fecha_creacion: string;
+  fecha_respuesta: string | null;
+  placa: string;
+  id_tipo: number;
+  tipo: string;
+  minutos: number | null;
+  valor: number | null;
+  fecha_ingreso: string;
+  fecha_salida: string | null;
+  sede: string;
+  id_parqueadero: number;
+  cliente: string;
+  administrador: string | null;
+}
+
+export interface SimulacionCobro {
+  minutos: number;
+  valor_anterior: number;
+  valor: number;
+  devolucion: number;
+  permitido: boolean;
+}
+
+export interface CorreccionCobro {
+  placa: string;
+  placa_anterior: string;
+  tipo: string;
+  tipo_anterior: string;
+  valor_anterior: number;
+  valor: number;
+  devolucion: number;
+  metodo: MetodoPago | null;
+  comprobante: string | null;
 }
 
 export interface InfoQr {
@@ -753,6 +816,7 @@ export const api = {
   qrIngreso: (idParqueadero: number) => request<QrSede>("GET", `/estacionamiento/qr-ingreso?idParqueadero=${idParqueadero}`),
   verificarQr: (idRegistro: number, coincide: boolean, motivo?: string) =>
     request<{ id_registro: number; placa: string; codigo_espacio: string; coincide: boolean }>("POST", `/estacionamiento/qr/${idRegistro}/verificar`, { coincide, motivo }),
+  corregirIngreso: (idRegistro: number, d: DatosCorreccion) => request<Registro>("POST", `/estacionamiento/registros/${idRegistro}/corregir`, d),
   actividad: (idParqueadero: number, desde: string) =>
     request<ActividadPersonal[]>("GET", `/estacionamiento/actividad?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
   cliente: {
@@ -770,6 +834,8 @@ export const api = {
     cancelarReserva: (id: number) => request<Reserva>("POST", `/cliente/reservas/${id}/cancelar`),
     preferencias: () => request<PreferenciasNotificacion>("GET", "/cliente/preferencias"),
     guardarPreferencias: (p: PreferenciasNotificacion) => request<PreferenciasNotificacion>("PUT", "/cliente/preferencias", p),
+    reclamos: () => request<Reclamo[]>("GET", "/cliente/reclamos"),
+    reclamar: (d: { idRegistro?: number; comprobante?: string; motivo: string }) => request<{ id_reclamo: number }>("POST", "/cliente/reclamos", d),
   },
   topes: () => request<TopeTarifario[]>("GET", "/topes-tarifarios"),
   admin: {
@@ -787,6 +853,12 @@ export const api = {
       request<{ pagos: Pago[]; totales: TotalesPagos }>("GET", `/admin/pagos?${qs(f as Record<string, string | number | undefined>)}`),
     anularPago: (id: number, motivo: string) => request<Pago>("POST", `/admin/pagos/${id}/anular`, { motivo }),
     cobrarDeNuevo: (idRegistro: number, pago: DatosPago) => request<Pago>("POST", `/admin/registros/${idRegistro}/pago`, pago),
+    simularCobro: (idRegistro: number, idTipo: number) => request<SimulacionCobro>("GET", `/admin/registros/${idRegistro}/simular-cobro?idTipo=${idTipo}`),
+    corregirCobro: (idRegistro: number, d: DatosCorreccion & { idReclamo?: number }) =>
+      request<CorreccionCobro>("POST", `/admin/registros/${idRegistro}/corregir-cobro`, d),
+    reclamos: (estado?: string) => request<Reclamo[]>("GET", `/admin/reclamos${estado ? `?estado=${estado}` : ""}`),
+    responderReclamo: (id: number, estado: "RESUELTO" | "RECHAZADO", respuesta: string) =>
+      request<unknown>("POST", `/admin/reclamos/${id}/responder`, { estado, respuesta }),
     reporte: <T,>(tipo: TipoReporte, f: FiltrosReporte) =>
       request<T>("GET", `/admin/reportes/${tipo}?${qs(f as unknown as Record<string, string | number | undefined>)}`),
     descargarReporte: (tipo: TipoReporte, f: FiltrosReporte) =>

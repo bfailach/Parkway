@@ -88,12 +88,15 @@ export function MiParqueo({
               <dl className="tiquete-datos">
                 <div><dt>Ingresó</dt><dd>{horaCorta(r.fecha_ingreso)}</dd></div>
                 <div><dt>Tiempo</dt><dd>{duracion(min)}</dd></div>
+                {/* Transparencia: el tipo con el que se registró define la tarifa */}
+                <div><dt>Registrado como</dt><dd>{nombreTipo(r.tipo)}</dd></div>
               </dl>
             </div>
             <div className="tarjeta-dentro-valor">
               <span className="tenue">Valor hasta ahora</span>
               <strong>{pesos(cobro?.total ?? null)}</strong>
-              <span className="tenue">{pesos(r.valor_hora)} la hora, {pesos(r.valor_fraccion)} cada 15 min</span>
+              <span className="tenue">Tarifa de {nombreTipo(r.tipo).toLowerCase()}: {pesos(r.valor_hora)} la hora, {pesos(r.valor_fraccion)} cada 15 min</span>
+              <span className="tenue nota">¿El tipo o la placa no son los de tu vehículo? Díselo al operador antes de salir para que lo corrija.</span>
             </div>
           </section>
         );
