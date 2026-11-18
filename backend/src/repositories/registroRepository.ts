@@ -62,6 +62,9 @@ const SELECT_DETALLE = `
          tv.id_tipo, tv.nombre AS tipo, v.marca, v.color,
          -- Entrada con QR: el cliente registró su propio ingreso.
          CASE WHEN oi.rol = 'CLIENTE' THEN 'Autoservicio (QR)' ELSE oi.nombre END AS operador_ingreso, os.nombre AS operador_salida,
+         -- Ingreso con QR y si el operador ya lo verificó (to_jsonb: sirve sin la migración)
+         (oi.rol = 'CLIENTE') AS por_qr, (to_jsonb(r)->>'verificado_por') IS NOT NULL AS qr_verificado,
+         uc.nombre AS cliente,
          t.valor_hora::float AS valor_hora, t.valor_fraccion::float AS valor_fraccion,
          t.valor_dia::float AS valor_dia,
          r.id_reserva, p.nombre AS sede,
@@ -73,6 +76,7 @@ const SELECT_DETALLE = `
     JOIN vehiculo v       ON v.placa = r.placa
     JOIN tipo_vehiculo tv ON tv.id_tipo = v.id_tipo
     JOIN usuario oi       ON oi.id_usuario = r.id_operador_ingreso
+    LEFT JOIN usuario uc  ON uc.id_usuario = v.id_cliente
     LEFT JOIN usuario os  ON os.id_usuario = r.id_operador_salida
     LEFT JOIN tarifa t    ON t.id_tarifa = r.id_tarifa
     -- RF08: el pago vigente del registro (el aprobado o, si no hay, el último).

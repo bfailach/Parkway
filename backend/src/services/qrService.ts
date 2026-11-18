@@ -8,6 +8,8 @@ import * as vehiculoRepository from "../repositories/vehiculoRepository";
 import { verificarAcceso } from "./accesoService";
 import { registrarIngreso } from "./estacionamientoService";
 import { normalizarPlaca } from "../validators/ingresoValidator";
+import { transactionManager } from "../transactions/transactionManager";
+import * as espacioRepository from "../repositories/espacioRepository";
 
 /**
  * Entrada con QR (autoservicio del cliente).
@@ -111,6 +113,67 @@ export async function ingresar(cliente: UsuarioToken, body: Record<string, unkno
     { placa, idTipo: vehiculo.id_tipo, idParqueadero: sede, marca: vehiculo.marca ?? undefined, color: vehiculo.color ?? undefined },
     cliente,
     { origen: "QR" }
+  );
+}
+
+/**
+ * Verificación del ingreso con QR en portería.
+ *
+ * El operador compara el vehículo que llegó con el que el cliente registró
+ * (placa, tipo, marca y color):
+ *  - coincide = true: el ingreso queda verificado (VERIFICAR_QR).
+ *  - coincide = false: el ingreso se anula (ANULAR_INGRESO). El registro queda
+ *    ANULADO, sin cobro, y el espacio se libera, todo en una transacción.
+ */
+export async function verificarIngreso(usuario: UsuarioToken, idRegistro: number, body: Record<string, unknown>) {
+  if (!Number.isInteger(idRegistro) || idRegistro <= 0) throw badRequest("Registro inválido");
+  if (typeof body.coincide !== "boolean") throw badRequest("Indique si el vehículo coincide", { coincide: "Debe ser true o false" });
+  const coincide = body.coincide;
+  const motivo = String(body.motivo ?? "").trim().slice(0, 200);
+  if (!coincide && motivo.length < 5) {
+    throw badRequest("Revise los campos del formulario", { motivo: "Escriba qué no coincide (por ejemplo, otra placa o color)" });
+  }
+  return transactionManager.ejecutar(
+    usuario.id_usuario,
+    coincide ? "VERIFICAR_QR" : "ANULAR_INGRESO",
+    "registro_estacionamiento",
+    async (client) => {
+      const { rows } = await client.query(
+        `SELECT r.id_registro, r.placa, r.estado, r.id_espacio, e.codigo AS codigo_espacio, e.id_parqueadero,
+                u.rol AS rol_ingreso, (to_jsonb(r)->>'verificado_por') IS NOT NULL AS verificado
+           FROM registro_estacionamiento r
+           JOIN espacio e ON e.id_espacio = r.id_espacio
+           JOIN usuario u ON u.id_usuario = r.id_operador_ingreso
+          WHERE r.id_registro = $1
+          FOR UPDATE OF r`,
+        [idRegistro]
+      );
+      const r = rows[0];
+      if (!r) throw notFound("El registro no existe");
+      await verificarAcceso(usuario, r.id_parqueadero, client);
+      if (r.rol_ingreso !== "CLIENTE") throw conflict("Solo se verifican los ingresos registrados con QR");
+      if (r.estado !== "ABIERTO") throw conflict(`El vehículo ${r.placa} ya no está dentro del parqueadero`);
+      if (r.verificado) throw conflict(`El ingreso de ${r.placa} ya fue verificado`);
+      if (coincide) {
+        await client.query(
+          `UPDATE registro_estacionamiento SET verificado_por = $2, fecha_verificacion = now() WHERE id_registro = $1`,
+          [idRegistro, usuario.id_usuario]
+        );
+      } else {
+        await client.query(
+          `UPDATE registro_estacionamiento
+              SET estado = 'ANULADO', fecha_salida = now(), minutos = 0, valor_calculado = 0, id_operador_salida = $2
+            WHERE id_registro = $1`,
+          [idRegistro, usuario.id_usuario]
+        );
+        await espacioRepository.actualizarEstado(client, r.id_espacio, "LIBRE");
+      }
+      return { id_registro: r.id_registro, placa: r.placa, codigo_espacio: r.codigo_espacio, coincide };
+    },
+    {
+      idEntidad: (x) => x.id_registro,
+      detalle: (x) => ({ placa: x.placa, espacio: x.codigo_espacio, origen: "QR", ...(coincide ? {} : { motivo }) }),
+    }
   );
 }
 

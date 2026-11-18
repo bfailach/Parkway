@@ -273,6 +273,7 @@ export function Historial({ sede, tipos }: { sede: Parqueadero; tipos: TipoVehic
                   <td>
                     <span className={`chip ${m.movimiento === "ENTRADA" ? "chip-entrada" : "chip-salida"}`}>{m.movimiento === "ENTRADA" ? "Entrada" : "Salida"}</span>
                     {m.movimiento === "ENTRADA" && m.estado === "ABIERTO" && <span className="celda-sub tenue">Sigue dentro</span>}
+                    {m.movimiento === "ENTRADA" && m.estado === "ANULADO" && <span className="celda-sub tenue">Anulada en portería</span>}
                     {m.movimiento === "SALIDA" && m.minutos != null && <span className="celda-sub tenue">{duracion(m.minutos)}</span>}
                   </td>
                   <td><Placa placa={m.placa} /></td>

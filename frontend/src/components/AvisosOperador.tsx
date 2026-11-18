@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ActividadPersonal, api, Parqueadero } from "../lib/api";
-import { pesos } from "../lib/formato";
+import { nombreTipo, pesos } from "../lib/formato";
 import { escucharAvisos, useEnVivo } from "../lib/tiempoReal";
 import { Dialogo } from "./Dialogo";
 
@@ -96,7 +96,7 @@ const hora = (f: string) => new Date(f).toLocaleTimeString("es-CO", { hour: "num
 const TIPOS: Record<string, string> = { AUTOMOVIL: "automóviles", MOTOCICLETA: "motocicletas", BICICLETA: "bicicletas" };
 
 function categoria(a: ActividadPersonal): Categoria | null {
-  if (a.operacion === "INGRESO" && a.origen === "QR") return "qr";
+  if ((a.operacion === "INGRESO" && a.origen === "QR") || a.operacion === "ANULAR_INGRESO") return "qr";
   if (a.operacion === "INGRESO" || a.operacion === "SALIDA") return "movimientos";
   if (["RESERVA", "CANCELAR_RESERVA", "EXPIRACION"].includes(a.operacion)) return "reservas";
   if (["ANULAR_PAGO", "COBRO_NUEVO", "ESTADO_ESPACIO"].includes(a.operacion)) return "cobros";
@@ -109,8 +109,16 @@ function redactar(a: ActividadPersonal, sede: string, idSede: number): Aviso | n
   switch (a.operacion) {
     case "INGRESO":
       return a.origen === "QR"
-        ? { ...base, titulo: `Ingreso con QR · ${placa}`, texto: `${quien(a)} entró con el QR a ${sede}. Espacio ${a.espacio} · ${hora(a.fecha)}`, importante: true, ver: "activos" }
+        ? {
+            ...base,
+            titulo: `Ingreso con QR · ${placa}`,
+            texto: `${quien(a)} entró con el QR a ${sede}: ${[a.tipo ? nombreTipo(a.tipo).toLowerCase() : null, a.marca, a.color?.toLowerCase()].filter(Boolean).join(", ")}, espacio ${a.espacio} (${hora(a.fecha)}). Verifique el vehículo.`,
+            importante: true,
+            ver: "activos",
+          }
         : { ...base, titulo: `Ingreso · ${placa}`, texto: `${quien(a)} lo registró en ${sede}, espacio ${a.espacio}.`, importante: false, ver: "activos" };
+    case "ANULAR_INGRESO":
+      return { ...base, titulo: `Ingreso con QR anulado · ${placa}`, texto: `${quien(a)} lo anuló en ${sede}${a.motivo ? `: ${a.motivo}` : "."} El espacio ${a.espacio} quedó libre.`, importante: false, ver: "historial" };
     case "SALIDA":
       return { ...base, titulo: `Salida · ${placa}`, texto: `${quien(a)} registró la salida en ${sede}${a.valor != null ? `. Cobro: ${pesos(a.valor)}` : ""}.`, importante: false, ver: "historial" };
     case "RESERVA":

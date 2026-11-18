@@ -1354,3 +1354,9 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--acento);
 .qr-confirmacion { max-width: 520px; display: grid; gap: 8px; }
 .qr-confirmacion p { margin: 0; }
 .qr-confirmacion-titulo { color: var(--ok-texto); font-weight: 700; font-size: 1.05rem; }
+/* Verificación del ingreso con QR */
+.verificacion-qr { display: grid; gap: 12px; }
+.verificacion-vehiculo { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.verificacion-vehiculo .tiquete-datos { flex: 1; min-width: 220px; margin: 0; }
+.verificacion-pregunta { font-weight: 600; margin: 0; }
+.chip-pendiente { background: var(--alerta-fondo, rgba(255, 196, 0, 0.15)); color: var(--alerta, #ffc400); }

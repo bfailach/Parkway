@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ActividadPersonal, api, QrSede as Qr } from "../lib/api";
 import { escucharAvisos } from "../lib/tiempoReal";
+import { VerificacionQr } from "./VerificacionQr";
 
 /**
  * QR de entrada de la sede (autoservicio). El operador lo muestra en la
@@ -22,6 +23,7 @@ export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
   const [cargando, setCargando] = useState(false);
   const [restante, setRestante] = useState(0);
   const [confirmado, setConfirmado] = useState<ActividadPersonal | null>(null);
+  const [resultado, setResultado] = useState<"verificado" | "anulado" | null>(null);
   const caja = useRef<HTMLElement>(null);
   const mostradoDesde = useRef<string>(new Date().toISOString());
 
@@ -62,6 +64,7 @@ export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
         if (qr && vivo) {
           if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined);
           setConfirmado(qr);
+          setResultado(null);
           setVisible(false);
           setQr(null);
         }
@@ -78,6 +81,7 @@ export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
   const mostrar = () => {
     mostradoDesde.current = new Date().toISOString();
     setConfirmado(null);
+    setResultado(null);
     setVisible(true);
     pedir();
   };
@@ -87,15 +91,35 @@ export function QrSede({ idSede, nombre }: { idSede: number; nombre: string }) {
       <div className="qr-sede">
         {confirmado && (
           <div className="tarjeta qr-confirmacion" role="status" aria-live="polite">
-            <p className="qr-confirmacion-titulo">Ingreso con QR registrado</p>
-            <p>
-              <b>{confirmado.placa}</b> · {confirmado.actor ?? "Cliente"} · espacio <b>{confirmado.espacio}</b> ·{" "}
-              {new Date(confirmado.fecha).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })}
+            <p className="qr-confirmacion-titulo">
+              {resultado === "anulado" ? "Ingreso anulado" : resultado === "verificado" ? "Ingreso con QR verificado" : "Ingreso con QR registrado: verifique el vehículo"}
             </p>
-            <div className="acciones">
-              <button className="boton boton-primario" onClick={mostrar}>Mostrar QR para el siguiente cliente</button>
-              <button className="boton" onClick={() => setConfirmado(null)}>Cerrar</button>
-            </div>
+            {resultado === null ? (
+              <VerificacionQr
+                datos={{
+                  idRegistro: Number(confirmado.id_entidad),
+                  placa: confirmado.placa ?? "",
+                  tipo: confirmado.tipo,
+                  marca: confirmado.marca,
+                  color: confirmado.color,
+                  cliente: confirmado.actor,
+                  espacio: confirmado.espacio,
+                  fecha: confirmado.fecha,
+                }}
+                onListo={setResultado}
+              />
+            ) : (
+              <p>
+                <b>{confirmado.placa}</b> ·{" "}
+                {resultado === "anulado" ? `el espacio ${confirmado.espacio} quedó libre y no se cobró nada.` : `espacio ${confirmado.espacio}. Puede seguir.`}
+              </p>
+            )}
+            {resultado !== null && (
+              <div className="acciones">
+                <button className="boton boton-primario" onClick={mostrar}>Mostrar QR para el siguiente cliente</button>
+                <button className="boton" onClick={() => setConfirmado(null)}>Cerrar</button>
+              </div>
+            )}
           </div>
         )}
         {!confirmado && (

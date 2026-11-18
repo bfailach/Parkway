@@ -247,6 +247,11 @@ export interface Registro {
   valor_dia: number;
   /** Tope legal por minuto: el cobro nunca lo supera (Decreto 026 de 2026). */
   tope_minuto?: number | null;
+  /** Ingreso registrado por el cliente con QR, y si el operador ya lo verificó. */
+  por_qr?: boolean;
+  qr_verificado?: boolean;
+  /** Dueño del vehículo, si tiene cuenta. */
+  cliente?: string | null;
   minutos_transcurridos?: number;
   valor_estimado?: number | null;
   id_reserva?: number | null;
@@ -433,7 +438,15 @@ export interface ActividadPersonal {
   id: number;
   operacion: string;
   fecha: string;
+  /** Registro, reserva, pago o espacio afectado. */
+  id_entidad: string | null;
   placa: string | null;
+  tipo: string | null;
+  marca: string | null;
+  color: string | null;
+  /** Ingreso con QR ya verificado por el operador. */
+  verificado: boolean;
+  estado_registro: string | null;
   espacio: string | null;
   actor: string | null;
   rol_actor: string | null;
@@ -446,7 +459,8 @@ export interface ActividadPersonal {
 /** Lo que otros hicieron sobre los vehículos y reservas del cliente. */
 export interface ActividadCliente {
   id: number;
-  operacion: "EXPIRACION" | "ANULAR_PAGO" | "COBRO_NUEVO";
+  operacion: "EXPIRACION" | "ANULAR_PAGO" | "COBRO_NUEVO" | "ANULAR_INGRESO";
+  id_entidad: string | null;
   fecha: string;
   placa: string | null;
   espacio: string | null;
@@ -737,6 +751,8 @@ export const api = {
     request<Consentimientos>("POST", "/usuarios/me/consentimientos", { finalidad, otorgado }),
   // Entrada con QR: código de la sede para la portería
   qrIngreso: (idParqueadero: number) => request<QrSede>("GET", `/estacionamiento/qr-ingreso?idParqueadero=${idParqueadero}`),
+  verificarQr: (idRegistro: number, coincide: boolean, motivo?: string) =>
+    request<{ id_registro: number; placa: string; codigo_espacio: string; coincide: boolean }>("POST", `/estacionamiento/qr/${idRegistro}/verificar`, { coincide, motivo }),
   actividad: (idParqueadero: number, desde: string) =>
     request<ActividadPersonal[]>("GET", `/estacionamiento/actividad?idParqueadero=${idParqueadero}&desde=${encodeURIComponent(desde)}`),
   cliente: {

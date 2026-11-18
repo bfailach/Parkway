@@ -92,6 +92,28 @@ export function Notificador() {
       const ahora = Date.now();
       const activos = p?.activas !== false;
 
+      // Reserva vencida, pago anulado, nuevo cobro o ingreso anulado, hechos por otros.
+      const anulados = new Set<number>();
+      try {
+        const lista = (await api.cliente.actividad(m.actividadDesde)).filter((a) => !m.actividadVista.has(a.id)).reverse();
+        for (const a of lista) {
+          m.actividadVista.add(a.id);
+          if (a.operacion === "ANULAR_INGRESO") anulados.add(Number(a.id_entidad));
+          m.actividadDesde = a.fecha;
+          if (!activos) continue;
+          if (a.operacion === "EXPIRACION")
+            avisar("Tu reserva venció", `No alcanzaste a llegar con ${a.placa}; el espacio ${a.espacio} de ${a.sede} quedó libre. Puedes reservar otra vez.`);
+          else if (a.operacion === "ANULAR_PAGO")
+            avisar(`Se anuló un pago de ${a.placa}`, `${a.motivo ? `Motivo: ${a.motivo}. ` : ""}Revisa tu historial; el valor puede cobrarse de nuevo.`);
+          else if (a.operacion === "ANULAR_INGRESO")
+            avisar(`Se anuló el ingreso de ${a.placa}`, `En la portería de ${a.sede} el vehículo no coincidía${a.motivo ? `: ${a.motivo}` : ""}. No se cobró nada.`);
+          else if (a.operacion === "COBRO_NUEVO")
+            avisar(`Nuevo cobro para ${a.placa}`, `Se registró otra vez el cobro de tu visita en ${a.sede}. El detalle está en tu historial.`);
+        }
+      } catch {
+        /* se revisa de nuevo en la siguiente vuelta */
+      }
+
       // Entradas y salidas
       const actuales = new Map(estado.dentro.map((r) => [r.id_registro, r.placa]));
       if (m.iniciado && activos && p?.alEntrarSalir !== false) {
@@ -99,7 +121,7 @@ export function Notificador() {
           if (!m.dentro.has(r.id_registro)) avisar(`${r.placa} entró al parqueadero`, `Está en el espacio ${r.codigo_espacio} de ${r.sede}.`);
         });
         for (const [id, placa] of m.dentro) {
-          if (actuales.has(id)) continue;
+          if (actuales.has(id) || anulados.has(id)) continue; // un ingreso anulado ya tuvo su aviso
           const visita = (await api.cliente.historial().catch(() => [])).find((h) => h.id_registro === id);
           avisar(
             `${placa} salió del parqueadero`,
@@ -138,23 +160,6 @@ export function Notificador() {
           avisar(`Tu reserva vence en ${Math.ceil(restante / 60000)} min`, `El espacio ${rs.codigo_espacio} de ${rs.sede} se libera a las ${new Date(rs.fecha_fin).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" })}.`);
         }
       });
-      // Reserva vencida, pago anulado o nuevo cobro hechos por otros.
-      try {
-        const lista = (await api.cliente.actividad(m.actividadDesde)).filter((a) => !m.actividadVista.has(a.id)).reverse();
-        for (const a of lista) {
-          m.actividadVista.add(a.id);
-          m.actividadDesde = a.fecha;
-          if (!activos) continue;
-          if (a.operacion === "EXPIRACION")
-            avisar("Tu reserva venció", `No alcanzaste a llegar con ${a.placa}; el espacio ${a.espacio} de ${a.sede} quedó libre. Puedes reservar otra vez.`);
-          else if (a.operacion === "ANULAR_PAGO")
-            avisar(`Se anuló un pago de ${a.placa}`, `${a.motivo ? `Motivo: ${a.motivo}. ` : ""}Revisa tu historial; el valor puede cobrarse de nuevo.`);
-          else if (a.operacion === "COBRO_NUEVO")
-            avisar(`Nuevo cobro para ${a.placa}`, `Se registró otra vez el cobro de tu visita en ${a.sede}. El detalle está en tu historial.`);
-        }
-      } catch {
-        /* se revisa de nuevo en la siguiente vuelta */
-      }
       m.iniciado = true;
     }
 

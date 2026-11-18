@@ -4,6 +4,8 @@ import { useConsulta } from "../lib/useConsulta";
 import { duracion, horaCorta, nombreTipo, pesos } from "../lib/formato";
 import { Placa } from "../components/Placa";
 import { SalidaDialogo } from "../components/SalidaDialogo";
+import { Dialogo } from "../components/Dialogo";
+import { VerificacionQr } from "../components/VerificacionQr";
 
 /**
  * Vehículos dentro del parqueadero y registro de salida (RF07).
@@ -13,6 +15,7 @@ import { SalidaDialogo } from "../components/SalidaDialogo";
 export function Activos({ sede }: { sede: Parqueadero }) {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<Registro | null>(null);
+  const [verificando, setVerificando] = useState<Registro | null>(null);
 
   const activos = useConsulta(() => api.activos(sede.id_parqueadero, filtro || undefined), [sede.id_parqueadero, filtro], 15000, { sede: sede.id_parqueadero });
   const lista = activos.datos ?? [];
@@ -65,12 +68,18 @@ export function Activos({ sede }: { sede: Parqueadero }) {
                     {nombreTipo(r.tipo)}
                     {r.marca ? <span className="tenue"> {r.marca}</span> : null}
                     {r.id_reserva ? <span className="chip chip-reserva chip-sm">Con reserva</span> : null}
+                    {r.por_qr ? (
+                      <span className={`chip chip-sm ${r.qr_verificado ? "chip-entrada" : "chip-pendiente"}`}>{r.qr_verificado ? "QR verificado" : "QR sin verificar"}</span>
+                    ) : null}
                   </td>
                   <td className="codigo">{r.codigo_espacio}</td>
                   <td>{horaCorta(r.fecha_ingreso)}</td>
                   <td>{duracion(r.minutos_transcurridos)}</td>
                   <td className="num">{pesos(r.valor_estimado)}</td>
                   <td className="accion">
+                    {r.por_qr && !r.qr_verificado && (
+                      <button className="boton" onClick={() => setVerificando(r)}>Verificar</button>
+                    )}
                     <button className="boton boton-secundario" onClick={() => setSeleccion(r)}>Registrar salida</button>
                   </td>
                 </tr>
@@ -79,6 +88,28 @@ export function Activos({ sede }: { sede: Parqueadero }) {
           </table>
         </div>
       )}
+
+      {/* Verificación de un ingreso con QR desde la lista de vehículos dentro */}
+      <Dialogo abierto={verificando !== null} titulo="Verificar ingreso con QR" onCerrar={() => setVerificando(null)}>
+        {verificando && (
+          <VerificacionQr
+            datos={{
+              idRegistro: verificando.id_registro,
+              placa: verificando.placa,
+              tipo: verificando.tipo,
+              marca: verificando.marca,
+              color: verificando.color,
+              cliente: verificando.cliente ?? null,
+              espacio: verificando.codigo_espacio,
+              fecha: verificando.fecha_ingreso,
+            }}
+            onListo={() => {
+              setVerificando(null);
+              activos.recargar();
+            }}
+          />
+        )}
+      </Dialogo>
 
       <SalidaDialogo
         registro={seleccion}

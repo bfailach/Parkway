@@ -100,3 +100,17 @@ DROP TRIGGER IF EXISTS tr_tarifa_tope ON tarifa;
 CREATE TRIGGER tr_tarifa_tope
     BEFORE INSERT OR UPDATE ON tarifa
     FOR EACH ROW EXECUTE FUNCTION fn_tarifa_dentro_del_tope();
+
+-- ---------------------------------------------------------------------
+-- 4. Verificación del ingreso con QR por el operador
+-- El cliente registra su propio ingreso con el QR; el operador confirma en
+-- portería que el vehículo (placa, tipo, marca y color) es el registrado.
+-- Si no coincide, anula el ingreso: el registro queda ANULADO, sin cobro, y
+-- el espacio se libera. Las consultas de historial y reportes usan ABIERTO o
+-- CERRADO, así que un ingreso anulado no cuenta como visita ni como recaudo.
+-- ---------------------------------------------------------------------
+ALTER TABLE registro_estacionamiento ADD COLUMN IF NOT EXISTS verificado_por INT REFERENCES usuario (id_usuario);
+ALTER TABLE registro_estacionamiento ADD COLUMN IF NOT EXISTS fecha_verificacion TIMESTAMP;
+ALTER TABLE registro_estacionamiento DROP CONSTRAINT IF EXISTS registro_estacionamiento_estado_check;
+ALTER TABLE registro_estacionamiento ADD CONSTRAINT registro_estacionamiento_estado_check
+    CHECK (estado IN ('ABIERTO', 'CERRADO', 'ANULADO'));

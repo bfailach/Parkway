@@ -33,6 +33,10 @@ router.get("/qr-ingreso", ...personal, asyncHandler<AuthenticatedRequest>(async 
   const origen = `${req.headers["x-forwarded-proto"] ?? req.protocol}://${req.headers["x-forwarded-host"] ?? req.get("host")}`;
   res.json(await qr.generar(req.usuario!, Number(req.query.idParqueadero), origen));
 }));
+// Verificación del ingreso con QR: { coincide: true } o { coincide: false, motivo }
+router.post("/qr/:idRegistro/verificar", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
+  res.json(await qr.verificarIngreso(req.usuario!, Number(req.params.idRegistro), req.body ?? {}));
+}));
 // Actividad reciente de la sede (avisos al personal)
 router.get("/actividad", ...personal, asyncHandler<AuthenticatedRequest>(async (req, res) => {
   res.json(await actividad.dePersonal(req.usuario!, Number(req.query.idParqueadero), req.query.desde));

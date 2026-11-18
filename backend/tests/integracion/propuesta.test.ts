@@ -205,3 +205,34 @@ describe("avisos de actividad", () => {
     }
   });
 });
+
+describe("verificación del ingreso con QR en portería", () => {
+  test("el operador confirma que el vehículo coincide", async () => {
+    const r = await qr.ingresar(CLIENTE, { pase: qr.firmarPase(CHAPINERO, CLIENTE1), placa: "BICI001" });
+    const v = await qr.verificarIngreso(OPERADOR1, r.id_registro, { coincide: true });
+    assert.equal(v.coincide, true);
+    const fila = await uno<{ verificado_por: number }>("SELECT verificado_por FROM registro_estacionamiento WHERE id_registro = $1", [r.id_registro]);
+    assert.equal(fila.verificado_por, OPERADOR1.id_usuario);
+    await fallaCon(qr.verificarIngreso(OPERADOR1, r.id_registro, { coincide: true }), 409); // no dos veces
+    await estacionamiento.registrarSalida(r.id_registro, OPERADOR1, { metodo: "EFECTIVO", recibido: 10000 });
+  });
+
+  test("si no coincide, el ingreso se anula sin cobro y el espacio queda libre", async () => {
+    const r = await qr.ingresar(CLIENTE, { pase: qr.firmarPase(CHAPINERO, CLIENTE1), placa: "BICI001" });
+    await fallaCon(qr.verificarIngreso(OPERADOR1, r.id_registro, { coincide: false }), 400); // falta el motivo
+    await qr.verificarIngreso(OPERADOR1, r.id_registro, { coincide: false, motivo: "Llegó una bicicleta roja, no la registrada" });
+    const fila = await uno<{ estado: string; valor_calculado: string; espacio: string }>(
+      `SELECT r.estado, r.valor_calculado, e.estado AS espacio FROM registro_estacionamiento r JOIN espacio e ON e.id_espacio = r.id_espacio WHERE r.id_registro = $1`,
+      [r.id_registro]
+    );
+    assert.deepEqual([fila.estado, Number(fila.valor_calculado), fila.espacio], ["ANULADO", 0, "LIBRE"]);
+    const avisos = await actividad.deCliente(CLIENTE1);
+    assert.match(String(avisos.find((a) => a.operacion === "ANULAR_INGRESO")?.motivo), /bicicleta roja/);
+  });
+
+  test("un ingreso registrado por el operador no se verifica como QR", async () => {
+    const r = await estacionamiento.registrarIngreso({ placa: "VER123", idTipo: 1, idParqueadero: CHAPINERO }, OPERADOR1);
+    await fallaCon(qr.verificarIngreso(OPERADOR1, r.id_registro, { coincide: true }), 409);
+  });
+});
+

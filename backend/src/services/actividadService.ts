@@ -27,6 +27,7 @@ export const OPERACIONES_AVISABLES = [
   "ANULAR_PAGO",
   "COBRO_NUEVO",
   "ESTADO_ESPACIO",
+  "ANULAR_INGRESO",
 ] as const;
 
 const AVISABLES = new Set<string>(OPERACIONES_AVISABLES);
@@ -64,7 +65,10 @@ export async function dePersonal(usuario: UsuarioToken, idParqueadero: number, d
   await verificarAcceso(usuario, idParqueadero);
   const { rows } = await pool.query(
     `SELECT t.id_transaccion AS id, t.tipo_operacion AS operacion, t.fecha_fin AS fecha,
+            t.id_entidad,
             COALESCE(r.placa, rs.placa, rp.placa, t.detalle->>'placa') AS placa,
+            tvv.nombre AS tipo, vv.marca, vv.color,
+            (to_jsonb(r)->>'verificado_por') IS NOT NULL AS verificado, r.estado AS estado_registro,
             COALESCE(er.codigo, es.codigo, ee.codigo, t.detalle->>'espacio') AS espacio,
             u.nombre AS actor, u.rol AS rol_actor,
             t.detalle->>'origen' AS origen,
@@ -74,6 +78,8 @@ export async function dePersonal(usuario: UsuarioToken, idParqueadero: number, d
        FROM transaccion t
        ${UNIR_SEDE}
        LEFT JOIN usuario u ON u.id_usuario = t.id_usuario
+       LEFT JOIN vehiculo vv ON vv.placa = COALESCE(r.placa, rs.placa, rp.placa)
+       LEFT JOIN tipo_vehiculo tvv ON tvv.id_tipo = vv.id_tipo
       WHERE t.estado = 'CONFIRMADA' AND t.fecha_fin > $2
         AND t.tipo_operacion = ANY($3)
         AND ${SEDE_DE_TRANSACCION} = $1
@@ -87,12 +93,14 @@ export async function dePersonal(usuario: UsuarioToken, idParqueadero: number, d
 
 /**
  * Lo que otras personas o el sistema hicieron sobre los vehículos y reservas
- * del cliente: reserva vencida, pago anulado y nuevo cobro. (La entrada y la
+ * del cliente: reserva vencida, pago anulado, nuevo cobro e ingreso con QR
+ * anulado en portería. (La entrada y la
  * salida ya las detecta el aviso del cliente con su estado.)
  */
 export async function deCliente(idCliente: number, desde?: unknown) {
   const { rows } = await pool.query(
     `SELECT t.id_transaccion AS id, t.tipo_operacion AS operacion, t.fecha_fin AS fecha,
+            t.id_entidad,
             COALESCE(rs.placa, rp.placa, r.placa) AS placa,
             COALESCE(es.codigo, ep.codigo, er.codigo) AS espacio,
             p.nombre AS sede,
@@ -104,7 +112,7 @@ export async function deCliente(idCliente: number, desde?: unknown) {
       WHERE t.estado = 'CONFIRMADA' AND t.fecha_fin > $2
         AND (
               (t.tipo_operacion = 'EXPIRACION' AND rs.id_cliente = $1)
-           OR (t.tipo_operacion IN ('ANULAR_PAGO', 'COBRO_NUEVO') AND v.id_cliente = $1)
+           OR (t.tipo_operacion IN ('ANULAR_PAGO', 'COBRO_NUEVO', 'ANULAR_INGRESO') AND v.id_cliente = $1)
         )
       ORDER BY t.fecha_fin DESC
       LIMIT 20`,
