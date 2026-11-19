@@ -1,6 +1,6 @@
 # Parkway
 
-Sistema transaccional para la gestión de parqueaderos. Muestra los cupos
+Sistema transaccional y disyribuido, para la gestión de parqueaderos. Muestra los cupos
 libres de cada sede en tiempo real, registra ingresos y salidas con cálculo
 automático del cobro, permite a los clientes reservar un espacio dentro del
 horario de la sede y deja cada operación en una bitácora. El administrador
