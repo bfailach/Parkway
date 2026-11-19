@@ -181,5 +181,6 @@ docker compose down -v     # detiene y borra los volúmenes (la base vuelve a ca
 | El gateway no inicia: `host not found in upstream api1` | El gateway arrancó antes que las réplicas. `docker compose up -d gateway`. |
 | `firmaTokens: HS256` en `/api/salud/distribuida` | La llave no se montó. Revise que `despliegue/secretos/jwt_es256.pem` exista y sea legible. |
 | La réplica reinicia en bucle | El primario no había terminado de cargar. `docker compose restart postgres-replica`. Si persiste: `docker compose down -v` y subir de nuevo. |
+| `postgres-primario` queda *unhealthy* en Windows | Los scripts quedaron con fin de línea CRLF. Con la versión actual (`.gitattributes`) basta con `docker compose down -v`, `git pull`, borrar `despliegue/postgres/*.sh` y `database/*.sql`, `git checkout -- despliegue database` y volver a levantar. |
 | `origin_mismatch` al entrar con Google | El origen no está en *Orígenes autorizados de JavaScript* del Client ID en Google Cloud. Agregue la URL exacta (por ejemplo `http://localhost:8080`). |
 | Puerto 8080 ocupado | Cambie `"8080:80"` por otro puerto en `docker-compose.yml`. |
